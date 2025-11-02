@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     const processedFormats = formats
       .filter((f: Format) => (f.vcodec !== 'none' && f.acodec !== 'none') || (f.vcodec !== 'none' && !f.acodec) || (f.acodec !== 'none' && !f.vcodec))
       .map((f: Format) => {
-        const directDownloadUrl = new URL('/api/download-direct', request.nextUrl.origin);
+        const directDownloadUrl = new URL('/api/download-direct', process.env.NEXT_PUBLIC_API_BASE_URL);
         directDownloadUrl.searchParams.set('url', url);
         directDownloadUrl.searchParams.set('format', f.format_id);
 
