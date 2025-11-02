@@ -23,68 +23,55 @@ const LoginPage = () => {
         body: JSON.stringify({ username, password }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const data = await response.json();
         throw new Error(data.message || 'Login failed');
       }
 
-      const { token, role } = await response.json();
+      const { token, role } = data;
       localStorage.setItem('token', token);
-      if (role === 'admin') {
-        router.push('/admin');
-      } else {
-        router.push('/dashboard');
-      }
+      router.push('/admin');
     } catch (err) {
       setError((err as Error).message);
     }
   };
 
   return (
-    <div className="flex h-screen">
-      <div className="hidden lg:flex items-center justify-center flex-1 bg-gray-100 text-black">
-        <div className="max-w-md text-center">
-            <Image src="/globe.svg" alt="Globe" width={500} height={500} />
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="w-full max-w-md p-8 space-y-8 bg-white dark:bg-gray-800 rounded-lg shadow-md">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Admin Login</h1>
+          <p className="mt-2 text-gray-600 dark:text-gray-400">Welcome back, please enter your credentials.</p>
         </div>
-      </div>
-      <div className="w-full bg-white lg:w-1/2 flex items-center justify-center">
-        <div className="max-w-md w-full p-6">
-          <h1 className="text-3xl font-semibold mb-6 text-black text-center">Login</h1>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-700">Username</label>
-              <input
-                id="username"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-                className="block w-full px-3 py-2 mt-1 text-gray-900 placeholder-gray-500 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-              />
-            </div>
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">Password</label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="block w-full px-3 py-2 mt-1 text-gray-900 placeholder-gray-500 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-              />
-            </div>
-            {error && <p className="text-sm text-red-600">{error}</p>}
-            <button type="submit" className="w-full px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-              Login
-            </button>
-          </form>
-          <p className="text-sm text-center text-gray-600 mt-4">
-            Don't have an account?{' '}
-            <Link href="/register" className="font-medium text-indigo-600 hover:text-indigo-500">
-              Register
-            </Link>
-          </p>
-        </div>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label htmlFor="username" className="text-sm font-medium text-gray-700 dark:text-gray-300">Username</label>
+            <input
+              id="username"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+              className="block w-full px-4 py-3 mt-1 text-gray-900 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-violet-500 focus:border-violet-500 dark:text-white"
+            />
+          </div>
+          <div>
+            <label htmlFor="password" className="text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="block w-full px-4 py-3 mt-1 text-gray-900 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-violet-500 focus:border-violet-500 dark:text-white"
+            />
+          </div>
+          {error && <p className="text-sm text-red-500 text-center">{error}</p>}
+          <button type="submit" className="w-full px-4 py-3 font-medium text-white bg-violet-600 rounded-md hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-violet-500">
+            Login
+          </button>
+        </form>
       </div>
     </div>
   );

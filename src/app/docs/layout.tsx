@@ -64,9 +64,11 @@ export default function DocsLayout({
           <span className="sr-only">MediaGrab</span>
         </Link>
         <nav className="ml-auto flex gap-4 sm:gap-6">
+          <Link href="/" className="text-sm font-medium hover:underline underline-offset-4 dark:text-gray-300">Home</Link>
           <Link href="/pricing" className="text-sm font-medium hover:underline underline-offset-4 dark:text-gray-300">Pricing</Link>
           <Link href="/docs" className="text-sm font-medium hover:underline underline-offset-4 dark:text-gray-300">Docs</Link>
           <Link href="/contact" className="text-sm font-medium hover:underline underline-offset-4 dark:text-gray-300">Contact</Link>
+          <Link href="/admin" className="text-sm font-medium hover:underline underline-offset-4 dark:text-gray-300">Admin</Link>
         </nav>
       </header>
 
@@ -83,6 +85,7 @@ export default function DocsLayout({
         <nav className="sm:ml-auto flex gap-4 sm:gap-6">
           <Link href="/terms" className="text-xs hover:underline underline-offset-4">Terms of Service</Link>
           <Link href="/privacy" className="text-xs hover:underline underline-offset-4">Privacy</Link>
+          <a href="https://felipefogaca.net" target="_blank" rel="noopener noreferrer" className="text-xs hover:underline underline-offset-4">Developer</a>
         </nav>
       </footer>
     </div>

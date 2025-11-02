@@ -1,165 +1,81 @@
-# MediaGrab - Ultimate Media Downloader API
+# MediaGrab - The Ultimate Media Downloading API
 
-![MediaGrab Logo](public/next.svg) <!-- Replace with an actual logo if available -->
-
-## Table of Contents
-- [About](#about)
-- [Features](#features)
-- [Technologies Used](#technologies-used)
-- [Getting Started](#getting-started)
-  - [Prerequisites](#prerequisites)
-  - [Installation](#installation)
-  - [Database Setup](#database-setup)
-  - [Running the Development Server](#running-the-development-server)
-- [Usage](#usage)
-  - [Public Web Downloader](#public-web-downloader)
-  - [Developer API](#developer-api)
-- [Admin Dashboard](#admin-dashboard)
-- [Contributing](#contributing)
-- [License](#license)
-
-## About
-MediaGrab is a robust and flexible media downloading service built with Next.js. It offers a user-friendly web interface for direct, public media downloads and a powerful API for developers to integrate media downloading capabilities into their own applications. The developer API includes API key management and usage limits based on pricing tiers.
+MediaGrab is a powerful, reliable, and easy-to-integrate API for instantly generating download links for any video or audio from various sources.
 
 ## Features
-- **Public Web Downloader:** Quickly generate download links for videos and audio directly from the landing page without needing an API key.
-- **Developer API:** A secure, API key-authenticated endpoint for programmatic access to media download functionalities.
-- **API Key Management:** Admin dashboard to create, manage, and monitor API keys, including setting usage limits for different tiers.
-- **Usage Limits:** Enforce per-API key usage limits to support various pricing plans (Developer, Pro, Enterprise).
-- **Admin Dashboard:** Comprehensive dashboard for user management, API key oversight, and analytics.
-- **Theme Toggle:** User-friendly dark/light mode toggle for enhanced accessibility and preference.
-- **Responsive Design:** Optimized for various devices and screen sizes.
-- **Static Pages:** Dedicated pages for Pricing, Docs, Contact, Terms of Service, and Privacy Policy.
 
-## Technologies Used
-- **Framework:** Next.js (App Router)
-- **Frontend:** React, Tailwind CSS, Headless UI
-- **Backend:** Node.js, Express.js (for Next.js API Routes)
-- **Database:** SQLite (with `sqlite` package)
-- **Media Processing:** `yt-dlp-wrap` (a wrapper for `yt-dlp`)
-- **Authentication:** `bcrypt` (for password hashing), `jsonwebtoken` (for JWTs)
+- **Easy to Use:** Simply paste a link to get download links.
+- **Admin Dashboard:** Manage users and API keys.
+- **Secure:** Uses JWT for authentication and bcrypt for password hashing.
+- **Free Tier:** A free developer tier for personal projects and exploring the API.
 
 ## Getting Started
-Follow these instructions to set up and run the project locally.
-
-### Prerequisites
-- Node.js (v18 or higher)
-- npm or Yarn
-- Git
 
 ### Installation
+
 1.  **Clone the repository:**
     ```bash
-    git clone git@github.com:fefogaca/mediagrab.git
+    git clone <repository-url>
     cd mediagrab
     ```
 
 2.  **Install dependencies:**
     ```bash
     npm install
-    # or
-    yarn install
     ```
 
+### Environment Variables
+
+Create a `.env.local` file in the root of your project and add the following environment variable:
+
+```
+JWT_SECRET=your_super_secret_jwt_key
+```
+
+Replace `your_super_secret_jwt_key` with a strong, random string. You can generate one using a command like `openssl rand -base64 32`.
+
 ### Database Setup
-The project uses SQLite. You need to create and migrate the database for API key and user management.
+
+This project uses SQLite as its database. To set up the database schema and create the necessary tables, run the following command:
 
 ```bash
-# Create/Initialize the database (if not already present)
-node scripts/migrate.js
+node scripts/setup.js
+```
 
-# Create an admin user (optional, for dashboard access)
+### Creating an Admin User
+
+To create an admin user, run the following command and follow the prompts:
+
+```bash
 node scripts/create-admin.js
 ```
 
-> **Note:** The `migrate.js` script adds `usage_count` and `usage_limit` columns to the `api_keys` table. Run it once.
-
 ### Running the Development Server
-To run the application in development mode:
+
+Once you have installed the dependencies, set up the environment variables, and created an admin user, you can run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-```
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-## Usage
-
-### Public Web Downloader
-Visit the landing page ([http://localhost:3000](http://localhost:3000)), paste a video or audio URL, and click "Get Links" to instantly retrieve available download options. No API key is required.
-
-### Developer API
-For programmatic access to media downloading, use the API endpoint with an authenticated API key. API keys can be generated and managed in the Admin Dashboard.
-
-**Endpoint:** `GET /api/download`
-
-**Authentication:** Requires a valid API key passed as a query parameter `apikey`.
-
-**Usage Limits:** Each API key has a `usage_count` and `usage_limit` enforced. Exceeding the limit will result in a `429 Too Many Requests` response.
-
-**Parameters:**
-- `url` (required): The URL of the video or audio to process.
-- `apikey` (required): Your unique API key.
-
-**Example Request (cURL):**
-```bash
-curl -X GET "http://localhost:3000/api/download?url=YOUR_MEDIA_URL&apikey=YOUR_API_KEY"
 ```
 
-**Example Request (JavaScript using `fetch`):**
-```javascript
-fetch(`/api/download?url=${encodeURIComponent(yourMediaUrl)}&apikey=${yourApiKey}`)
-  .then(response => response.json())
-  .then(data => console.log(data))
-  .catch(error => console.error('Error:', error));
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+## API Usage
+
+### Free API Key Generation
+
+To get a free API key for the Developer plan, go to the **Pricing** page and click the "Get Started" button. The API key will be displayed on the page.
+
+### Public Download Endpoint
+
+- **Endpoint:** `/api/public-download`
+- **Method:** `GET`
+- **Query Parameter:** `url` (the URL of the media to download)
+
+**Example:**
+
+```
+/api/public-download?url=https://www.youtube.com/watch?v=dQw4w9WgXcQ
 ```
 
-**Example Response (Success):**
-```json
-{
-  "title": "Example Video Title",
-  "requested_url": "https://www.youtube.com/watch?v=...",
-  "formats": [
-    {
-      "format_id": "248",
-      "ext": "webm",
-      "resolution": "1920x1080",
-      "quality": null,
-      "vcodec": "vp9",
-      "acodec": "none",
-      "filesize_approx": 123456789,
-      "download_url": "http://localhost:3000/api/download-direct?url=...&format=248"
-    },
-    {
-      "format_id": "251",
-      "ext": "webm",
-      "resolution": "Audio Only",
-      "quality": null,
-      "vcodec": "none",
-      "acodec": "opus",
-      "filesize_approx": 543210,
-      "download_url": "http://localhost:3000/api/download-direct?url=...&format=251"
-    }
-  ]
-}
-```
-
-**Example Response (Error - Invalid API Key):**
-```json
-{ "error": "Invalid API key." }
-```
-
-**Example Response (Error - Limit Exceeded):**
-```json
-{ "error": "API usage limit exceeded." }
-```
-
-## Admin Dashboard
-Access the admin dashboard at [http://localhost:3000/admin](http://localhost:3000/admin) to manage users, generate API keys with custom usage limits, and monitor overall API usage statistics.
-
-## Contributing
-We welcome contributions! Please follow standard GitHub practices: fork the repository, create a new branch, commit your changes, and open a pull request.
-
-## License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This will return a JSON object with the video title and a list of available formats with their download links.

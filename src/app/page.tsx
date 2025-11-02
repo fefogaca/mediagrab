@@ -1,7 +1,7 @@
 'use client';
-import React, { useState, Fragment } from 'react';
+import React, { useState, Fragment, useRef } from 'react';
 import Link from 'next/link';
-import { Transition } from '@headlessui/react'; // Using a library for robust transitions
+// import { Transition } from '@headlessui/react'; // Using a library for robust transitions
 
 // Define the structure of a format from the API
 interface MediaFormat {
@@ -16,28 +16,39 @@ interface MediaFormat {
 }
 
 export default function Home() {
+  // State for the input URL
   const [url, setUrl] = useState<string>('');
+  // State to manage loading during API calls
   const [loading, setLoading] = useState<boolean>(false);
+  // State for storing and displaying errors
   const [error, setError] = useState<string | null>(null);
   
-  const [modalOpen, setModalOpen] = useState<boolean>(false);
+  // State for the fetched media formats and video title
   const [formats, setFormats] = useState<MediaFormat[]>([]);
   const [videoTitle, setVideoTitle] = useState<string>('');
+  // Ref for the results section to enable smooth scrolling
+  const resultsRef = useRef<HTMLDivElement>(null);
 
+  // Function to handle the form submission and fetch download links
   const handleGetLinks = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
     setFormats([]);
+    setVideoTitle('');
 
     try {
+      // Fetch download links from the public API endpoint
       const response = await fetch(`/api/public-download?url=${encodeURIComponent(url)}`);
       const data = await response.json();
 
       if (response.ok) {
         setVideoTitle(data.title);
         setFormats(data.formats);
-        setModalOpen(true);
+        // Scroll to the results section after a short delay
+        setTimeout(() => {
+          resultsRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
       } else {
         throw new Error(data.message || 'Failed to get download links.');
       }
@@ -66,7 +77,7 @@ export default function Home() {
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 flex items-center">
+        <main className="flex-1 flex flex-col justify-center items-center">
           <section className="w-full py-12 md:py-24">
             <div className="container mx-auto px-4 md:px-6">
               <div className="flex flex-col items-center space-y-6 text-center">
@@ -106,6 +117,31 @@ export default function Home() {
               </div>
             </div>
           </section>
+
+          {/* Download Links Section */}
+          {formats.length > 0 && (
+            <section ref={resultsRef} className="w-full py-12 md:py-24 bg-gray-100 dark:bg-gray-800">
+              <div className="container mx-auto px-4 md:px-6">
+                <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl text-gray-800 dark:text-gray-100 mb-8 text-center">Download Links for: {videoTitle}</h2>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {formats.map((format) => (
+                    <div key={format.format_id} className="bg-white dark:bg-gray-700 rounded-lg shadow-md p-4 flex flex-col justify-between">
+                      <div>
+                        <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">Resolution: {format.resolution}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-300">Extension: {format.ext}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-300">Codecs: {`${format.vcodec !== 'none' ? format.vcodec : ''}${format.vcodec !== 'none' && format.acodec !== 'none' ? ', ' : ''}${format.acodec !== 'none' ? format.acodec : ''}`}</p>
+                      </div>
+                      <div className="mt-4 text-right">
+                        <a href={format.download_url} download className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-violet-600 rounded-md shadow-sm hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-violet-500">
+                          Download
+                        </a>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+          )}
         </main>
 
         {/* Footer */}
@@ -114,73 +150,10 @@ export default function Home() {
           <nav className="sm:ml-auto flex gap-4 sm:gap-6">
             <Link href="/terms" className="text-xs hover:underline underline-offset-4">Terms of Service</Link>
             <Link href="/privacy" className="text-xs hover:underline underline-offset-4">Privacy</Link>
+            <a href="https://felipefogaca.net" target="_blank" rel="noopener noreferrer" className="text-xs hover:underline underline-offset-4">Developer</a>
           </nav>
         </footer>
       </div>
-
-      {/* Download Links Modal */}
-      <Transition show={modalOpen} as={Fragment}>
-        <div className="fixed inset-0 z-20 overflow-y-auto">
-          <div className="min-h-screen px-4 text-center">
-            <Transition.Child
-              as="div"
-              className="fixed inset-0 bg-black bg-opacity-50 z-10"
-              enter="ease-out duration-300"
-              enterFrom="opacity-0"
-              enterTo="opacity-100"
-              leave="ease-in duration-200"
-              leaveFrom="opacity-100"
-              leaveTo="opacity-0"
-            />
-
-            <span className="inline-block h-screen align-middle" aria-hidden="true">&#8203;</span>
-
-            <Transition.Child
-              as="div"
-              className="inline-block w-full max-w-4xl p-6 my-8 overflow-hidden text-left align-middle transition-all transform bg-white dark:bg-gray-800 shadow-xl rounded-2xl z-30"
-              enter="ease-out duration-300"
-              enterFrom="opacity-0 scale-95"
-              enterTo="opacity-100 scale-100"
-              leave="ease-in duration-200"
-              leaveFrom="opacity-100 scale-100"
-              leaveTo="opacity-0 scale-95"
-            >
-              <div className="inline-block w-full max-w-4xl p-6 my-8 overflow-hidden text-left align-middle transition-all transform bg-white dark:bg-gray-800 shadow-xl rounded-2xl">
-                <div className="flex justify-between items-center pb-3 border-b dark:border-gray-700">
-                  <h3 className="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100">{videoTitle}</h3>
-                  <button onClick={() => setModalOpen(false)} className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
-                    <svg className="w-6 h-6 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                  </button>
-                </div>
-                <div className="mt-4 max-h-96 overflow-y-auto">
-                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                    <thead className="bg-gray-50 dark:bg-gray-700">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Resolution</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Extension</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Codecs</th>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Download</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                      {formats.map((format) => (
-                        <tr key={format.format_id}>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{format.resolution}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{format.ext}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{`${format.vcodec !== 'none' ? format.vcodec : ''}${format.vcodec !== 'none' && format.acodec !== 'none' ? ', ' : ''}${format.acodec !== 'none' ? format.acodec : ''}`}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <a href={format.download_url} download className="text-violet-600 hover:text-violet-900 dark:text-violet-400 dark:hover:text-violet-300">Download</a>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </Transition.Child>
-          </div>
-        </div>
-      </Transition>
     </>
   );
 }

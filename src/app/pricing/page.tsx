@@ -1,5 +1,6 @@
 
-import React from 'react';
+'use client';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import StandardLayout from '../components/StandardLayout';
 
@@ -10,17 +11,41 @@ const CheckIcon = () => (
 );
 
 const PricingPage = () => {
+  const [apiKey, setApiKey] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleGetStarted = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/generate-free-api-key', { method: 'POST' });
+      const data = await response.json();
+
+      if (response.ok) {
+        setApiKey(data.apiKey);
+      } else {
+        throw new Error(data.message || 'Failed to generate API key.');
+      }
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const tiers = [
     {
       name: 'Developer',
       price: 'Free',
       description: 'For personal projects and exploring the API.',
       features: [
-        '100 API calls/month',
+        '5 API calls/month',
         'Community support',
       ],
       cta: 'Get Started',
-      href: '/register',
+      href: '#',
       mostPopular: false,
     },
     {
@@ -34,7 +59,7 @@ const PricingPage = () => {
         'Access to all features',
       ],
       cta: 'Choose Pro',
-      href: '/register',
+      href: '/contact',
       mostPopular: true,
     },
     {
@@ -83,9 +108,20 @@ const PricingPage = () => {
                   ))}
                 </ul>
 
-                <Link href={tier.href} className={`mt-8 block w-full py-3 px-6 text-center rounded-md font-medium ${tier.mostPopular ? 'bg-violet-600 text-white hover:bg-violet-700' : 'bg-gray-100 dark:bg-gray-700 text-violet-600 dark:text-violet-400 hover:bg-gray-200 dark:hover:bg-gray-600'}`}>
-                  {tier.cta}
-                </Link>
+                <button onClick={tier.name === 'Developer' ? handleGetStarted : undefined} disabled={loading} className={`mt-8 block w-full py-3 px-6 text-center rounded-md font-medium ${tier.mostPopular ? 'bg-violet-600 text-white hover:bg-violet-700' : 'bg-gray-100 dark:bg-gray-700 text-violet-600 dark:text-violet-400 hover:bg-gray-200 dark:hover:bg-gray-600'}`}>
+                  {loading && tier.name === 'Developer' ? 'Generating...' : tier.cta}
+                </button>
+                {tier.name === 'Developer' && apiKey && (
+                  <div className="mt-4 p-4 bg-green-100 dark:bg-green-900 rounded-md">
+                    <p className="text-sm text-green-800 dark:text-green-200">Your API Key:</p>
+                    <p className="text-lg font-mono text-green-900 dark:text-green-100 break-all">{apiKey}</p>
+                  </div>
+                )}
+                {tier.name === 'Developer' && error && (
+                  <div className="mt-4 p-4 bg-red-100 dark:bg-red-900 rounded-md">
+                    <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+                  </div>
+                )}
               </div>
             ))}
           </div>

@@ -18,10 +18,9 @@ interface User {
 
 const ApiKeysPage = () => {
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [newApiKeyUserId, setNewApiKeyUserId] = useState<string>('');
+  const [newApiKeyExpiresAt, setNewApiKeyExpiresAt] = useState<string>('');
   const [selectedUsageLimit, setSelectedUsageLimit] = useState<string>('100'); // Default to 100
   const [customUsageLimit, setCustomUsageLimit] = useState<string>('');
 
@@ -32,19 +31,13 @@ const ApiKeysPage = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [apiKeysResponse, usersResponse] = await Promise.all([
-        fetch('/api/admin/api-keys'),
-        fetch('/api/admin/users'),
-      ]);
+      const apiKeysResponse = await fetch('/api/admin/api-keys');
 
       if (!apiKeysResponse.ok) throw new Error('Failed to fetch API keys');
-      if (!usersResponse.ok) throw new Error('Failed to fetch users');
 
       const apiKeysData = await apiKeysResponse.json();
-      const usersData = await usersResponse.json();
 
       setApiKeys(apiKeysData);
-      setUsers(usersData);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -54,9 +47,15 @@ const ApiKeysPage = () => {
 
   const handleCreateApiKey = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newApiKeyUserId) {
-      setError('Please select a user for the new API key.');
-      return;
+
+    let expiresAtToSend: string | null = null;
+    if (newApiKeyExpiresAt) {
+      const date = new Date(newApiKeyExpiresAt);
+      if (isNaN(date.getTime())) {
+        setError('Please enter a valid expiration date.');
+        return;
+      }
+      expiresAtToSend = date.toISOString();
     }
 
     let limitToSend = parseInt(selectedUsageLimit);
@@ -69,15 +68,28 @@ const ApiKeysPage = () => {
     }
 
     try {
+      // Assuming the logged-in user is the admin and we want to assign the key to them
+      // In a real app, you'd fetch the admin's ID from a secure context (e.g., JWT payload)
+      // For simplicity, we'll fetch the first user (which should be the admin in this setup)
+      const usersResponse = await fetch('/api/admin/users');
+      if (!usersResponse.ok) throw new Error('Failed to fetch admin user ID');
+      const usersData = await usersResponse.json();
+      const adminUser = usersData[0]; // Assuming the first user is the admin
+
+      if (!adminUser) {
+        setError('Admin user not found.');
+        return;
+      }
+
       const response = await fetch('/api/admin/api-keys', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: parseInt(newApiKeyUserId), usage_limit: limitToSend }),
+        body: JSON.stringify({ user_id: adminUser.id, usage_limit: limitToSend, expires_at: expiresAtToSend }),
       });
       if (!response.ok) {
         throw new Error('Failed to create API key');
       }
-      setNewApiKeyUserId('');
+      setNewApiKeyExpiresAt('');
       setSelectedUsageLimit('100');
       setCustomUsageLimit('');
       fetchData();
@@ -113,19 +125,14 @@ const ApiKeysPage = () => {
           <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">Generate New API Key</h2>
           <form onSubmit={handleCreateApiKey} className="space-y-4">
             <div>
-              <label htmlFor="newApiKeyUser" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Assign to User</label>
-              <select
-                id="newApiKeyUser"
-                className="form-select mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
-                value={newApiKeyUserId}
-                onChange={(e) => setNewApiKeyUserId(e.target.value)}
-                required
-              >
-                <option value="">Select a user</option>
-                {users.map((user) => (
-                  <option key={user.id} value={user.id}>{user.username}</option>
-                ))}
-              </select>
+              <label htmlFor="newApiKeyExpiresAt" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Expiration Date (Optional)</label>
+              <input
+                id="newApiKeyExpiresAt"
+                type="date"
+                className="form-input mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
+                value={newApiKeyExpiresAt}
+                onChange={(e) => setNewApiKeyExpiresAt(e.target.value)}
+              />
             </div>
             <div>
               <label htmlFor="usageLimit" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Usage Limit</label>
@@ -164,7 +171,6 @@ const ApiKeysPage = () => {
                 <tr>
                   <th className="p-2 whitespace-nowrap"><div className="font-semibold text-left">ID</div></th>
                   <th className="p-2 whitespace-nowrap"><div className="font-semibold text-left">Key</div></th>
-                  <th className="p-2 whitespace-nowrap"><div className="font-semibold text-left">User</div></th>
                   <th className="p-2 whitespace-nowrap"><div className="font-semibold text-left">Limit</div></th>
                   <th className="p-2 whitespace-nowrap"><div className="font-semibold text-left">Usage</div></th>
                   <th className="p-2 whitespace-nowrap"><div className="font-semibold text-left">Created At</div></th>
@@ -177,7 +183,6 @@ const ApiKeysPage = () => {
                   <tr key={apiKey.id}>
                     <td className="p-2 whitespace-nowrap"><div className="text-left">{apiKey.id}</div></td>
                     <td className="p-2 whitespace-nowrap"><div className="text-left font-medium text-gray-800 dark:text-gray-100">{apiKey.key}</div></td>
-                    <td className="p-2 whitespace-nowrap"><div className="text-left">{users.find(user => user.id === apiKey.user_id)?.username || 'N/A'}</div></td>
                     <td className="p-2 whitespace-nowrap"><div className="text-left">{apiKey.usage_limit}</div></td>
                     <td className="p-2 whitespace-nowrap"><div className="text-left">{apiKey.usage_count}</div></td>
                     <td className="p-2 whitespace-nowrap"><div className="text-left">{new Date(apiKey.created_at).toLocaleDateString()}</div></td>

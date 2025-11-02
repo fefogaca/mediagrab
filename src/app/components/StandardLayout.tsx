@@ -17,9 +17,11 @@ const StandardLayout = ({ children }: { children: React.ReactNode }) => {
           <span className="sr-only">MediaGrab</span>
         </Link>
         <nav className="ml-auto flex gap-4 sm:gap-6">
+          <Link href="/" className="text-sm font-medium hover:underline underline-offset-4 dark:text-gray-300">Home</Link>
           <Link href="/pricing" className="text-sm font-medium hover:underline underline-offset-4 dark:text-gray-300">Pricing</Link>
           <Link href="/docs" className="text-sm font-medium hover:underline underline-offset-4 dark:text-gray-300">Docs</Link>
           <Link href="/contact" className="text-sm font-medium hover:underline underline-offset-4 dark:text-gray-300">Contact</Link>
+          <Link href="/admin" className="text-sm font-medium hover:underline underline-offset-4 dark:text-gray-300">Admin</Link>
         </nav>
       </header>
       
@@ -27,11 +29,11 @@ const StandardLayout = ({ children }: { children: React.ReactNode }) => {
 
       <footer className="flex flex-col gap-2 sm:flex-row py-6 w-full shrink-0 items-center px-4 md:px-6 border-t dark:border-gray-800">
         <p className="text-xs text-gray-500 dark:text-gray-400">&copy; 2024 MediaGrab. All rights reserved.</p>
-        <nav className="sm:ml-auto flex gap-4 sm:gap-6">
-          <Link href="/terms" className="text-xs hover:underline underline-offset-4">Terms of Service</Link>
-          <Link href="/privacy" className="text-xs hover:underline underline-offset-4">Privacy</Link>
-        </nav>
-      </footer>
+                  <nav className="sm:ml-auto flex gap-4 sm:gap-6">
+                    <Link href="/terms" className="text-xs hover:underline underline-offset-4">Terms of Service</Link>
+                    <Link href="/privacy" className="text-xs hover:underline underline-offset-4">Privacy</Link>
+                    <a href="https://felipefogaca.net" target="_blank" rel="noopener noreferrer" className="text-xs hover:underline underline-offset-4">Developer</a>
+                  </nav>      </footer>
     </div>
   );
 };

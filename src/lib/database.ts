@@ -39,5 +39,12 @@ export async function setupDatabase() {
       FOREIGN KEY (api_key_id) REFERENCES api_keys(id)
     );
   `);
+
+  // Create a default guest user if it doesn't exist
+  const guestUser = await db.get("SELECT * FROM users WHERE username = ?", "guest");
+  if (!guestUser) {
+    await db.run("INSERT INTO users (username, password, role) VALUES (?, ?, ?)", "guest", "guest_password", "guest");
+  }
+
   console.log("Database setup complete.");
 }

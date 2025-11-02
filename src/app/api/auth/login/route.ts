@@ -3,13 +3,21 @@ import { openDb } from '@/lib/database';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'supersecretjwtkey';
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET is not defined in environment variables');
+}
 
 export async function POST(request: Request) {
   const { username, password } = await request.json();
 
   if (!username || !password) {
     return NextResponse.json({ message: 'Username and password are required' }, { status: 400 });
+  }
+
+  if (password.length < 8) {
+    return NextResponse.json({ message: 'Invalid credentials' }, { status: 401 });
   }
 
   try {

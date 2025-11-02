@@ -20,10 +20,13 @@ export async function GET(request: Request, { params }: { params: { id: string }
   }
 }
 
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
-  const id = params.id;
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  // Extract user ID from the awaited params object
+  const { id } = await params;
+  // Extract update fields from the request body
   const { username, password, role } = await request.json();
 
+  // Validate if any fields are provided for update
   if (!username && !password && !role) {
     return NextResponse.json({ message: 'No fields to update' }, { status: 400 });
   }
@@ -34,11 +37,13 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     const updateParams: (string | number)[] = [];
     const fields: string[] = [];
 
+    // Conditionally add fields to update query
     if (username) {
       fields.push('username = ?');
       updateParams.push(username);
     }
     if (password) {
+      // Hash password before updating for security
       const hashedPassword = await bcrypt.hash(password, 10);
       fields.push('password = ?');
       updateParams.push(hashedPassword);
@@ -48,11 +53,14 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       updateParams.push(role);
     }
 
+    // Construct the final update query
     updateQuery += ' ' + fields.join(', ') + ' WHERE id = ?';
     updateParams.push(id);
 
+    // Execute the update query
     const result = await db.run(updateQuery, ...updateParams);
 
+    // Check if any rows were affected
     if (result.changes === 0) {
       return NextResponse.json({ message: 'User not found or no changes made' }, { status: 404 });
     }

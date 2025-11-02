@@ -12,13 +12,18 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [loggedIn, setLoggedIn] = useState(false); // New state to track login status
+  const [loading, setLoading] = useState(true); // New state to track loading status
   const router = useRouter();
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
       router.push('/login');
+    } else {
+      setLoggedIn(true);
     }
+    setLoading(false); // Set loading to false after check
   }, [router]);
 
   return (
@@ -26,7 +31,7 @@ export default function AdminLayout({
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
       <div className="relative flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
         <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-        {children}
+        {loggedIn && !loading ? children : null}
       </div>
     </div>
   );

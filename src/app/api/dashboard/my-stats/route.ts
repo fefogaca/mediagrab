@@ -3,7 +3,11 @@ import { NextResponse } from 'next/server';
 import { openDb } from '@/lib/database';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'supersecretjwtkey';
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET is not defined in environment variables');
+}
 
 export async function GET(request: Request) {
   try {

@@ -1,15 +1,24 @@
 
 'use client';
 import React from 'react';
+import { useState, useEffect } from 'react';
 import DashboardCardTotalDownloads from './partials/dashboard/DashboardCardTotalDownloads';
 import DashboardCardTotalUsers from './partials/dashboard/DashboardCardTotalUsers';
 import DashboardCardTotalApiKeys from './partials/dashboard/DashboardCardTotalApiKeys';
 import DashboardCardRecentDownloads from './partials/dashboard/DashboardCardRecentDownloads';
-import DashboardCardDownloadsOverTime from './partials/dashboard/DashboardCardDownloadsOverTime';
 import DashboardCardTopUsers from './partials/dashboard/DashboardCardTopUsers';
-import DashboardCardApiKeyUsage from './partials/dashboard/DashboardCardApiKeyUsage';
+import dynamic from 'next/dynamic';
+
+const DynamicDashboardCardDownloadsOverTime = dynamic(() => import('./partials/dashboard/DashboardCardDownloadsOverTime'), { ssr: false });
+const DynamicDashboardCardApiKeyUsage = dynamic(() => import('./partials/dashboard/DashboardCardApiKeyUsage'), { ssr: false });
 
 function Dashboard() {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   return (
     <main className="grow">
       <div className="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto">
@@ -23,9 +32,9 @@ function Dashboard() {
           <DashboardCardTotalUsers />
           <DashboardCardTotalApiKeys />
           <DashboardCardRecentDownloads />
-          <DashboardCardDownloadsOverTime />
+          {mounted && <DynamicDashboardCardDownloadsOverTime />}
           <DashboardCardTopUsers />
-          <DashboardCardApiKeyUsage />
+          {mounted && <DynamicDashboardCardApiKeyUsage />}
         </div>
       </div>
     </main>
