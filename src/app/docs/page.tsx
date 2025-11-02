@@ -33,7 +33,7 @@ const DocsPage = () => {
         "vcodec": "av01.0.13M.10",
         "acodec": "none",
         "filesize_approx": 157383383,
-        "download_url": "http://localhost:3000/api/download-direct?url=...&format=313"
+        "download_url": "${process.env.NEXT_PUBLIC_API_BASE_URL}/api/download-direct?url=...&format=313"
       },
       {
         "format_id": "140",
@@ -43,7 +43,7 @@ const DocsPage = () => {
         "vcodec": "none",
         "acodec": "mp4a.40.2",
         "filesize_approx": 3094343,
-        "download_url": "http://localhost:3000/api/download-direct?url=...&format=140"
+        "download_url": "${process.env.NEXT_PUBLIC_API_BASE_URL}/api/download-direct?url=...&format=140"
       }
     ]
   }, null, 2);
@@ -64,7 +64,7 @@ const DocsPage = () => {
       <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-12">Authentication</h2>
       <p>All API requests must be authenticated. Provide your API key as the <code>apikey</code> query parameter in your request.</p>
       <CodeBlock lang="bash">
-        {`curl "http://localhost:3000/api/download?url=<VIDEO_URL>&apikey=<YOUR_API_KEY>"`}
+        {`curl "${process.env.NEXT_PUBLIC_API_BASE_URL}/api/download?url=<VIDEO_URL>&apikey=<YOUR_API_KEY>"`}
       </CodeBlock>
 
       <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-12">API Reference</h2>
@@ -79,7 +79,7 @@ const DocsPage = () => {
       
       <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mt-6">Example Request:</h4>
       <CodeBlock lang="bash">
-        {`curl "http://localhost:3000/api/download?url=https://www.youtube.com/watch?v=dQw4w9WgXcQ&apikey=user-key-123"`}
+        {`curl "${process.env.NEXT_PUBLIC_API_BASE_URL}/api/download?url=https://www.youtube.com/watch?v=dQw4w9WgXcQ&apikey=user-key-123"`}
       </CodeBlock>
 
       <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mt-6">Example Response:</h4>
