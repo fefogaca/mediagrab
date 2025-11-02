@@ -26,17 +26,19 @@ MediaGrab is a powerful, reliable, and easy-to-integrate API for instantly gener
 
 ### Environment Variables
 
-Create a `.env.local` file in the root of your project and add the following environment variable:
+Create a `.env.local` file in the root of your project and add the following environment variables:
 
 ```
 JWT_SECRET=your_super_secret_jwt_key
+NEXT_PUBLIC_API_BASE_URL=https://api.example.com # Replace with your deployed API URL or http://localhost:3000 for local development
 ```
 
 Replace `your_super_secret_jwt_key` with a strong, random string. You can generate one using a command like `openssl rand -base64 32`.
+`NEXT_PUBLIC_API_BASE_URL` should be the base URL of your deployed API (e.g., `https://api.felipefogaca.net`). For local development, you can set it to `http://localhost:3000`.
 
 ### Database Setup
 
-This project uses SQLite as its database. To set up the database schema and create the necessary tables, run the following command:
+This project uses SQLite as its database. To set up the database schema and create the necessary tables, including a default "guest" user for free API key generation, run the following command:
 
 ```bash
 node scripts/setup.js
@@ -75,7 +77,7 @@ To get a free API key for the Developer plan, go to the **Pricing** page and cli
 **Example:**
 
 ```
-/api/public-download?url=https://www.youtube.com/watch?v=dQw4w9WgXcQ
+GET ${NEXT_PUBLIC_API_BASE_URL}/api/public-download?url=https://www.youtube.com/watch?v=dQw4w9WgXcQ
 ```
 
 This will return a JSON object with the video title and a list of available formats with their download links.

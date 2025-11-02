@@ -21,6 +21,8 @@ const CodeBlock = ({ children, lang }: { children: string; lang: string }) => {
 };
 
 const DocsPage = () => {
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3000"; // Fallback for development
+
   const exampleResponse = JSON.stringify({
     "title": "Example Video Title",
     "requested_url": "https://...",
@@ -33,7 +35,7 @@ const DocsPage = () => {
         "vcodec": "av01.0.13M.10",
         "acodec": "none",
         "filesize_approx": 157383383,
-        "download_url": "${process.env.NEXT_PUBLIC_API_BASE_URL}/api/download-direct?url=...&format=313"
+        "download_url": `${apiBaseUrl}/api/download-direct?url=...&format=313`
       },
       {
         "format_id": "140",
@@ -43,7 +45,7 @@ const DocsPage = () => {
         "vcodec": "none",
         "acodec": "mp4a.40.2",
         "filesize_approx": 3094343,
-        "download_url": "${process.env.NEXT_PUBLIC_API_BASE_URL}/api/download-direct?url=...&format=140"
+        "download_url": `${apiBaseUrl}/api/download-direct?url=...&format=140`
       }
     ]
   }, null, 2);
