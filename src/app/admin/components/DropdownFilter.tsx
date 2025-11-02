@@ -6,12 +6,12 @@ interface DropdownFilterProps {
 }
 
 interface CheckRefs {
-  DirectorIndirect: React.RefObject<HTMLInputElement>;
-  RealTimeValue: React.RefObject<HTMLInputElement>;
-  Topcahnnels: React.RefObject<HTMLInputElement>;
-  SalesRefunds: React.RefObject<HTMLInputElement>;
-  LastOrder: React.RefObject<HTMLInputElement>;
-  TotalSpent: React.RefObject<HTMLInputElement>;
+  DirectorIndirect: React.RefObject<HTMLInputElement | null>;
+  RealTimeValue: React.RefObject<HTMLInputElement | null>;
+  Topcahnnels: React.RefObject<HTMLInputElement | null>;
+  SalesRefunds: React.RefObject<HTMLInputElement | null>;
+  LastOrder: React.RefObject<HTMLInputElement | null>;
+  TotalSpent: React.RefObject<HTMLInputElement | null>;
 }
 
 const DropdownFilter = ({ align }: DropdownFilterProps) => {

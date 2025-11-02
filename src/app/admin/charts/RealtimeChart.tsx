@@ -1,5 +1,5 @@
-import React, { useRef, useEffect, useState } from 'react';
-import { useThemeProvider } from '../utils/ThemeContext';
+import React, { useRef, useEffect, useState, useContext } from 'react';
+import { ThemeContext } from '@/app/components/ThemeProvider';
 
 import { chartColors } from './ChartjsConfig';
 import {
@@ -28,7 +28,7 @@ const RealtimeChart = ({
   const canvas = useRef<HTMLCanvasElement>(null);
   const chartValue = useRef<HTMLSpanElement>(null);
   const chartDeviation = useRef<HTMLDivElement>(null);
-  const { currentTheme } = useThemeProvider();
+  const { currentTheme } = useContext(ThemeContext);
   const darkMode = currentTheme === 'dark';  
   const { textColor, gridColor, tooltipTitleColor, tooltipBodyColor, tooltipBgColor, tooltipBorderColor } = chartColors;
 
@@ -88,10 +88,10 @@ const RealtimeChart = ({
           },
           tooltip: {
             titleFont: {
-              weight: '600',
+              weight: 600,
             },
             callbacks: {
-              label: (context) => formatValue(context.parsed.y),
+              label: (context) => formatValue(context.parsed.y ?? 0),
             },
             titleColor: darkMode ? tooltipTitleColor.dark : tooltipTitleColor.light,
             bodyColor: darkMode ? tooltipBodyColor.dark : tooltipBodyColor.light,

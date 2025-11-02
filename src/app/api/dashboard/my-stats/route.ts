@@ -3,10 +3,16 @@ import { NextResponse } from 'next/server';
 import { openDb } from '@/lib/database';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET: string = process.env.JWT_SECRET as string;
 
 if (!JWT_SECRET) {
   throw new Error('JWT_SECRET is not defined in environment variables');
+}
+
+interface DecodedToken {
+  id: number;
+  username: string;
+  role: string;
 }
 
 export async function GET(request: Request) {
@@ -16,8 +22,11 @@ export async function GET(request: Request) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
-    const decoded = jwt.verify(token, JWT_SECRET) as { id: number };
-    const userId = decoded.id;
+    const decoded = jwt.verify(token, JWT_SECRET);
+    if (typeof decoded === 'string' || !('id' in decoded)) {
+      return NextResponse.json({ message: 'Unauthorized: Invalid token payload' }, { status: 401 });
+    }
+    const userId = (decoded as DecodedToken).id;
 
     const db = await openDb();
     const { totalDownloads } = await db.get('SELECT COUNT(*) as totalDownloads FROM download_logs WHERE user_id = ?', userId);

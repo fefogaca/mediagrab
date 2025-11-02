@@ -1,5 +1,5 @@
-import React, { useRef, useEffect, useState } from 'react';
-import { useThemeProvider } from '../utils/ThemeContext';
+import React, { useRef, useEffect, useState, useContext } from 'react';
+import { ThemeContext } from '@/app/components/ThemeProvider';
 
 import { chartColors } from './ChartjsConfig';
 import {
@@ -24,7 +24,7 @@ const DoughnutChart = ({
   const [chart, setChart] = useState<Chart | null>(null)
   const canvas = useRef<HTMLCanvasElement>(null);
   const legend = useRef<HTMLUListElement>(null);
-  const { currentTheme } = useThemeProvider();
+  const { currentTheme } = useContext(ThemeContext);
   const darkMode = currentTheme === 'dark';
   const { tooltipTitleColor, tooltipBodyColor, tooltipBgColor, tooltipBorderColor } = chartColors; 
 
@@ -72,7 +72,7 @@ const DoughnutChart = ({
               ul.firstChild.remove();
             }
             // Reuse the built-in legendItems generator
-            const items = c.options.plugins?.legend?.labels?.generateLabels(c);
+            const items = c.options.plugins?.legend?.labels?.generateLabels?.(c);
             items?.forEach((item) => {
               const li = document.createElement('li');
               li.style.margin = '4px';

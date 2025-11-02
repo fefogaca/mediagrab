@@ -1,8 +1,8 @@
-import React from "react";
-import { useThemeProvider } from "../../components/ThemeProvider";
+import React, { useContext } from "react";
+import { ThemeContext } from '@/app/components/ThemeProvider';
 
 export default function ThemeToggle() {
-  const { currentTheme, changeCurrentTheme } = useThemeProvider();
+  const { currentTheme, changeCurrentTheme } = useContext(ThemeContext);
 
   return (
     <div className="inline-flex">

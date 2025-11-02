@@ -2,6 +2,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import YTDlpWrap from 'yt-dlp-wrap';
 
+interface Format {
+  vcodec: string;
+  acodec: string;
+  format_id: string;
+  ext: string;
+  resolution: string;
+  quality: string;
+  filesize_approx: number;
+}
+
 const ytDlpWrap = new YTDlpWrap();
 
 export async function GET(request: NextRequest) {
@@ -17,8 +27,8 @@ export async function GET(request: NextRequest) {
     const { title, formats } = videoInfo;
 
     const processedFormats = formats
-      .filter(f => (f.vcodec !== 'none' && f.acodec !== 'none') || (f.vcodec !== 'none' && !f.acodec) || (f.acodec !== 'none' && !f.vcodec))
-      .map(f => {
+      .filter((f: Format) => (f.vcodec !== 'none' && f.acodec !== 'none') || (f.vcodec !== 'none' && !f.acodec) || (f.acodec !== 'none' && !f.vcodec))
+      .map((f: Format) => {
         const directDownloadUrl = new URL('/api/download-direct', request.nextUrl.origin);
         directDownloadUrl.searchParams.set('url', url);
         directDownloadUrl.searchParams.set('format', f.format_id);

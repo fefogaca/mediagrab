@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { openDb } from '@/lib/database';
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
-  const { id } = params;
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
 
   try {
     const db = await openDb();
@@ -19,8 +19,8 @@ export async function GET(request: Request, { params }: { params: { id: string }
   }
 }
 
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
-  const { id } = params;
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const { key, user_id, expires_at } = await request.json();
 
   if (!key && !user_id && !expires_at) {

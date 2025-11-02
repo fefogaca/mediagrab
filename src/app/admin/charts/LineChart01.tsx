@@ -1,5 +1,5 @@
-import React, { useRef, useEffect, useState } from 'react';
-import { useThemeProvider } from '../../components/ThemeProvider';
+import React, { useRef, useEffect, useState, useContext } from 'react';
+import { ThemeContext } from '@/app/components/ThemeProvider';
 
 import { chartColors } from './ChartjsConfig';
 import {
@@ -26,7 +26,7 @@ const LineChart01 = ({
 
   const [chart, setChart] = useState<Chart | null>(null)
   const canvas = useRef<HTMLCanvasElement>(null);
-  const { currentTheme } = useThemeProvider();
+  const { currentTheme, changeCurrentTheme } = useContext(ThemeContext);
   const darkMode = currentTheme === 'dark';
   const { tooltipBodyColor, tooltipBgColor, tooltipBorderColor } = chartColors; 
 
@@ -61,7 +61,7 @@ const LineChart01 = ({
           tooltip: {
             callbacks: {
               title: () => '', // Disable tooltip title
-              label: (context) => formatValue(context.parsed.y),
+              label: (context) => formatValue(context.parsed.y ?? 0),
             },
             bodyColor: darkMode ? tooltipBodyColor.dark : tooltipBodyColor.light,
             backgroundColor: darkMode ? tooltipBgColor.dark : tooltipBgColor.light,

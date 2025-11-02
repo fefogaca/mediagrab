@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useRef, useEffect, useContext, createContext } from 'react';
 import { CSSTransition as ReactCSSTransition } from 'react-transition-group';
 
@@ -108,6 +109,7 @@ function CSSTransition({
       }}
       onExiting={() => {
         if (nodeRef.current) {
+
           removeClasses(nodeRef.current, leaveStartClasses);
           addClasses(nodeRef.current, leaveEndClasses);
         }

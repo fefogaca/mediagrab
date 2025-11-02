@@ -1,5 +1,5 @@
-import React, { useRef, useEffect, useState } from 'react';
-import { useThemeProvider } from '../utils/ThemeContext';
+import React, { useRef, useEffect, useState, useContext } from 'react';
+import { ThemeContext } from '@/app/components/ThemeProvider';
 
 import { chartColors } from './ChartjsConfig';
 import {
@@ -27,7 +27,7 @@ const BarChart01 = ({
   const [chart, setChart] = useState<Chart | null>(null)
   const canvas = useRef<HTMLCanvasElement>(null);
   const legend = useRef<HTMLUListElement>(null);
-  const { currentTheme } = useThemeProvider();
+  const { currentTheme, changeCurrentTheme } = useContext(ThemeContext);
   const darkMode = currentTheme === 'dark';
   const { textColor, gridColor, tooltipBodyColor, tooltipBgColor, tooltipBorderColor } = chartColors;
 
@@ -88,7 +88,7 @@ const BarChart01 = ({
           tooltip: {
             callbacks: {
               title: () => '', // Disable tooltip title
-              label: (context) => formatValue(context.parsed.y),
+              label: (context) => formatValue(context.parsed.y ?? 0),
             },
             bodyColor: darkMode ? tooltipBodyColor.dark : tooltipBodyColor.light,
             backgroundColor: darkMode ? tooltipBgColor.dark : tooltipBgColor.light,
@@ -116,7 +116,7 @@ const BarChart01 = ({
               ul.firstChild.remove();
             }
             // Reuse the built-in legendItems generator
-            const items = c.options.plugins?.legend?.labels?.generateLabels(c);
+            const items = c.options.plugins?.legend?.labels?.generateLabels?.(c);
             items?.forEach((item) => {
               const li = document.createElement('li');
               // Button element
