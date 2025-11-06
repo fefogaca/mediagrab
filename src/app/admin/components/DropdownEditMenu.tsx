@@ -1,10 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Transition from '../utils/Transition';
 
-interface DropdownEditMenuProps {
+interface DropdownEditMenuProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
   align: 'left' | 'right';
-  [key: string]: any; // Allow any other props
 }
 
 const DropdownEditMenu = ({
@@ -40,7 +39,7 @@ const DropdownEditMenu = ({
   });
 
   return (
-    <div {...rest}>
+  <div {...rest}>
       <button
         ref={trigger}
         className={`rounded-full ${

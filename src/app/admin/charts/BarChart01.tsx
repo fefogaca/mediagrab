@@ -153,8 +153,19 @@ const BarChart01 = ({
               label.classList.add('text-gray-500', 'dark:text-gray-400');
               label.style.fontSize = '14px';
               label.style.lineHeight = 'calc(1.25 / 0.875)';
-              const theValue = (c.data.datasets[item.datasetIndex!] as any).data.reduce((a: number, b: number) => a + b, 0);
-              const valueText = document.createTextNode(formatValue(theValue));
+              const targetDataset = c.data.datasets[item.datasetIndex!];
+              const datasetValues = Array.isArray(targetDataset?.data) ? targetDataset.data : [];
+              const totalValue = datasetValues.reduce<number>((sum, entry) => {
+                if (typeof entry === 'number') {
+                  return sum + entry;
+                }
+                if (entry && typeof entry === 'object' && 'y' in entry) {
+                  const point = (entry as { y?: unknown }).y;
+                  return sum + (typeof point === 'number' ? point : 0);
+                }
+                return sum;
+              }, 0);
+              const valueText = document.createTextNode(formatValue(totalValue));
               const labelText = document.createTextNode(item.text);
               value.appendChild(valueText);
               label.appendChild(labelText);

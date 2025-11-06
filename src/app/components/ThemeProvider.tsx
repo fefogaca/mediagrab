@@ -16,14 +16,12 @@ interface ThemeProviderProps {
 }
 
 export function ThemeProvider({ children }: ThemeProviderProps) {  
-  const [theme, setTheme] = useState<string>('light');
-
-  useEffect(() => {
-    const persistedTheme = localStorage.getItem('theme');
-    if (persistedTheme) {
-      setTheme(persistedTheme);
+  const [theme, setTheme] = useState<string>(() => {
+    if (typeof window === 'undefined') {
+      return 'light';
     }
-  }, []);
+    return localStorage.getItem('theme') ?? 'light';
+  });
 
   const changeCurrentTheme = (newTheme: string) => {
     setTheme(newTheme);
@@ -31,6 +29,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   };
 
   useEffect(() => {
+    if (typeof document === 'undefined') return;
     if (theme === 'light') {
       document.body.classList.remove('dark');
       document.body.style.colorScheme = 'light';

@@ -1,4 +1,4 @@
-
+/* eslint-disable @typescript-eslint/no-require-imports */
 const { open } = require('sqlite');
 const sqlite3 = require('sqlite3');
 

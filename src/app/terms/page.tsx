@@ -6,13 +6,13 @@ const TermsOfServicePage = () => {
   return (
     <LegalPageLayout title="Terms of Service">
       <p><strong>Last updated:</strong> November 02, 2025</p>
-      <p>Please read these Terms of Service ("Terms", "Terms of Service") carefully before using the MediaGrab API (the "Service") operated by MediaGrab ("us", "we", or "our").</p>
+  <p>Please read these Terms of Service (&quot;Terms&quot;, &quot;Terms of Service&quot;) carefully before using the MediaGrab API (the &quot;Service&quot;) operated by MediaGrab (&quot;us&quot;, &quot;we&quot;, or &quot;our&quot;).</p>
       
       <h2>1. Acknowledgment</h2>
       <p>By accessing or using the Service, you agree to be bound by these Terms. If you disagree with any part of the terms, then you may not access the Service. These Terms and Conditions set out the rights and obligations of all users regarding the use of the Service.</p>
 
       <h2>2. Service Description</h2>
-      <p>The Service provides an application programming interface (API) that allows users to programmatically access information and download links for media from various third-party platforms. The functionality and availability of the Service are provided on an "as is" and "as available" basis.</p>
+  <p>The Service provides an application programming interface (API) that allows users to programmatically access information and download links for media from various third-party platforms. The functionality and availability of the Service are provided on an &quot;as is&quot; and &quot;as available&quot; basis.</p>
 
       <h2>3. Disclaimer of Affiliation</h2>
       <p>MediaGrab is an independent service and is <strong>not affiliated, associated, authorized, endorsed by, or in any way officially connected with</strong> any of the third-party platforms from which media can be accessed (e.g., YouTube, TikTok, etc.), or any of their subsidiaries or affiliates. All product and company names are trademarks™ or registered® trademarks of their respective holders. Use of them does not imply any affiliation with or endorsement by them.</p>
@@ -30,7 +30,7 @@ const TermsOfServicePage = () => {
       <p>In no event shall MediaGrab, nor its directors, employees, partners, agents, suppliers, or affiliates, be liable for any indirect, incidental, special, consequential or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses, resulting from your access to or use of or inability to access or use the Service.</p>
 
       <h2>8. Changes to These Terms</h2>
-      <p>We reserve the right, at our sole discretion, to modify or replace these Terms at any time. We will provide at least 30 days' notice prior to any new terms taking effect. What constitutes a material change will be determined at our sole discretion.</p>
+  <p>We reserve the right, at our sole discretion, to modify or replace these Terms at any time. We will provide at least 30 days&apos; notice prior to any new terms taking effect. What constitutes a material change will be determined at our sole discretion.</p>
 
       <h2>9. Contact Us</h2>
       <p>If you have any questions about these Terms, please <Link href="/contact">contact us</Link>.</p>

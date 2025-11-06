@@ -1,50 +1,120 @@
 import { NextRequest, NextResponse } from 'next/server';
 import YTDlpWrap from 'yt-dlp-wrap';
-import { Readable } from 'stream';
+import ytdl from 'ytdl-core';
+
+import { validateMediaUrl } from '@/lib/media/providers';
 
 const ytDlpWrap = new YTDlpWrap();
+const DEFAULT_FORMAT = 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best';
+
+type StreamSource = 'yt-dlp' | 'ytdl-core';
+
+interface ApiErrorBody {
+  error: {
+    code: string;
+    message: string;
+  };
+}
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
-  const url = searchParams.get('url');
-  const format = searchParams.get('format') || 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best';
+  const urlParam = searchParams.get('url');
+  const formatParam = searchParams.get('format') || DEFAULT_FORMAT;
+  const source = (searchParams.get('source') as StreamSource | null) ?? 'yt-dlp';
 
-  if (!url) {
-    return NextResponse.json({ message: 'URL is required' }, { status: 400 });
+  if (!urlParam) {
+    return NextResponse.json<ApiErrorBody>(
+      {
+        error: {
+          code: 'MISSING_URL',
+          message: 'Inclua a URL do vídeo para iniciar o download.',
+        },
+      },
+      { status: 400 },
+    );
   }
+
+  const validation = validateMediaUrl(urlParam);
+  if (!validation.ok) {
+    const status = validation.reason === 'INVALID_URL' ? 400 : 415;
+    return NextResponse.json<ApiErrorBody>(
+      {
+        error: {
+          code: validation.reason,
+          message: validation.message,
+        },
+      },
+      { status },
+    );
+  }
+
+  const url = validation.normalizedUrl;
+  const provider = validation.provider;
+  const format = formatParam;
 
   try {
-    const readableStream = ytDlpWrap.execStream([url, '-f', format, '-o', '-']);
+    if (source === 'ytdl-core' && provider.id === 'youtube') {
+      const nodeStream = ytdl(url, { quality: format });
+      const responseStream = toReadableStream(nodeStream);
 
-    const responseStream = new ReadableStream({
-      start(controller) {
-        readableStream.on('data', (chunk) => {
-          controller.enqueue(chunk);
-        });
-        readableStream.on('end', () => {
-          controller.close();
-        });
-        readableStream.on('error', (err) => {
-          console.error('Stream error:', err);
-          controller.error(err);
-        });
+      return buildStreamResponse(responseStream);
+    }
+
+    const nodeStream = ytDlpWrap.execStream([url, '-f', format, '-o', '-']);
+    const responseStream = toReadableStream(nodeStream);
+    return buildStreamResponse(responseStream);
+  } catch (primaryError) {
+    console.error('Falha no stream primário:', primaryError);
+
+    if (provider.id === 'youtube' && source !== 'ytdl-core') {
+      try {
+        const fallbackStream = ytdl(url, { quality: format });
+        const responseStream = toReadableStream(fallbackStream);
+        return buildStreamResponse(responseStream);
+      } catch (fallbackError) {
+        console.error('Falha no fallback ytdl-core:', fallbackError);
+      }
+    }
+
+    return NextResponse.json<ApiErrorBody>(
+      {
+        error: {
+          code: 'STREAM_FAILURE',
+          message: 'Não foi possível iniciar o download agora. Tente novamente mais tarde.',
+        },
       },
-    });
-
-    // Suggest a filename to the browser.
-    // We need to get video info to get a real title, for now, let's use a generic name.
-    // This can be improved later by passing the title as a query param.
-    const filename = `media-download.mp4`;
-
-    return new NextResponse(responseStream, {
-      headers: {
-        'Content-Type': 'video/mp4',
-        'Content-Disposition': `attachment; filename="${filename}"`,
-      },
-    });
-
-  } catch (error) {
-    console.error('Download failed:', error);
-    return NextResponse.json({ message: 'Download failed', error: (error as Error).message }, { status: 500 });
+      { status: 502 },
+    );
   }
+}
+
+function toReadableStream(stream: NodeJS.ReadableStream): ReadableStream<Uint8Array> {
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      stream.on('data', (chunk) => {
+        controller.enqueue(chunk);
+      });
+      stream.on('end', () => {
+        controller.close();
+      });
+      stream.on('error', (error) => {
+        controller.error(error);
+      });
+    },
+    cancel() {
+      if ('destroy' in stream && typeof stream.destroy === 'function') {
+        stream.destroy();
+      }
+    },
+  });
+}
+
+function buildStreamResponse(stream: ReadableStream<Uint8Array>) {
+  const filename = 'media-download.mp4';
+  return new NextResponse(stream, {
+    headers: {
+      'Content-Type': 'application/octet-stream',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+    },
+  });
 }

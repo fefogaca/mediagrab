@@ -23,12 +23,13 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, variant = 'default' }: SidebarPr
   const trigger = useRef<HTMLButtonElement>(null);
   const sidebar = useRef<HTMLDivElement>(null);
 
-  const [sidebarExpanded, setSidebarExpanded] = useState<boolean>(true);
-
-  useEffect(() => {
+  const [sidebarExpanded, setSidebarExpanded] = useState<boolean>(() => {
+    if (typeof window === 'undefined') {
+      return false;
+    }
     const storedSidebarExpanded = localStorage.getItem("sidebar-expanded");
-    setSidebarExpanded(storedSidebarExpanded === null ? false : storedSidebarExpanded === "true");
-  }, []);
+    return storedSidebarExpanded !== null && storedSidebarExpanded === "true";
+  });
 
   // close on click outside
   useEffect(() => {
@@ -52,11 +53,14 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, variant = 'default' }: SidebarPr
   });
 
   useEffect(() => {
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      return;
+    }
     localStorage.setItem("sidebar-expanded", sidebarExpanded.toString());
     if (sidebarExpanded) {
-      document.querySelector("body")!.classList.add("sidebar-expanded");
+      document.body.classList.add("sidebar-expanded");
     } else {
-      document.querySelector("body")!.classList.remove("sidebar-expanded");
+      document.body.classList.remove("sidebar-expanded");
     }
   }, [sidebarExpanded]);
 

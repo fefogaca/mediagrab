@@ -131,7 +131,13 @@ const LineChart02 = ({
               box.style.borderRadius = 'calc(infinity * 1px)';
               box.style.marginRight = '8px';
               box.style.borderWidth = '3px';
-              box.style.borderColor = (c.data.datasets[item.datasetIndex!] as any).borderColor as string;
+              const dataset = c.data.datasets[item.datasetIndex!];
+              const borderColor = Array.isArray(dataset?.borderColor)
+                ? dataset?.borderColor[0]
+                : dataset?.borderColor;
+              if (borderColor) {
+                box.style.borderColor = String(borderColor);
+              }
               box.style.pointerEvents = 'none';
               // Label
               const label = document.createElement('span');

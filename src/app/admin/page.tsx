@@ -1,7 +1,6 @@
 
 'use client';
 import React from 'react';
-import { useState, useEffect } from 'react';
 import DashboardCardTotalDownloads from './partials/dashboard/DashboardCardTotalDownloads';
 import DashboardCardTotalUsers from './partials/dashboard/DashboardCardTotalUsers';
 import DashboardCardTotalApiKeys from './partials/dashboard/DashboardCardTotalApiKeys';
@@ -13,11 +12,7 @@ const DynamicDashboardCardDownloadsOverTime = dynamic(() => import('./partials/d
 const DynamicDashboardCardApiKeyUsage = dynamic(() => import('./partials/dashboard/DashboardCardApiKeyUsage'), { ssr: false });
 
 function Dashboard() {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const isBrowser = typeof window !== 'undefined';
 
   return (
     <main className="grow">
@@ -32,9 +27,9 @@ function Dashboard() {
           <DashboardCardTotalUsers />
           <DashboardCardTotalApiKeys />
           <DashboardCardRecentDownloads />
-          {mounted && <DynamicDashboardCardDownloadsOverTime />}
+          {isBrowser && <DynamicDashboardCardDownloadsOverTime />}
           <DashboardCardTopUsers />
-          {mounted && <DynamicDashboardCardApiKeyUsage />}
+          {isBrowser && <DynamicDashboardCardApiKeyUsage />}
         </div>
       </div>
     </main>

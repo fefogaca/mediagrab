@@ -8,8 +8,8 @@ const PrivacyPolicyPage = () => {
       <p><strong>Last updated:</strong> November 02, 2025</p>
       <p>This Privacy Policy describes Our policies and procedures on the collection, use, and disclosure of Your information when You use the Service and tells You about Your privacy rights and how the law protects You.</p>
       
-      <h2>1. Interpretation and Definitions</h2>
-      <p>For the purposes of this Privacy Policy, terms such as "You", "We", "Service", and "Personal Data" carry specific meanings as defined herein and in our Terms of Service.</p>
+  <h2>1. Interpretation and Definitions</h2>
+  <p>For the purposes of this Privacy Policy, terms such as &quot;You&quot;, &quot;We&quot;, &quot;Service&quot;, and &quot;Personal Data&quot; carry specific meanings as defined herein and in our Terms of Service.</p>
 
       <h2>2. Collecting and Using Your Personal Data</h2>
       <h3>Types of Data Collected</h3>
@@ -22,7 +22,7 @@ const PrivacyPolicyPage = () => {
       </ul>
       
       <h4>Usage Data</h4>
-      <p>Usage Data is collected automatically when using the Service. This may include information such as Your device's IP address, browser type, browser version, the pages of our Service that You visit, the time and date of Your visit, API requests made, and other diagnostic data.</p>
+  <p>Usage Data is collected automatically when using the Service. This may include information such as Your device&apos;s IP address, browser type, browser version, the pages of our Service that You visit, the time and date of Your visit, API requests made, and other diagnostic data.</p>
 
       <h2>3. Use of Your Personal Data</h2>
       <p>The Company may use Personal Data for the following purposes:</p>
@@ -40,7 +40,7 @@ const PrivacyPolicyPage = () => {
       <p>The security of Your Personal Data is important to Us, but remember that no method of transmission over the Internet or method of electronic storage is 100% secure. While We strive to use commercially acceptable means to protect Your Personal Data, We cannot guarantee its absolute security.</p>
 
       <h2>6. Changes to this Privacy Policy</h2>
-      <p>We may update Our Privacy Policy from time to time. We will notify You of any changes by posting the new Privacy Policy on this page and updating the "Last updated" date.</p>
+  <p>We may update Our Privacy Policy from time to time. We will notify You of any changes by posting the new Privacy Policy on this page and updating the &quot;Last updated&quot; date.</p>
 
       <h2>7. Contact Us</h2>
       <p>If you have any questions about this Privacy Policy, please <Link href="/contact">contact us</Link>.</p>

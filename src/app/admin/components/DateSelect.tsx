@@ -1,10 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Transition from '../utils/Transition';
 
-interface DateSelectProps {
-  // TODO: Add any additional props here
-}
-
 const options = [
   {
     id: 0,
@@ -28,7 +24,7 @@ const options = [
   }
 ];
 
-function DateSelect(props: DateSelectProps) {
+function DateSelect() {
 
   const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
   const [selected, setSelected] = useState<number>(2);

@@ -5,34 +5,30 @@ interface DropdownFilterProps {
   align: 'left' | 'right';
 }
 
-interface CheckRefs {
-  DirectorIndirect: React.RefObject<HTMLInputElement | null>;
-  RealTimeValue: React.RefObject<HTMLInputElement | null>;
-  Topcahnnels: React.RefObject<HTMLInputElement | null>;
-  SalesRefunds: React.RefObject<HTMLInputElement | null>;
-  LastOrder: React.RefObject<HTMLInputElement | null>;
-  TotalSpent: React.RefObject<HTMLInputElement | null>;
-}
-
 const DropdownFilter = ({ align }: DropdownFilterProps) => {
   const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
 
   const trigger = useRef<HTMLButtonElement>(null);
   const dropdown = useRef<HTMLDivElement>(null);
+  const directorIndirectRef = useRef<HTMLInputElement>(null);
+  const realTimeValueRef = useRef<HTMLInputElement>(null);
+  const topChannelsRef = useRef<HTMLInputElement>(null);
+  const salesRefundsRef = useRef<HTMLInputElement>(null);
+  const lastOrderRef = useRef<HTMLInputElement>(null);
+  const totalSpentRef = useRef<HTMLInputElement>(null);
 
-  const Checkrefs: CheckRefs = {
-    DirectorIndirect: useRef<HTMLInputElement>(null),
-    RealTimeValue: useRef<HTMLInputElement>(null),
-    Topcahnnels: useRef<HTMLInputElement>(null),
-    SalesRefunds: useRef<HTMLInputElement>(null),
-    LastOrder: useRef<HTMLInputElement>(null),
-    TotalSpent: useRef<HTMLInputElement>(null),
-  };
+  const checkboxRefs: Array<React.RefObject<HTMLInputElement | null>> = [
+    directorIndirectRef,
+    realTimeValueRef,
+    topChannelsRef,
+    salesRefundsRef,
+    lastOrderRef,
+    totalSpentRef,
+  ];
 
   const handleFilters = () => {
-    Object.keys(Checkrefs).forEach((key) => {
-      const ref = Checkrefs[key as keyof CheckRefs];
-      if (ref.current && ref.current.checked) {
+    checkboxRefs.forEach((ref) => {
+      if (ref.current) {
         ref.current.checked = false;
       }
     });
@@ -107,7 +103,7 @@ const DropdownFilter = ({ align }: DropdownFilterProps) => {
             <li className="py-1 px-3">
               <label className="flex items-center">
                 <input
-                  ref={Checkrefs.DirectorIndirect}
+                  ref={directorIndirectRef}
                   type="checkbox"
                   className="form-checkbox"
                 />
@@ -119,7 +115,7 @@ const DropdownFilter = ({ align }: DropdownFilterProps) => {
             <li className="py-1 px-3">
               <label className="flex items-center">
                 <input
-                  ref={Checkrefs.RealTimeValue}
+                  ref={realTimeValueRef}
                   type="checkbox"
                   className="form-checkbox"
                 />
@@ -131,7 +127,7 @@ const DropdownFilter = ({ align }: DropdownFilterProps) => {
             <li className="py-1 px-3">
               <label className="flex items-center">
                 <input
-                  ref={Checkrefs.Topcahnnels}
+                  ref={topChannelsRef}
                   type="checkbox"
                   className="form-checkbox"
                 />
@@ -141,7 +137,7 @@ const DropdownFilter = ({ align }: DropdownFilterProps) => {
             <li className="py-1 px-3">
               <label className="flex items-center">
                 <input
-                  ref={Checkrefs.SalesRefunds}
+                  ref={salesRefundsRef}
                   type="checkbox"
                   className="form-checkbox"
                 />
@@ -153,7 +149,7 @@ const DropdownFilter = ({ align }: DropdownFilterProps) => {
             <li className="py-1 px-3">
               <label className="flex items-center">
                 <input
-                  ref={Checkrefs.LastOrder}
+                  ref={lastOrderRef}
                   type="checkbox"
                   className="form-checkbox"
                 />
@@ -163,7 +159,7 @@ const DropdownFilter = ({ align }: DropdownFilterProps) => {
             <li className="py-1 px-3">
               <label className="flex items-center">
                 <input
-                  ref={Checkrefs.TotalSpent}
+                  ref={totalSpentRef}
                   type="checkbox"
                   className="form-checkbox"
                 />
