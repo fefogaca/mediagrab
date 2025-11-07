@@ -195,26 +195,26 @@ export default function Home() {
                   <form onSubmit={handleGetLinks} className="relative group">
                     <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-600 to-sky-600 rounded-2xl blur opacity-20 group-hover:opacity-30 transition duration-300"></div>
                     <div className="relative flex flex-col sm:flex-row items-stretch gap-3 bg-white dark:bg-gray-800 rounded-2xl p-2 shadow-2xl border border-gray-200/50 dark:border-gray-700/50">
-                      <input
-                        type="url"
+                    <input
+                      type="url"
                         className="flex-1 w-full px-6 py-4 text-base sm:text-lg border-0 rounded-xl bg-gray-50 dark:bg-gray-900/50 focus:ring-2 focus:ring-violet-500 focus:bg-white dark:focus:bg-gray-900 dark:text-gray-200 placeholder:text-gray-400 dark:placeholder:text-gray-500 transition-all"
-                        value={url}
-                        onChange={(e) => setUrl(e.target.value)}
-                        required
+                      value={url}
+                      onChange={(e) => setUrl(e.target.value)}
+                      required
                         placeholder="Cole aqui o link do vídeo (YouTube, Instagram, TikTok, X, etc.)"
-                      />
-                      <button
-                        type="submit"
+                    />
+                    <button
+                      type="submit"
                         className="group/btn relative inline-flex items-center justify-center px-8 py-4 font-semibold text-white bg-gradient-to-r from-violet-600 to-sky-600 rounded-xl shadow-lg shadow-violet-500/30 hover:shadow-xl hover:shadow-violet-500/40 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-violet-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:scale-105 active:scale-95 overflow-hidden"
-                        disabled={loading}
-                      >
+                      disabled={loading}
+                    >
                         <span className="relative z-10 flex items-center gap-2">
-                          {loading ? (
+                      {loading ? (
                             <>
-                              <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                              </svg>
+                        <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
                               <span>Processando...</span>
                             </>
                           ) : (
@@ -227,7 +227,7 @@ export default function Home() {
                           )}
                         </span>
                         <div className="absolute inset-0 bg-gradient-to-r from-violet-700 to-sky-700 opacity-0 group-hover/btn:opacity-100 transition-opacity"></div>
-                      </button>
+                    </button>
                     </div>
                   </form>
                   {status.type !== 'idle' && status.message && (
@@ -259,7 +259,7 @@ export default function Home() {
 
           {/* Features Section */}
           <section className="w-full py-16 md:py-24 bg-gradient-to-b from-transparent via-gray-50/50 to-gray-100 dark:via-gray-800/50 dark:to-gray-900">
-            <div className="container mx-auto px-4 md:px-6">
+              <div className="container mx-auto px-4 md:px-6">
               <div className="text-center mb-16 space-y-4">
                 <div className="inline-block">
                   <span className="px-4 py-2 rounded-full bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 text-sm font-medium border border-violet-200 dark:border-violet-800">
@@ -324,8 +324,8 @@ export default function Home() {
                   <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-3">Fácil Integração</h3>
                   <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
                     API RESTful simples e intuitiva. Documentação completa com exemplos práticos.
-                  </p>
-                </div>
+                        </p>
+                      </div>
 
                 {/* Feature 5 */}
                 <div className="group bg-white dark:bg-gray-800 rounded-2xl p-8 border border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105 hover:-translate-y-1">
@@ -338,7 +338,7 @@ export default function Home() {
                   <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
                     Mantemos a API sempre atualizada para suportar as últimas mudanças das plataformas.
                   </p>
-                </div>
+                      </div>
 
                 {/* Feature 6 */}
                 <div className="group bg-white dark:bg-gray-800 rounded-2xl p-8 border border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105 hover:-translate-y-1">
@@ -346,15 +346,15 @@ export default function Home() {
                     <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                     </svg>
-                  </div>
+                    </div>
                   <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-3">Métricas Detalhadas</h3>
                   <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
                     Dashboard completo com estatísticas de uso, downloads e performance da sua API.
                   </p>
                 </div>
+                </div>
               </div>
-            </div>
-          </section>
+            </section>
         </main>
 
         {/* Footer */}
@@ -440,14 +440,14 @@ function FeedbackDialog({ title, message, onClose }: FeedbackDialogProps) {
           <div className="flex-1">
             <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">{title}</h3>
             <p className="mt-2 text-sm text-gray-600 dark:text-gray-300 leading-relaxed">{message}</p>
-            <div className="mt-6 flex justify-end">
-              <button
-                type="button"
-                onClick={onClose}
+        <div className="mt-6 flex justify-end">
+          <button
+            type="button"
+            onClick={onClose}
                 className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-violet-600 to-sky-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-500/30 transition-all hover:shadow-xl hover:shadow-violet-500/40 hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2"
-              >
-                Entendi
-              </button>
+          >
+            Entendi
+          </button>
             </div>
           </div>
         </div>

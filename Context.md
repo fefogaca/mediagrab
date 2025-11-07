@@ -446,6 +446,9 @@ npm run clean:all    # Limpar tudo (incluindo node_modules)
   - `JWT_SECRET` - Secret para JWT
   - `NEXT_PUBLIC_API_BASE_URL` - URL base da API
   - `NEXT_PUBLIC_WEB_BASE_URL` - URL base da aplicação web
+  - `INSTAGRAM_APP_ID` - App ID utilizado nos cabeçalhos do Instagram (default: `936619743392459`)
+  - `INSTAGRAM_COOKIES_PATH` - Caminho para arquivo de cookies do Instagram (formato Netscape) usado pelo yt-dlp
+  - `YOUTUBE_COOKIES_PATH` - Caminho para arquivo de cookies do YouTube (formato Netscape) usado pelo yt-dlp
   - Outras variáveis opcionais documentadas
 
 ### 2024-12-19 - Dashboard de Usuário e Melhorias de Erros
@@ -493,6 +496,7 @@ npm run clean:all    # Limpar tudo (incluindo node_modules)
     - `best[ext=mp4]`, `best[ext=webm]`
     - `bestvideo[ext=mp4]+bestaudio[ext=m4a]/best`
     - `bestvideo[height<=1080]`, `bestvideo[height<=720]`, `bestvideo[height<=480]`, `bestvideo[height<=360]`
+  - **Cookies Opcionais:** Caso `INSTAGRAM_COOKIES_PATH` ou `YOUTUBE_COOKIES_PATH` estejam configuradas, os arquivos (formato Netscape) são enviados ao yt-dlp para requisições autenticadas
   - Tratamento especial: qualquer erro do Instagram dispara o fallback completo
 - ✅ **Logs Detalhados:** Cada tentativa de fallback é logada para debugging
 - ✅ **Tratamento de Erros:** Erros de formato não disponível são detectados e tratados corretamente
@@ -653,6 +657,9 @@ Criar `.env.local`:
 ```
 JWT_SECRET=your_super_secret_jwt_key
 NEXT_PUBLIC_API_BASE_URL=http://localhost:3000
+INSTAGRAM_APP_ID=936619743392459
+INSTAGRAM_COOKIES_PATH=private/instagram_cookies.txt
+YOUTUBE_COOKIES_PATH=private/youtube_cookies.txt
 ```
 
 ---

@@ -1,12 +1,39 @@
 import YTDlpWrap from 'yt-dlp-wrap';
 import ytdlCore from 'ytdl-core';
 import type { videoFormat } from 'ytdl-core';
+import fs from 'fs';
+import path from 'path';
 
 import {
   detectMediaProvider,
   type MediaProvider,
   type MediaProviderId,
 } from '../media/providers';
+
+const DEFAULT_INSTAGRAM_COOKIES = path.resolve(process.cwd(), 'private/instagram_cookies.txt');
+const DEFAULT_YOUTUBE_COOKIES = path.resolve(process.cwd(), 'private/youtube_cookies.txt');
+
+function configureCookies(envPath: string | undefined, defaultPath: string) {
+  const cookiesPath = envPath
+    ? path.resolve(process.cwd(), envPath)
+    : defaultPath;
+  const hasCookies = fs.existsSync(cookiesPath);
+  return { cookiesPath, hasCookies };
+}
+
+function getInstagramConfig() {
+  const appId = process.env.INSTAGRAM_APP_ID || '936619743392459';
+  const { cookiesPath, hasCookies } = configureCookies(process.env.INSTAGRAM_COOKIES_PATH, DEFAULT_INSTAGRAM_COOKIES);
+  return {
+    appId,
+    cookiesPath,
+    hasCookies,
+  };
+}
+
+function getYoutubeCookiesConfig() {
+  return configureCookies(process.env.YOUTUBE_COOKIES_PATH, DEFAULT_YOUTUBE_COOKIES);
+}
 
 export type MediaLibrarySource = 'yt-dlp' | 'ytdl-core';
 
@@ -67,12 +94,31 @@ function getYtDlpOptions(providerId: MediaProviderId): string[] {
   
   // Configurações específicas por plataforma (apenas as essenciais)
   switch (providerId) {
-    case 'youtube':
+    case 'youtube': {
+      const { cookiesPath, hasCookies } = getYoutubeCookiesConfig();
       options.push('--extractor-args', 'youtube:player_client=android,web');
+      if (hasCookies) {
+        console.log('YouTube (resolver): usando cookies em', cookiesPath);
+        options.push('--cookies', cookiesPath);
+      } else {
+        console.warn('YouTube (resolver): Nenhum arquivo de cookies encontrado em', cookiesPath);
+      }
       break;
-    case 'instagram':
-      // Instagram funciona melhor sem opções extras
+    }
+    case 'instagram': {
+      const { appId, cookiesPath, hasCookies } = getInstagramConfig();
+      options.push('--extractor-args', `instagram:app_id=${appId}`);
+      options.push('--add-header', `X-IG-App-ID: ${appId}`);
+      options.push('--add-header', 'Origin: https://www.instagram.com');
+      options.push('--add-header', 'Referer: https://www.instagram.com/');
+      options.push('--add-header', 'Accept-Language: en-US,en;q=0.9');
+      if (hasCookies) {
+        options.push('--cookies', cookiesPath);
+      } else {
+        console.warn('Instagram (resolver): Nenhum arquivo de cookies encontrado em', cookiesPath);
+      }
       break;
+    }
     case 'tiktok':
       // TikTok funciona melhor sem opções extras
       break;
@@ -176,35 +222,35 @@ async function fetchWithYtDlp(url: string, providerId: MediaProviderId): Promise
   // Primeiro tentar com getVideoInfo (método mais confiável e simples)
   // Se falhar, tentar com opções customizadas via execPromise
   try {
-    const videoInfo = await ytDlpWrap.getVideoInfo(url);
-    const { title, formats } = videoInfo;
+  const videoInfo = await ytDlpWrap.getVideoInfo(url);
+  const { title, formats } = videoInfo;
 
-    const processedFormats = formats
-      .filter((format: YtDlpFormat) => {
-        const hasVideo = format.vcodec && format.vcodec !== 'none';
-        const hasAudio = format.acodec && format.acodec !== 'none';
-        return hasVideo || hasAudio;
-      })
-      .map((format: YtDlpFormat): RawFormat => ({
-        format_id: String(format.format_id ?? format.format ?? ''),
-        ext: format.ext ?? 'mp4',
-        resolution:
-          format.resolution ||
-          (format.acodec !== 'none' && format.vcodec === 'none'
-            ? 'Áudio'
-            : format.vcodec !== 'none' && format.acodec === 'none'
-              ? 'Vídeo'
-              : 'Desconhecido'),
-        quality: format.quality || format.format_note || null,
-        vcodec: format.vcodec || 'none',
-        acodec: format.acodec || 'none',
-        filesize_approx: format.filesize || format.filesize_approx,
-      }));
+  const processedFormats = formats
+    .filter((format: YtDlpFormat) => {
+      const hasVideo = format.vcodec && format.vcodec !== 'none';
+      const hasAudio = format.acodec && format.acodec !== 'none';
+      return hasVideo || hasAudio;
+    })
+    .map((format: YtDlpFormat): RawFormat => ({
+      format_id: String(format.format_id ?? format.format ?? ''),
+      ext: format.ext ?? 'mp4',
+      resolution:
+        format.resolution ||
+        (format.acodec !== 'none' && format.vcodec === 'none'
+          ? 'Áudio'
+          : format.vcodec !== 'none' && format.acodec === 'none'
+            ? 'Vídeo'
+            : 'Desconhecido'),
+      quality: format.quality || format.format_note || null,
+      vcodec: format.vcodec || 'none',
+      acodec: format.acodec || 'none',
+      filesize_approx: format.filesize || format.filesize_approx,
+    }));
 
-    return {
-      title,
-      formats: processedFormats,
-    };
+  return {
+    title,
+    formats: processedFormats,
+  };
   } catch (error) {
     // Se getVideoInfo falhar, tentar com opções customizadas via execPromise
     const errorMessage = error instanceof Error ? error.message : String(error);

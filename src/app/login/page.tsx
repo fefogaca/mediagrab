@@ -78,7 +78,7 @@ const LoginPage = () => {
       const { role } = data;
       // Redirecionar baseado no role
       if (role === 'admin') {
-        router.push('/admin');
+      router.push('/admin');
       } else {
         router.push('/dashboard');
       }

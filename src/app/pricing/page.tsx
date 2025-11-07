@@ -149,7 +149,7 @@ const PricingPage = () => {
                           Gerando...
                         </span>
                       ) : tier.cta}
-                    </button>
+                </button>
                   ) : (
                     <Link 
                       href={tier.href}
@@ -162,7 +162,7 @@ const PricingPage = () => {
                       {tier.cta}
                     </Link>
                   )}
-                  {tier.name === 'Developer' && apiKey && (
+                {tier.name === 'Developer' && apiKey && (
                     <div className="mt-4 p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-200 dark:border-emerald-800">
                       <div className="flex items-center justify-between mb-2">
                         <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">Sua API Key:</p>
@@ -193,13 +193,13 @@ const PricingPage = () => {
                       >
                         {apiKey}
                       </button>
-                    </div>
-                  )}
-                  {tier.name === 'Developer' && error && (
+                  </div>
+                )}
+                {tier.name === 'Developer' && error && (
                     <div className="mt-4 p-4 bg-rose-50 dark:bg-rose-900/20 rounded-xl border border-rose-200 dark:border-rose-800">
                       <p className="text-sm text-rose-800 dark:text-rose-200">{error}</p>
-                    </div>
-                  )}
+                  </div>
+                )}
                 </div>
               </div>
             ))}

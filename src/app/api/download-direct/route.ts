@@ -1,10 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server';
 import YTDlpWrap from 'yt-dlp-wrap';
 import ytdl from 'ytdl-core';
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
+import { randomUUID } from 'crypto';
 
 import { validateMediaUrl } from '@/lib/media/providers';
 
 import { detectMediaProvider, type MediaProviderId } from '@/lib/media/providers';
+
+const DEFAULT_INSTAGRAM_COOKIES = path.resolve(process.cwd(), 'private/instagram_cookies.txt');
+const DEFAULT_YOUTUBE_COOKIES = path.resolve(process.cwd(), 'private/youtube_cookies.txt');
+
+function configureCookies(envPath: string | undefined, defaultPath: string) {
+  const cookiesPath = envPath
+    ? path.resolve(process.cwd(), envPath)
+    : defaultPath;
+  const hasCookies = fs.existsSync(cookiesPath);
+  return { cookiesPath, hasCookies };
+}
+
+function getInstagramConfig() {
+  const appId = process.env.INSTAGRAM_APP_ID || '936619743392459';
+  const { cookiesPath, hasCookies } = configureCookies(process.env.INSTAGRAM_COOKIES_PATH, DEFAULT_INSTAGRAM_COOKIES);
+  return {
+    appId,
+    cookiesPath,
+    hasCookies,
+  };
+}
+
+function getYoutubeCookiesConfig() {
+  return configureCookies(process.env.YOUTUBE_COOKIES_PATH, DEFAULT_YOUTUBE_COOKIES);
+}
 
 const ytDlpWrap = new YTDlpWrap();
 const DEFAULT_FORMAT = 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best';
@@ -31,12 +60,32 @@ function getYtDlpOptions(providerId: MediaProviderId): string[] {
   
   // Configurações específicas por plataforma (apenas as essenciais)
   switch (providerId) {
-    case 'youtube':
+    case 'youtube': {
+      const { cookiesPath, hasCookies } = getYoutubeCookiesConfig();
       options.push('--extractor-args', 'youtube:player_client=android,web');
+      if (hasCookies) {
+        console.log('YouTube: usando cookies em', cookiesPath);
+        options.push('--cookies', cookiesPath);
+      } else {
+        console.warn('YouTube: Nenhum arquivo de cookies encontrado em', cookiesPath);
+      }
       break;
-    case 'instagram':
-      // Instagram funciona melhor sem opções extras
+    }
+    case 'instagram': {
+      const { appId, cookiesPath, hasCookies } = getInstagramConfig();
+      options.push('--extractor-args', `instagram:app_id=${appId}`);
+      options.push('--add-header', `X-IG-App-ID: ${appId}`);
+      options.push('--add-header', 'Origin: https://www.instagram.com');
+      options.push('--add-header', 'Referer: https://www.instagram.com/');
+      options.push('--add-header', 'Accept-Language: en-US,en;q=0.9');
+      if (hasCookies) {
+        console.log('Instagram: usando cookies em', cookiesPath);
+        options.push('--cookies', cookiesPath);
+      } else {
+        console.warn('Instagram: Nenhum arquivo de cookies encontrado em', cookiesPath);
+      }
       break;
+    }
     case 'tiktok':
       // TikTok funciona melhor sem opções extras
       break;
@@ -110,6 +159,65 @@ export async function GET(request: NextRequest) {
     );
   };
 
+  if (provider.id === 'instagram') {
+    const formatsToTry = Array.from(
+      new Set(
+        [format, DEFAULT_FORMAT, 'bestvideo+bestaudio/best', 'best[ext=mp4]/best', 'best']
+          .filter(Boolean),
+      ),
+    );
+
+    for (const candidateFormat of formatsToTry) {
+      try {
+        console.log(`Instagram: tentando baixar formato ${candidateFormat} para ${url}...`);
+        const { filePath, filename, cleanup } = await downloadToTempFile(url, candidateFormat, provider.id);
+        try {
+          const stats = fs.statSync(filePath);
+          const fileStream = fs.createReadStream(filePath);
+          const responseStream = toReadableStream(fileStream);
+          const response = buildStreamResponse(responseStream, filename, stats.size);
+
+          const cleanupOnce = () => {
+            if (fs.existsSync(filePath)) {
+              try {
+                cleanup();
+              } catch (cleanupError) {
+                console.warn('Instagram: falha ao limpar arquivo temporário', cleanupError);
+              }
+            }
+          };
+
+          fileStream.on('end', cleanupOnce);
+          fileStream.on('error', cleanupOnce);
+
+          return response;
+        } catch (streamError) {
+          console.error('Instagram: falha ao enviar arquivo temporário:', streamError);
+          cleanup();
+        }
+      } catch (candidateError) {
+        if (isFormatNotAvailableError(candidateError)) {
+          console.log(`Instagram: formato ${candidateFormat} não disponível, tentando próximo...`);
+          continue;
+        }
+        console.error(`Instagram: erro ao baixar formato ${candidateFormat}:`, candidateError);
+        continue;
+      }
+    }
+
+    return NextResponse.json<ApiErrorBody>(
+      {
+        error: {
+          code: 'STREAM_FAILURE',
+          message: 'Não foi possível iniciar o download agora. O formato solicitado pode não estar disponível. Tente novamente mais tarde.',
+        },
+      },
+      { status: 502 },
+    );
+  }
+
+  // Para outros provedores, manter fluxo existente
+
   try {
     if (source === 'ytdl-core' && provider.id === 'youtube') {
       const nodeStream = ytdl(url, { quality: format });
@@ -122,81 +230,23 @@ export async function GET(request: NextRequest) {
     // Tentar o formato solicitado primeiro
     try {
       const nodeStream = ytDlpWrap.execStream([...options, url, '-f', format, '-o', '-']);
-      
-      // Para Instagram e YouTube, verificar se o stream falha imediatamente
-      // Aguardar o primeiro chunk ou erro antes de retornar a resposta
-      if (provider.id === 'instagram' || provider.id === 'youtube') {
-        const streamCheck = await new Promise<{ success: boolean; error?: Error }>((resolve) => {
-          let hasData = false;
-          let streamError: Error | null = null;
-          let timeout: NodeJS.Timeout;
-          let resolved = false;
-          
-          const cleanup = () => {
-            if (resolved) return;
-            resolved = true;
-            try {
-              nodeStream.removeListener('data', onData);
-              nodeStream.removeListener('error', onError);
-              nodeStream.removeListener('close', onClose);
-              clearTimeout(timeout);
-            } catch (e) {
-              // Ignorar erros de cleanup
-            }
-          };
-          
-          const onData = (chunk: any) => {
-            if (resolved) return;
-            hasData = true;
-            cleanup();
-            resolve({ success: true });
-          };
-          
-          const onError = (error: Error) => {
-            if (resolved) return;
-            streamError = error;
-            cleanup();
-            resolve({ success: false, error });
-          };
-          
-          const onClose = () => {
-            if (resolved) return;
-            if (!hasData && !streamError) {
-              // Stream fechou sem dados nem erro - pode ser um problema
-              cleanup();
-              resolve({ success: false, error: new Error('Stream closed without data') });
-            }
-          };
-          
-          nodeStream.once('data', onData);
-          nodeStream.once('error', onError);
-          nodeStream.once('close', onClose);
-          
-          // Timeout aumentado para 2000ms para detectar erros do yt-dlp
-          timeout = setTimeout(() => {
-            if (!resolved) {
-              if (!hasData && !streamError) {
-                cleanup();
-                // Se não recebeu dados nem erro em 2s, pode ser um problema, mas tentar continuar
-                resolve({ success: true });
-              }
-            }
-          }, 2000);
-        });
-        
-        if (!streamCheck.success && streamCheck.error) {
-          const errorMsg = streamCheck.error.message || String(streamCheck.error);
-          console.log(`[${provider.id}] Erro detectado no stream, acionando fallback:`, errorMsg);
-          throw streamCheck.error;
-        }
-      }
-      
       const responseStream = toReadableStream(nodeStream);
       return buildStreamResponse(responseStream);
     } catch (streamError) {
-      // Para Instagram e YouTube, sempre tentar fallback se houver qualquer erro
-      if (provider.id === 'instagram' || provider.id === 'youtube') {
-        console.log(`[${provider.id}] Erro no stream primário, acionando fallback:`, streamError);
+      // Capturar e tratar todos os erros
+      const errorMessage = streamError instanceof Error ? streamError.message : String(streamError);
+      const errorCause = (streamError as any)?.cause;
+      const errorStderr = (streamError as any)?.stderr || '';
+      
+      console.log(`[${provider.id}] Erro capturado no stream primário:`, {
+        message: errorMessage,
+        cause: errorCause ? String(errorCause) : undefined,
+        stderr: errorStderr || undefined,
+      });
+      
+      // Para YouTube, sempre tentar fallback se houver qualquer erro
+      if (provider.id === 'youtube') {
+        console.log(`[${provider.id}] Acionando fallback...`);
         throw new Error('FORMAT_NOT_AVAILABLE');
       }
       // Se for erro de formato não disponível, lançar para o catch externo tratar
@@ -226,103 +276,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Para Instagram, sempre tentar múltiplos fallbacks quando houver erro
-    if (provider.id === 'instagram') {
-      try {
-        console.log('Tentando formatos alternativos para Instagram...');
-        const options = getYtDlpOptions(provider.id);
-        // Lista extensa de formatos para tentar
-        const fallbackFormats = [
-          'best',
-          'bestvideo+bestaudio/best',
-          'bestvideo/best',
-          'bestaudio/best',
-          'worst',
-          'worstvideo+worstaudio/worst',
-          'best[ext=mp4]',
-          'best[ext=webm]',
-          'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best',
-          'bestvideo[height<=1080]',
-          'bestvideo[height<=720]',
-          'bestvideo[height<=480]',
-          'bestvideo[height<=360]',
-        ];
-        
-        for (const fallbackFormat of fallbackFormats) {
-          try {
-            console.log(`Instagram: Tentando formato ${fallbackFormat}...`);
-            const nodeStream = ytDlpWrap.execStream([...options, url, '-f', fallbackFormat, '-o', '-']);
-            
-            // Verificar se o stream falha imediatamente
-            const streamCheck = await new Promise<{ success: boolean; error?: Error }>((resolve) => {
-              let hasData = false;
-              let streamError: Error | null = null;
-              let timeout: NodeJS.Timeout;
-              let resolved = false;
-              
-              const cleanup = () => {
-                if (resolved) return;
-                resolved = true;
-                try {
-                  nodeStream.removeListener('data', onData);
-                  nodeStream.removeListener('error', onError);
-                  clearTimeout(timeout);
-                } catch (e) {
-                  // Ignorar erros de cleanup
-                }
-              };
-              
-              const onData = () => {
-                if (resolved) return;
-                hasData = true;
-                cleanup();
-                resolve({ success: true });
-              };
-              
-              const onError = (error: Error) => {
-                if (resolved) return;
-                streamError = error;
-                cleanup();
-                resolve({ success: false, error });
-              };
-              
-              nodeStream.once('data', onData);
-              nodeStream.once('error', onError);
-              
-              timeout = setTimeout(() => {
-                if (!resolved) {
-                  if (!hasData && !streamError) {
-                    cleanup();
-                    resolve({ success: true });
-                  }
-                }
-              }, 2000);
-            });
-            
-            if (!streamCheck.success && streamCheck.error) {
-              console.log(`Instagram: Formato ${fallbackFormat} falhou:`, streamCheck.error.message);
-              continue;
-            }
-            
-            const responseStream = toReadableStream(nodeStream);
-            return buildStreamResponse(responseStream);
-          } catch (formatError) {
-            // Verificar se é erro de formato não disponível
-            if (isFormatNotAvailableError(formatError)) {
-              console.log(`Instagram: Formato ${fallbackFormat} não disponível, tentando próximo...`);
-              continue;
-            }
-            // Se for outro erro, pode ser um problema temporário, tentar próximo formato
-            console.log(`Instagram: Formato ${fallbackFormat} falhou com erro diferente, tentando próximo...`);
-            continue;
-          }
-        }
-      } catch (instagramFallbackError) {
-        console.error('Falha no fallback do Instagram:', instagramFallbackError);
-      }
-    }
-
-    // Para YouTube (incluindo Shorts), sempre tentar múltiplos fallbacks quando houver erro
+    // Para YouTube (incluindo Shorts), tentar múltiplos fallbacks
     if (provider.id === 'youtube') {
       try {
         // Primeiro tentar ytdl-core se ainda não tentou
@@ -354,58 +308,6 @@ export async function GET(request: NextRequest) {
           try {
             console.log(`YouTube: Tentando formato ${fallbackFormat}...`);
             const nodeStream = ytDlpWrap.execStream([...options, url, '-f', fallbackFormat, '-o', '-']);
-            
-            // Verificar se o stream falha imediatamente
-            const streamCheck = await new Promise<{ success: boolean; error?: Error }>((resolve) => {
-              let hasData = false;
-              let streamError: Error | null = null;
-              let timeout: NodeJS.Timeout;
-              let resolved = false;
-              
-              const cleanup = () => {
-                if (resolved) return;
-                resolved = true;
-                try {
-                  nodeStream.removeListener('data', onData);
-                  nodeStream.removeListener('error', onError);
-                  clearTimeout(timeout);
-                } catch (e) {
-                  // Ignorar erros de cleanup
-                }
-              };
-              
-              const onData = () => {
-                if (resolved) return;
-                hasData = true;
-                cleanup();
-                resolve({ success: true });
-              };
-              
-              const onError = (error: Error) => {
-                if (resolved) return;
-                streamError = error;
-                cleanup();
-                resolve({ success: false, error });
-              };
-              
-              nodeStream.once('data', onData);
-              nodeStream.once('error', onError);
-              
-              timeout = setTimeout(() => {
-                if (!resolved) {
-                  if (!hasData && !streamError) {
-                    cleanup();
-                    resolve({ success: true });
-                  }
-                }
-              }, 2000);
-            });
-            
-            if (!streamCheck.success && streamCheck.error) {
-              console.log(`YouTube: Formato ${fallbackFormat} falhou:`, streamCheck.error.message);
-              continue;
-            }
-            
             const responseStream = toReadableStream(nodeStream);
             return buildStreamResponse(responseStream);
           } catch (formatError) {
@@ -440,27 +342,45 @@ function toReadableStream(stream: NodeJS.ReadableStream): ReadableStream<Uint8Ar
   return new ReadableStream<Uint8Array>({
     start(controller) {
       let hasEnqueued = false;
+      let isClosed = false;
+      
+      const safeError = (error: Error) => {
+        if (isClosed) return;
+        isClosed = true;
+        try {
+          controller.error(error);
+        } catch (e) {
+          // Ignorar erros se o controller já estiver fechado ou com erro
+        }
+      };
+      
+      const safeClose = () => {
+        if (isClosed) return;
+        isClosed = true;
+        try {
+          controller.close();
+        } catch (error) {
+          // Ignorar erros se o controller já estiver fechado
+        }
+      };
       
       stream.on('data', (chunk) => {
+        if (isClosed) return;
         try {
           hasEnqueued = true;
           controller.enqueue(chunk);
         } catch (error) {
           console.error('Erro ao enfileirar chunk:', error);
-          controller.error(error);
+          safeError(error as Error);
         }
       });
       
       stream.on('end', () => {
-        try {
-          controller.close();
-        } catch (error) {
-          console.error('Erro ao fechar stream:', error);
-        }
+        safeClose();
       });
       
       stream.on('error', (error) => {
-        console.error('Erro no stream:', error);
+        // Não logar aqui pois já foi logado antes do stream ser criado
         try {
           // Verificar se é erro de formato não disponível
           const errorStr = String(error);
@@ -481,18 +401,18 @@ function toReadableStream(stream: NodeJS.ReadableStream): ReadableStream<Uint8Ar
             const formatError = new Error('FORMAT_NOT_AVAILABLE');
             (formatError as any).cause = error;
             (formatError as any).stderr = errorStderr;
-            controller.error(formatError);
+            safeError(formatError);
           } else {
-            controller.error(error);
+            safeError(error);
           }
         } catch (e) {
-          controller.error(error);
+          safeError(error);
         }
       });
       
       stream.on('close', () => {
         // Se o stream fechar sem dados, pode ser um problema
-        if (!hasEnqueued) {
+        if (!hasEnqueued && !isClosed) {
           console.warn('Stream fechou sem enviar dados');
         }
       });
@@ -503,18 +423,56 @@ function toReadableStream(stream: NodeJS.ReadableStream): ReadableStream<Uint8Ar
           stream.destroy();
         }
       } catch (error) {
-        console.error('Erro ao cancelar stream:', error);
+        // Ignorar erros ao cancelar
       }
     },
   });
 }
 
-function buildStreamResponse(stream: ReadableStream<Uint8Array>) {
-  const filename = 'media-download.mp4';
+function buildStreamResponse(stream: ReadableStream<Uint8Array>, filename = 'media-download.mp4', size?: number) {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/octet-stream',
+    'Content-Disposition': `attachment; filename="${filename}"`,
+  };
+  if (typeof size === 'number') {
+    headers['Content-Length'] = String(size);
+  }
+
   return new NextResponse(stream, {
-    headers: {
-      'Content-Type': 'application/octet-stream',
-      'Content-Disposition': `attachment; filename="${filename}"`,
-    },
+    headers,
   });
+}
+
+async function downloadToTempFile(url: string, format: string, providerId: MediaProviderId): Promise<{ filePath: string; filename: string; cleanup: () => void }> {
+  const options = getYtDlpOptions(providerId);
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), `mediagrab-${randomUUID()}-`));
+  const outputTemplate = path.join(tempDir, 'download.%(ext)s');
+  const args = [
+    ...options,
+    url,
+    '-f',
+    format,
+    '-o',
+    outputTemplate,
+    '--merge-output-format',
+    'mp4',
+    '--no-playlist',
+  ];
+
+  try {
+    await ytDlpWrap.execPromise(args);
+    const files = fs.readdirSync(tempDir).filter((file) => !file.startsWith('.'));
+    if (files.length === 0) {
+      throw new Error('Nenhum arquivo gerado pelo yt-dlp');
+    }
+    const filePath = path.join(tempDir, files[0]);
+    const filename = path.basename(filePath);
+    const cleanup = () => {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    };
+    return { filePath, filename, cleanup };
+  } catch (error) {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+    throw error;
+  }
 }

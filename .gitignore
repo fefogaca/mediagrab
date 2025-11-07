@@ -75,3 +75,5 @@ yarn-error.log*
 
 # local sqlite database
 /mydb.sqlite
+/private/instagram_cookies.txt
+/private/youtube_cookies.txt
