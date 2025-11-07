@@ -15,21 +15,42 @@ interface DecodedToken {
   role: string;
 }
 
-export async function GET(request: Request) {
+function getUserIdFromRequest(request: Request): number | null {
   try {
     const token = request.headers.get('authorization')?.split(' ')[1];
     if (!token) {
+      // Tentar pegar do cookie
+      const cookies = request.headers.get('cookie');
+      if (cookies) {
+        const tokenMatch = cookies.match(/token=([^;]+)/);
+        if (tokenMatch) {
+          const decoded = jwt.verify(tokenMatch[1], JWT_SECRET);
+          if (typeof decoded !== 'string' && 'id' in decoded) {
+            return (decoded as DecodedToken).id;
+          }
+        }
+      }
+      return null;
+    }
+    const decoded = jwt.verify(token, JWT_SECRET);
+    if (typeof decoded === 'string' || !('id' in decoded)) {
+      return null;
+    }
+    return (decoded as DecodedToken).id;
+  } catch (error) {
+    return null;
+  }
+}
+
+export async function GET(request: Request) {
+  try {
+    const userId = getUserIdFromRequest(request);
+    if (!userId) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
-    const decoded = jwt.verify(token, JWT_SECRET);
-    if (typeof decoded === 'string' || !('id' in decoded)) {
-      return NextResponse.json({ message: 'Unauthorized: Invalid token payload' }, { status: 401 });
-    }
-    const userId = (decoded as DecodedToken).id;
-
     const db = await openDb();
-    const apiKeys = await db.all('SELECT * FROM api_keys WHERE user_id = ?', userId);
+    const apiKeys = await db.all('SELECT id, key, user_id, created_at, expires_at, usage_count, usage_limit FROM api_keys WHERE user_id = ?', userId);
 
     return NextResponse.json(apiKeys, { status: 200 });
   } catch (error) {

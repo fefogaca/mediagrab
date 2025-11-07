@@ -56,7 +56,9 @@ const ModalSearch = ({
         leaveStart="opacity-100"
         leaveEnd="opacity-0"
         aria-hidden="true"
-      />
+      >
+        <div />
+      </Transition>
       {/* Modal dialog */}
       <Transition
         id={id}

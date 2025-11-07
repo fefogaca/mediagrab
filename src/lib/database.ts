@@ -38,6 +38,20 @@ export async function setupDatabase() {
       FOREIGN KEY (user_id) REFERENCES users(id),
       FOREIGN KEY (api_key_id) REFERENCES api_keys(id)
     );
+
+    CREATE TABLE IF NOT EXISTS notifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      message TEXT NOT NULL,
+      type TEXT NOT NULL DEFAULT 'info',
+      target_audience TEXT NOT NULL DEFAULT 'all',
+      target_user_id INTEGER,
+      created_by INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      read_at DATETIME,
+      FOREIGN KEY (target_user_id) REFERENCES users(id),
+      FOREIGN KEY (created_by) REFERENCES users(id)
+    );
   `);
 
   // Create a default guest user if it doesn't exist

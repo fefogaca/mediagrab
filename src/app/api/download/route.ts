@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import { appConfig, buildDownloadUrl } from '@/config/app.config';
 import { openDb } from '@/lib/database';
 import { validateMediaUrl } from '@/lib/media/providers';
 import {
@@ -140,11 +141,7 @@ function buildDownloadFormat(
   url: string,
   format: ResolvedMediaFormat,
 ) {
-  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || request.nextUrl.origin;
-  const directDownloadUrl = new URL('/api/download-direct', baseUrl);
-  directDownloadUrl.searchParams.set('url', url);
-  directDownloadUrl.searchParams.set('format', format.format_id);
-  directDownloadUrl.searchParams.set('source', format.source);
+  const downloadUrl = buildDownloadUrl(url, format.format_id, format.source);
 
   return {
     format_id: format.format_id,
@@ -155,6 +152,6 @@ function buildDownloadFormat(
     acodec: format.acodec,
     filesize_approx: format.filesize_approx,
     source: format.source,
-    download_url: directDownloadUrl.toString(),
+    download_url: downloadUrl,
   };
 }

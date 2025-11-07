@@ -42,7 +42,12 @@ export async function POST(request: Request) {
       role || 'user' // Default role to 'user' if not provided
     );
 
-    return NextResponse.json({ message: 'User created successfully', userId: result.lastID }, { status: 201 });
+    return NextResponse.json({ 
+      message: 'User created successfully', 
+      userId: result.lastID,
+      username: username,
+      role: role || 'user'
+    }, { status: 201 });
   } catch (error) {
     console.error('Failed to create user:', error);
     return NextResponse.json({ message: 'Failed to create user', error: (error as Error).message }, { status: 500 });

@@ -15,18 +15,39 @@ interface DecodedToken {
   role: string;
 }
 
-export async function GET(request: Request) {
+function getUserIdFromRequest(request: Request): number | null {
   try {
     const token = request.headers.get('authorization')?.split(' ')[1];
     if (!token) {
-      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+      // Tentar pegar do cookie
+      const cookies = request.headers.get('cookie');
+      if (cookies) {
+        const tokenMatch = cookies.match(/token=([^;]+)/);
+        if (tokenMatch) {
+          const decoded = jwt.verify(tokenMatch[1], JWT_SECRET);
+          if (typeof decoded !== 'string' && 'id' in decoded) {
+            return (decoded as DecodedToken).id;
+          }
+        }
+      }
+      return null;
     }
-
     const decoded = jwt.verify(token, JWT_SECRET);
     if (typeof decoded === 'string' || !('id' in decoded)) {
-      return NextResponse.json({ message: 'Unauthorized: Invalid token payload' }, { status: 401 });
+      return null;
     }
-    const userId = (decoded as DecodedToken).id;
+    return (decoded as DecodedToken).id;
+  } catch (error) {
+    return null;
+  }
+}
+
+export async function GET(request: Request) {
+  try {
+    const userId = getUserIdFromRequest(request);
+    if (!userId) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
 
     const db = await openDb();
     const { totalDownloads } = await db.get('SELECT COUNT(*) as totalDownloads FROM download_logs WHERE user_id = ?', userId);

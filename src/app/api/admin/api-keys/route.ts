@@ -5,7 +5,22 @@ import { v4 as uuidv4 } from 'uuid';
 export async function GET() {
   try {
     const db = await openDb();
-    const apiKeys = await db.all('SELECT id, key, user_id, created_at, expires_at FROM api_keys');
+    // Buscar API keys com informações do usuário
+    const apiKeys = await db.all(`
+      SELECT 
+        ak.id, 
+        ak.key, 
+        ak.user_id, 
+        ak.created_at, 
+        ak.expires_at,
+        ak.usage_count,
+        ak.usage_limit,
+        u.username,
+        u.role
+      FROM api_keys ak
+      LEFT JOIN users u ON ak.user_id = u.id
+      ORDER BY ak.created_at DESC
+    `);
     return NextResponse.json(apiKeys, { status: 200 });
   } catch (error) {
     console.error('Failed to fetch API keys:', error);
