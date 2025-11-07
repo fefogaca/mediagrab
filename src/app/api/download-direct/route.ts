@@ -5,6 +5,8 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { randomUUID } from 'crypto';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
 
 import { validateMediaUrl } from '@/lib/media/providers';
 
@@ -37,6 +39,8 @@ function getYoutubeCookiesConfig() {
 
 const ytDlpWrap = new YTDlpWrap();
 const DEFAULT_FORMAT = 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best';
+const PROVIDERS_REQUIRING_MERGE: MediaProviderId[] = ['instagram', 'twitter'];
+const execFileAsync = promisify(execFile);
 
 // User agents modernos para evitar detecção
 const USER_AGENTS = {
@@ -159,17 +163,27 @@ export async function GET(request: NextRequest) {
     );
   };
 
-  if (provider.id === 'instagram') {
-    const formatsToTry = Array.from(
-      new Set(
-        [format, DEFAULT_FORMAT, 'bestvideo+bestaudio/best', 'best[ext=mp4]/best', 'best']
-          .filter(Boolean),
-      ),
-    );
+  const requiresTempDownload = PROVIDERS_REQUIRING_MERGE.includes(provider.id);
+
+  if (requiresTempDownload) {
+    const baseFormats = [
+      format,
+      DEFAULT_FORMAT,
+      'bestvideo+bestaudio/best',
+      'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+      'best[ext=mp4]/best',
+      'best',
+    ];
+
+    const twitterSpecificFormats = provider.id === 'twitter'
+      ? ['bv*+ba/b', 'bv*+ba/best', 'bestvideo+bestaudio']
+      : [];
+
+    const formatsToTry = Array.from(new Set([...baseFormats, ...twitterSpecificFormats].filter(Boolean)));
 
     for (const candidateFormat of formatsToTry) {
       try {
-        console.log(`Instagram: tentando baixar formato ${candidateFormat} para ${url}...`);
+        console.log(`${provider.id}: tentando baixar formato ${candidateFormat} para ${url}...`);
         const { filePath, filename, cleanup } = await downloadToTempFile(url, candidateFormat, provider.id);
         try {
           const stats = fs.statSync(filePath);
@@ -182,7 +196,7 @@ export async function GET(request: NextRequest) {
               try {
                 cleanup();
               } catch (cleanupError) {
-                console.warn('Instagram: falha ao limpar arquivo temporário', cleanupError);
+                console.warn(`${provider.id}: falha ao limpar arquivo temporário`, cleanupError);
               }
             }
           };
@@ -192,15 +206,21 @@ export async function GET(request: NextRequest) {
 
           return response;
         } catch (streamError) {
-          console.error('Instagram: falha ao enviar arquivo temporário:', streamError);
+          console.error(`${provider.id}: falha ao enviar arquivo temporário:`, streamError);
           cleanup();
         }
       } catch (candidateError) {
-        if (isFormatNotAvailableError(candidateError)) {
-          console.log(`Instagram: formato ${candidateFormat} não disponível, tentando próximo...`);
+        const errorMessage = candidateError instanceof Error ? candidateError.message : String(candidateError);
+        if (errorMessage === 'AUDIO_NOT_FOUND') {
+          console.log(`${provider.id}: arquivo gerado sem trilha de áudio, tentando próximo formato...`);
           continue;
         }
-        console.error(`Instagram: erro ao baixar formato ${candidateFormat}:`, candidateError);
+
+        if (isFormatNotAvailableError(candidateError)) {
+          console.log(`${provider.id}: formato ${candidateFormat} não disponível, tentando próximo...`);
+          continue;
+        }
+        console.error(`${provider.id}: erro ao baixar formato ${candidateFormat}:`, candidateError);
         continue;
       }
     }
@@ -443,6 +463,30 @@ function buildStreamResponse(stream: ReadableStream<Uint8Array>, filename = 'med
   });
 }
 
+async function fileHasAudioTrack(filePath: string): Promise<boolean> {
+  const ffprobeBinary = process.env.FFPROBE_PATH || 'ffprobe';
+  try {
+    const { stdout } = await execFileAsync(ffprobeBinary, [
+      '-v',
+      'error',
+      '-select_streams',
+      'a',
+      '-show_entries',
+      'stream=codec_type',
+      '-of',
+      'json',
+      filePath,
+    ]);
+
+    const parsed = JSON.parse(stdout || '{}');
+    const streams = Array.isArray(parsed?.streams) ? parsed.streams : [];
+    return streams.length > 0;
+  } catch (error) {
+    console.warn('ffprobe não pôde verificar as faixas de áudio; assumindo que o arquivo possui áudio.', error);
+    return true;
+  }
+}
+
 async function downloadToTempFile(url: string, format: string, providerId: MediaProviderId): Promise<{ filePath: string; filename: string; cleanup: () => void }> {
   const options = getYtDlpOptions(providerId);
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), `mediagrab-${randomUUID()}-`));
@@ -467,6 +511,16 @@ async function downloadToTempFile(url: string, format: string, providerId: Media
     }
     const filePath = path.join(tempDir, files[0]);
     const filename = path.basename(filePath);
+
+    if (PROVIDERS_REQUIRING_MERGE.includes(providerId)) {
+      const hasAudio = await fileHasAudioTrack(filePath);
+      if (!hasAudio) {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+        const audioError = new Error('AUDIO_NOT_FOUND');
+        (audioError as any).code = 'AUDIO_NOT_FOUND';
+        throw audioError;
+      }
+    }
     const cleanup = () => {
       fs.rmSync(tempDir, { recursive: true, force: true });
     };
