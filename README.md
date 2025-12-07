@@ -1,5 +1,3 @@
-# 🎬 MediaGrab
-
 <div align="center">
   <img src="public/images/logo-longEscrito.png" alt="MediaGrab Logo" width="300" />
   
@@ -260,5 +258,5 @@ Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para ma
 ---
 
 <div align="center">
-  <p>Feito com ❤️ por <a href="https://github.com/seu-usuario">Seu Nome</a></p>
+  <p>Feito com ❤️ por <a href="https://github.com/fefogaca">fefogaca</a></p>
 </div>
