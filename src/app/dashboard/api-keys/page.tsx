@@ -1,314 +1,427 @@
-'use client';
-import React, { useState, useEffect } from 'react';
+"use client";
+
+import { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@frontend/components/ui/card";
+import { Button } from "@frontend/components/ui/button";
+import { Input } from "@frontend/components/ui/input";
+import { Badge } from "@frontend/components/ui/badge";
+import { Progress } from "@frontend/components/ui/progress";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@frontend/components/ui/dialog";
+import { toast } from "sonner";
+import {
+  Key,
+  Plus,
+  Copy,
+  Trash2,
+  Eye,
+  EyeOff,
+  RefreshCw,
+  Mail,
+  AlertTriangle,
+} from "lucide-react";
 
 interface ApiKey {
-  id: number;
+  id: string;
   key: string;
   created_at: string;
-  expires_at: string | null;
-  usage_limit: number;
+  expires_at?: string;
   usage_count: number;
+  usage_limit: number;
 }
 
-const ApiKeysPage = () => {
+interface UserPlan {
+  plan: string;
+  maxKeys: number;
+  requestLimit: number;
+  emailVerified: boolean;
+}
+
+export default function ApiKeysPage() {
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [newApiKeyExpiresAt, setNewApiKeyExpiresAt] = useState<string>('');
-  const [selectedUsageLimit, setSelectedUsageLimit] = useState<string>('100');
-  const [customUsageLimit, setCustomUsageLimit] = useState<string>('');
-  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [visibleKeys, setVisibleKeys] = useState<Set<string>>(new Set());
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [emailVerificationDialogOpen, setEmailVerificationDialogOpen] = useState(false);
+  const [userPlan, setUserPlan] = useState<UserPlan>({
+    plan: 'free',
+    maxKeys: 1,
+    requestLimit: 5,
+    emailVerified: false,
+  });
 
   useEffect(() => {
-    fetchData();
+    fetchApiKeys();
+    fetchUserPlan();
   }, []);
 
-  const fetchData = async () => {
+  const fetchApiKeys = async () => {
     try {
-      setLoading(true);
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('Not authenticated');
-      }
-
-      const apiKeysResponse = await fetch('/api/dashboard/my-api-keys', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!apiKeysResponse.ok) throw new Error('Failed to fetch API keys');
-
-      const apiKeysData = await apiKeysResponse.json();
-      setApiKeys(apiKeysData);
-    } catch (err) {
-      setError((err as Error).message);
+      const response = await fetch("/api/dashboard/my-api-keys");
+      const data = await response.json();
+      setApiKeys(data.apiKeys || []);
+    } catch (error) {
+      console.error("Erro ao buscar API keys:", error);
+      toast.error("Erro ao carregar API keys");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCreateApiKey = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    let expiresAtToSend: string | null = null;
-    if (newApiKeyExpiresAt) {
-      const date = new Date(newApiKeyExpiresAt);
-      if (isNaN(date.getTime())) {
-        setError('Por favor, insira uma data de expiração válida.');
-        return;
-      }
-      expiresAtToSend = date.toISOString();
-    }
-
-    let limitToSend = parseInt(selectedUsageLimit);
-    if (selectedUsageLimit === 'custom') {
-      limitToSend = parseInt(customUsageLimit);
-      if (isNaN(limitToSend) || limitToSend <= 0) {
-        setError('Por favor, insira um limite de uso válido.');
-        return;
-      }
-    }
-
+  const fetchUserPlan = async () => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('Not authenticated');
-      }
-
-      const response = await fetch('/api/dashboard/api-keys', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ usage_limit: limitToSend, expires_at: expiresAtToSend }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create API key');
-      }
-
+      const response = await fetch("/api/auth/me");
       const data = await response.json();
-      setNewApiKeyExpiresAt('');
-      setSelectedUsageLimit('100');
-      setCustomUsageLimit('');
-      setError(null);
-      fetchData();
-      
-      // Mostrar a nova API key
-      if (data.apiKey) {
-        setCopiedKey(data.apiKey);
-        await navigator.clipboard.writeText(data.apiKey);
-        setTimeout(() => setCopiedKey(null), 5000);
+      if (data.user) {
+        const plan = data.user.plan || 'free';
+        const limits = {
+          free: { maxKeys: 1, requestLimit: 5 },
+          developer: { maxKeys: 5, requestLimit: 1000 },
+          startup: { maxKeys: 20, requestLimit: 10000 },
+          enterprise: { maxKeys: -1, requestLimit: -1 },
+        };
+        const planLimits = limits[plan as keyof typeof limits] || limits.free;
+        setUserPlan({
+          plan,
+          maxKeys: planLimits.maxKeys,
+          requestLimit: planLimits.requestLimit,
+          emailVerified: !!data.user.emailVerified,
+        });
       }
-    } catch (err) {
-      setError((err as Error).message);
+    } catch (error) {
+      console.error("Erro ao buscar plano:", error);
     }
   };
 
-  const handleDeleteApiKey = async (id: number) => {
-    if (!confirm('Tem certeza que deseja deletar esta API key?')) {
-      return;
+  const createApiKey = async () => {
+    setCreating(true);
+    try {
+      const response = await fetch("/api/dashboard/api-keys", {
+        method: "POST",
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        // Verificar se é erro de verificação de email
+        if (data.requiresEmailVerification) {
+          setDialogOpen(false);
+          setEmailVerificationDialogOpen(true);
+          return;
+        }
+        throw new Error(data.message || "Erro ao criar");
+      }
+
+      toast.success("API key criada com sucesso!");
+      setDialogOpen(false);
+      fetchApiKeys();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao criar API key");
+    } finally {
+      setCreating(false);
     }
+  };
+
+  const deleteApiKey = async (keyId: string) => {
+    if (!confirm("Tem certeza que deseja excluir esta API key?")) return;
 
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('Not authenticated');
-      }
-
-      const response = await fetch(`/api/dashboard/api-keys/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+      const response = await fetch(`/api/dashboard/api-keys/${keyId}`, {
+        method: "DELETE",
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to delete API key');
-      }
+      if (!response.ok) throw new Error("Erro ao excluir");
 
-      fetchData();
-    } catch (err) {
-      setError((err as Error).message);
+      toast.success("API key excluída com sucesso!");
+      fetchApiKeys();
+    } catch {
+      toast.error("Erro ao excluir API key");
     }
   };
 
-  const handleCopyKey = async (key: string) => {
-    await navigator.clipboard.writeText(key);
-    setCopiedKey(key);
-    setTimeout(() => setCopiedKey(null), 2000);
+  const copyKey = (key: string) => {
+    navigator.clipboard.writeText(key);
+    toast.success("API key copiada!");
   };
 
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'Nunca';
-    return new Date(dateString).toLocaleDateString('pt-BR');
+  const toggleKeyVisibility = (keyId: string) => {
+    setVisibleKeys((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(keyId)) {
+        newSet.delete(keyId);
+      } else {
+        newSet.add(keyId);
+      }
+      return newSet;
+    });
   };
 
-  return (
-    <main className="grow bg-gradient-to-br from-gray-50 via-white to-violet-50/20 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
-      <div className="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto">
-        <div className="sm:flex sm:justify-between sm:items-center mb-8">
-          <div className="mb-4 sm:mb-0">
-            <div className="inline-block mb-3">
-              <span className="px-3 py-1.5 rounded-full bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 text-xs font-semibold border border-violet-200 dark:border-violet-800">
-                🔑 Gerenciamento de API Keys
-              </span>
-            </div>
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-violet-600 via-purple-600 to-sky-600 dark:from-violet-400 dark:via-purple-400 dark:to-sky-400 mt-2">
-              Minhas API Keys
-            </h1>
-            <p className="mt-2 text-gray-600 dark:text-gray-400 text-sm md:text-base">
-              Gerencie suas chaves de API e monitore seu uso
-            </p>
-          </div>
-        </div>
+  const getUsagePercentage = (usage: number, limit: number) => {
+    return Math.min((usage / limit) * 100, 100);
+  };
 
-        {/* Create API Key Form */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 sm:p-8 border border-gray-200 dark:border-gray-700 shadow-xl mb-8">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-6 flex items-center gap-2">
-            <svg className="w-6 h-6 text-violet-600 dark:text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Gerar Nova API Key
-          </h2>
-          <form onSubmit={handleCreateApiKey} className="space-y-4">
-            <div>
-              <label htmlFor="expiresAt" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Data de Expiração (Opcional)
-              </label>
-              <input
-                type="datetime-local"
-                id="expiresAt"
-                className="w-full px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-                value={newApiKeyExpiresAt}
-                onChange={(e) => setNewApiKeyExpiresAt(e.target.value)}
-              />
-            </div>
-            <div>
-              <label htmlFor="usageLimit" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Limite de Uso
-              </label>
-              <select
-                id="usageLimit"
-                className="w-full px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-                value={selectedUsageLimit}
-                onChange={(e) => setSelectedUsageLimit(e.target.value)}
-              >
-                <option value="100">100 chamadas/mês (Developer)</option>
-                <option value="10000">10,000 chamadas/mês (Pro)</option>
-                <option value="100000">100,000 chamadas/mês (Business)</option>
-                <option value="custom">Personalizado</option>
-              </select>
-              {selectedUsageLimit === 'custom' && (
-                <input
-                  type="number"
-                  className="mt-2 w-full px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-                  placeholder="Digite o limite personalizado"
-                  value={customUsageLimit}
-                  onChange={(e) => setCustomUsageLimit(e.target.value)}
-                  min="1"
-                />
-              )}
-            </div>
-            <button
-              type="submit"
-              className="w-full sm:w-auto px-6 py-3 font-semibold text-white bg-gradient-to-r from-violet-600 to-sky-600 rounded-xl shadow-lg shadow-violet-500/30 hover:shadow-xl hover:shadow-violet-500/40 transition-all duration-200 hover:scale-105 active:scale-95"
-            >
-              Gerar API Key
-            </button>
-          </form>
-          {error && (
-            <div className="mt-4 p-4 bg-rose-50 dark:bg-rose-900/20 rounded-xl border border-rose-200 dark:border-rose-800">
-              <p className="text-sm text-rose-800 dark:text-rose-200">{error}</p>
-            </div>
-          )}
-          {copiedKey && (
-            <div className="mt-4 p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-200 dark:border-emerald-800">
-              <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200 mb-2">Nova API Key criada e copiada!</p>
-              <button
-                onClick={() => handleCopyKey(copiedKey)}
-                className="w-full text-left text-base font-mono text-emerald-900 dark:text-emerald-100 break-all bg-emerald-100 dark:bg-emerald-900/40 p-3 rounded hover:bg-emerald-200 dark:hover:bg-emerald-900/60 transition-colors cursor-pointer"
-              >
-                {copiedKey}
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* API Key List */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 sm:p-8 border border-gray-200 dark:border-gray-700 shadow-xl">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-6 flex items-center gap-2">
-            <svg className="w-6 h-6 text-violet-600 dark:text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            Suas API Keys
-          </h2>
-          {loading ? (
-            <div className="animate-pulse space-y-4">
-              <div className="h-20 bg-gray-200 dark:bg-gray-700 rounded"></div>
-              <div className="h-20 bg-gray-200 dark:bg-gray-700 rounded"></div>
-            </div>
-          ) : apiKeys.length === 0 ? (
-            <p className="text-gray-600 dark:text-gray-400">Você ainda não possui API keys. Crie uma acima.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-200 dark:border-gray-700">
-                    <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">API Key</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Criada</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Expira</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Uso</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Ações</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                  {apiKeys.map((apiKey) => (
-                    <tr key={apiKey.id} className="hover:bg-gray-50 dark:hover:bg-gray-900/50">
-                      <td className="py-3 px-4">
-                        <button
-                          onClick={() => handleCopyKey(apiKey.key)}
-                          className="text-sm font-mono text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 break-all text-left flex items-center gap-2"
-                        >
-                          {apiKey.key}
-                          {copiedKey === apiKey.key ? (
-                            <svg className="w-4 h-4 text-emerald-600" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
-                          ) : (
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                            </svg>
-                          )}
-                        </button>
-                      </td>
-                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{formatDate(apiKey.created_at)}</td>
-                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{formatDate(apiKey.expires_at)}</td>
-                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
-                        {apiKey.usage_count} / {apiKey.usage_limit}
-                      </td>
-                      <td className="py-3 px-4">
-                        <button
-                          onClick={() => handleDeleteApiKey(apiKey.id)}
-                          className="text-sm text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 font-medium"
-                        >
-                          Deletar
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="h-8 bg-zinc-800 rounded w-48 animate-pulse" />
+        <div className="space-y-4">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-32 bg-zinc-800 rounded animate-pulse" />
+          ))}
         </div>
       </div>
-    </main>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Minhas API Keys</h1>
+          <p className="text-zinc-400 mt-1">Gerencie suas chaves de acesso à API</p>
+        </div>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="bg-emerald-600 hover:bg-emerald-500 text-white">
+              <Plus className="h-4 w-4 mr-2" />
+              Nova API Key
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="bg-zinc-900 border-zinc-800">
+            <DialogHeader>
+              <DialogTitle className="text-white">Criar Nova API Key</DialogTitle>
+              <DialogDescription className="text-zinc-400">
+                Uma nova API key será gerada automaticamente. Guarde-a em um local seguro.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <div className="p-4 rounded-lg bg-zinc-800/50 border border-zinc-700">
+                <p className="text-sm text-zinc-400 mb-2">Seu plano: <span className="text-emerald-500 capitalize font-medium">{userPlan.plan}</span></p>
+                <ul className="text-sm text-zinc-300 space-y-1">
+                  <li>• Limite de requests: <span className="text-white font-medium">{userPlan.requestLimit === -1 ? 'Ilimitado' : userPlan.requestLimit}</span></li>
+                  <li>• Keys disponíveis: <span className="text-white font-medium">{userPlan.maxKeys === -1 ? 'Ilimitadas' : `${userPlan.maxKeys - apiKeys.length} de ${userPlan.maxKeys}`}</span></li>
+                  <li>• Keys excluídas não podem ser recuperadas</li>
+                </ul>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setDialogOpen(false)} className="text-zinc-400">
+                Cancelar
+              </Button>
+              <Button 
+                onClick={createApiKey} 
+                disabled={creating}
+                className="bg-emerald-600 hover:bg-emerald-500"
+              >
+                {creating ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Criando...
+                  </>
+                ) : (
+                  <>
+                    <Key className="h-4 w-4 mr-2" />
+                    Criar Key
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Email Verification Dialog */}
+      <Dialog open={emailVerificationDialogOpen} onOpenChange={setEmailVerificationDialogOpen}>
+        <DialogContent className="bg-zinc-900 border-zinc-800">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <Mail className="h-5 w-5 text-amber-500" />
+              Verificação de Email Necessária
+            </DialogTitle>
+            <DialogDescription className="text-zinc-400">
+              Para criar uma API Key, você precisa verificar seu email primeiro.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/30">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5" />
+                <div>
+                  <p className="text-sm text-amber-200 font-medium">Verificação pendente</p>
+                  <p className="text-sm text-zinc-400 mt-1">
+                    Enviamos um email de verificação para sua conta. Clique no link do email para verificar e poder criar suas API Keys.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setEmailVerificationDialogOpen(false)} className="text-zinc-400">
+              Fechar
+            </Button>
+            <Button 
+              onClick={() => {
+                toast.info("Email de verificação reenviado!");
+                // TODO: Implementar reenvio quando SendGrid estiver configurado
+              }}
+              className="bg-emerald-600 hover:bg-emerald-500"
+            >
+              <Mail className="h-4 w-4 mr-2" />
+              Reenviar Email
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Stats */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card className="bg-zinc-900/50 border-zinc-800">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="p-3 rounded-lg bg-emerald-500/10">
+              <Key className="h-5 w-5 text-emerald-500" />
+            </div>
+            <div>
+              <p className="text-sm text-zinc-400">Total de Keys</p>
+              <p className="text-xl font-bold text-white">{apiKeys.length} / {userPlan.maxKeys === -1 ? '∞' : userPlan.maxKeys}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-zinc-900/50 border-zinc-800">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="p-3 rounded-lg bg-blue-500/10">
+              <RefreshCw className="h-5 w-5 text-blue-500" />
+            </div>
+            <div>
+              <p className="text-sm text-zinc-400">Total de Requests</p>
+              <p className="text-xl font-bold text-white">
+                {apiKeys.reduce((sum, key) => sum + key.usage_count, 0)}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-zinc-900/50 border-zinc-800">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="p-3 rounded-lg bg-amber-500/10">
+              <Key className="h-5 w-5 text-amber-500" />
+            </div>
+            <div>
+              <p className="text-sm text-zinc-400">Limite por Key</p>
+              <p className="text-xl font-bold text-white">{userPlan.requestLimit === -1 ? '∞' : userPlan.requestLimit} req</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* API Keys List */}
+      {apiKeys.length === 0 ? (
+        <Card className="bg-zinc-900/50 border-zinc-800">
+          <CardContent className="py-12 text-center">
+            <Key className="h-12 w-12 text-zinc-600 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-white mb-2">Nenhuma API Key</h3>
+            <p className="text-zinc-400 mb-4">Crie sua primeira API key para começar a usar a API</p>
+            <Button onClick={() => setDialogOpen(true)} className="bg-emerald-600 hover:bg-emerald-500">
+              <Plus className="h-4 w-4 mr-2" />
+              Criar API Key
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {apiKeys.map((apiKey) => {
+            const usagePercentage = getUsagePercentage(apiKey.usage_count, apiKey.usage_limit);
+            const isVisible = visibleKeys.has(apiKey.id);
+            
+            return (
+              <Card key={apiKey.id} className="bg-zinc-900/50 border-zinc-800">
+                <CardHeader className="pb-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-emerald-500/10">
+                        <Key className="h-5 w-5 text-emerald-500" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-white text-base">API Key #{apiKey.id}</CardTitle>
+                        <CardDescription className="text-zinc-400">
+                          Criada em {new Date(apiKey.created_at).toLocaleDateString("pt-BR")}
+                        </CardDescription>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {usagePercentage >= 100 ? (
+                        <Badge className="bg-red-500/10 text-red-500 border-red-500/30">Esgotada</Badge>
+                      ) : usagePercentage >= 80 ? (
+                        <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/30">Quase no limite</Badge>
+                      ) : (
+                        <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30">Ativa</Badge>
+                      )}
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Key Display */}
+                  <div className="flex items-center gap-2">
+                    <Input
+                      readOnly
+                      value={isVisible ? apiKey.key : "•".repeat(32)}
+                      className="font-mono text-sm bg-zinc-800/50 border-zinc-700 text-zinc-300"
+                    />
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="border-zinc-700 text-zinc-400 hover:text-white"
+                      onClick={() => toggleKeyVisibility(apiKey.id)}
+                    >
+                      {isVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="border-zinc-700 text-zinc-400 hover:text-white"
+                      onClick={() => copyKey(apiKey.key)}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="border-zinc-700 text-red-400 hover:text-red-300 hover:border-red-500/30"
+                      onClick={() => deleteApiKey(apiKey.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  {/* Usage Progress */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-zinc-400">Uso</span>
+                      <span className="text-zinc-300">
+                        {apiKey.usage_count.toLocaleString()} / {apiKey.usage_limit.toLocaleString()} requests
+                      </span>
+                    </div>
+                    <Progress value={usagePercentage} className="h-2" />
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
-};
-
-export default ApiKeysPage;
-
+}

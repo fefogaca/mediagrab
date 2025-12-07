@@ -1,201 +1,412 @@
+"use client";
 
-'use client';
+import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@frontend/components/ui/button";
+import { Input } from "@frontend/components/ui/input";
+import { Label } from "@frontend/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@frontend/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@frontend/components/ui/dialog";
+import { toast } from "sonner";
+import { Loader2, Mail, Lock, Github, Chrome, Globe, Shield, User, Key, Sparkles } from "lucide-react";
+import { LogoSmallDark } from "@frontend/components/shared/Logo";
+import { useTranslation } from "@/lib/i18n";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-
-const LoginPage = () => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [captchaAnswer, setCaptchaAnswer] = useState('');
-  const [captchaQuestion, setCaptchaQuestion] = useState<{ num1: number; num2: number; operator: string; answer: number } | null>(null);
-  const [captchaError, setCaptchaError] = useState('');
+export default function LoginPage() {
   const router = useRouter();
+  const { t, language, setLanguage } = useTranslation();
+  const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+  });
+  
+  // Setup state
+  const [needsSetup, setNeedsSetup] = useState(false);
+  const [setupOpen, setSetupOpen] = useState(false);
+  const [setupLoading, setSetupLoading] = useState(false);
+  const [checkingSetup, setCheckingSetup] = useState(true);
+  const [setupData, setSetupData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+  });
+  
+  // Refs para compatibilidade com automação de browser
+  const emailRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
 
+  // Verificar se precisa de setup ao carregar
   useEffect(() => {
-    generateCaptcha();
+    checkSetup();
   }, []);
 
-  const generateCaptcha = () => {
-    const num1 = Math.floor(Math.random() * 10) + 1;
-    const num2 = Math.floor(Math.random() * 10) + 1;
-    const operators = ['+', '-', '×'];
-    const operator = operators[Math.floor(Math.random() * operators.length)];
+  const checkSetup = async () => {
+    try {
+      const response = await fetch("/api/setup/check");
+      const data = await response.json();
+      
+      if (data.needsSetup) {
+        setNeedsSetup(true);
+        setSetupOpen(true);
+      }
+    } catch (error) {
+      console.error("Erro ao verificar setup:", error);
+    } finally {
+      setCheckingSetup(false);
+    }
+  };
+
+  const handleSetup = async (e: React.FormEvent) => {
+    e.preventDefault();
     
-    let answer: number;
-    switch (operator) {
-      case '+':
-        answer = num1 + num2;
-        break;
-      case '-':
-        answer = num1 - num2;
-        break;
-      case '×':
-        answer = num1 * num2;
-        break;
-      default:
-        answer = num1 + num2;
+    if (setupData.password !== setupData.confirmPassword) {
+      toast.error(language === 'pt' ? "As senhas não coincidem" : "Passwords don't match");
+      return;
     }
     
-    setCaptchaQuestion({ num1, num2, operator, answer });
-    setCaptchaAnswer('');
-    setCaptchaError('');
+    if (setupData.password.length < 8) {
+      toast.error(language === 'pt' ? "A senha deve ter pelo menos 8 caracteres" : "Password must be at least 8 characters");
+      return;
+    }
+    
+    setSetupLoading(true);
+    
+    try {
+      const response = await fetch("/api/setup/create-admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: setupData.name,
+          email: setupData.email,
+          password: setupData.password,
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || "Erro ao criar administrador");
+      }
+      
+      toast.success(language === 'pt' ? "Administrador criado com sucesso! Faça login." : "Admin created successfully! Please login.");
+      setSetupOpen(false);
+      setNeedsSetup(false);
+      
+      // Preencher o email do login
+      setFormData(prev => ({ ...prev, email: setupData.email }));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao criar administrador");
+    } finally {
+      setSetupLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setCaptchaError('');
-
-    // Validar captcha
-    if (!captchaQuestion) {
-      setCaptchaError('Por favor, resolva o captcha');
-      return;
-    }
-
-    const userAnswer = parseInt(captchaAnswer);
-    if (isNaN(userAnswer) || userAnswer !== captchaQuestion.answer) {
-      setCaptchaError('Resposta incorreta. Tente novamente.');
-      generateCaptcha();
-      return;
-    }
+    setIsLoading(true);
+    
+    // Pegar valores diretamente dos inputs para compatibilidade com automação
+    const email = emailRef.current?.value || formData.email;
+    const password = passwordRef.current?.value || formData.password;
 
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Login failed');
+        throw new Error(data.message || t.login.errors.invalid);
       }
 
-      const { role } = data;
+      toast.success(language === 'pt' ? "Login realizado com sucesso!" : "Login successful!");
+      
       // Redirecionar baseado no role
-      if (role === 'admin') {
-      router.push('/admin');
+      if (data.user?.role === "admin") {
+        router.push("/admin");
       } else {
-        router.push('/dashboard');
+        router.push("/dashboard");
       }
-    } catch (err) {
-      setError((err as Error).message);
-      generateCaptcha(); // Regenerar captcha em caso de erro
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t.login.errors.invalid);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 via-white to-violet-50/30 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
-      <div className="w-full max-w-md p-8 sm:p-10 space-y-8 bg-white/80 dark:bg-gray-800/80 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-200/50 dark:border-gray-700/50">
-        <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-r from-violet-600 to-sky-600 mb-4">
-            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-          </div>
-          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-violet-600 to-sky-600 dark:from-violet-400 dark:to-sky-400">Admin Login</h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-400">Bem-vindo de volta, por favor insira suas credenciais.</p>
+  // Loading inicial
+  if (checkingSetup) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
+          <p className="text-zinc-400">{language === 'pt' ? 'Verificando configuração...' : 'Checking configuration...'}</p>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label htmlFor="username" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Usuário</label>
-            <input
-              id="username"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-              className="block w-full px-4 py-3 text-gray-900 bg-gray-50 dark:bg-gray-900/50 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent dark:text-white transition-all"
-              placeholder="Digite seu usuário"
-            />
-          </div>
-          <div>
-            <label htmlFor="password" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Senha</label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="block w-full px-4 py-3 text-gray-900 bg-gray-50 dark:bg-gray-900/50 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent dark:text-white transition-all"
-              placeholder="Digite sua senha"
-            />
-          </div>
-          
-          {/* Captcha */}
-          <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-              Verificação de Segurança
-            </label>
-            {captchaQuestion && (
-              <div className="flex items-center gap-4">
-                <div className="flex-1 flex items-center justify-center gap-2 bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                  <span className="text-2xl font-bold text-gray-900 dark:text-white">{captchaQuestion.num1}</span>
-                  <span className="text-xl font-semibold text-gray-600 dark:text-gray-400">{captchaQuestion.operator}</span>
-                  <span className="text-2xl font-bold text-gray-900 dark:text-white">{captchaQuestion.num2}</span>
-                  <span className="text-xl font-semibold text-gray-600 dark:text-gray-400">=</span>
-                  <input
-                    type="text"
-                    value={captchaAnswer}
-                    onChange={(e) => setCaptchaAnswer(e.target.value.replace(/\D/g, ''))}
-                    required
-                    className="w-20 px-3 py-2 text-center text-lg font-bold text-gray-900 dark:text-white bg-transparent border-b-2 border-violet-500 focus:outline-none focus:border-violet-600 dark:focus:border-violet-400"
-                    placeholder="?"
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={generateCaptcha}
-                  className="p-2 text-gray-500 hover:text-violet-600 dark:hover:text-violet-400 transition-colors"
-                  title="Gerar novo captcha"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                </button>
-              </div>
-            )}
-            {captchaError && (
-              <p className="mt-2 text-sm text-rose-600 dark:text-rose-400 flex items-center gap-1">
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-                {captchaError}
-              </p>
-            )}
-          </div>
+      </div>
+    );
+  }
 
-          {error && (
-            <div className="p-3 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded-lg">
-              <p className="text-sm text-rose-600 dark:text-rose-400 flex items-center gap-2">
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-                {error}
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 p-4">
+      {/* Background Pattern */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#18181b_1px,transparent_1px),linear-gradient(to_bottom,#18181b_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_110%)]" />
+      
+      {/* Language Toggle */}
+      <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
+        <Globe className="h-4 w-4 text-zinc-400" />
+        <button 
+          onClick={() => setLanguage('pt')}
+          className={`px-2 py-1 text-sm rounded ${language === 'pt' ? 'bg-emerald-600 text-white' : 'text-zinc-400 hover:text-white'}`}
+        >
+          PT
+        </button>
+        <button 
+          onClick={() => setLanguage('en')}
+          className={`px-2 py-1 text-sm rounded ${language === 'en' ? 'bg-emerald-600 text-white' : 'text-zinc-400 hover:text-white'}`}
+        >
+          EN
+        </button>
+      </div>
+
+      {/* Setup Dialog */}
+      <Dialog open={setupOpen} onOpenChange={(open) => needsSetup && setSetupOpen(open)}>
+        <DialogContent className="bg-zinc-900 border-zinc-800 sm:max-w-md">
+          <DialogHeader>
+            <div className="flex justify-center mb-2">
+              <div className="p-3 rounded-full bg-emerald-500/10">
+                <Sparkles className="h-8 w-8 text-emerald-500" />
+              </div>
+            </div>
+            <DialogTitle className="text-xl text-white text-center">
+              {language === 'pt' ? '🎉 Bem-vindo ao MediaGrab!' : '🎉 Welcome to MediaGrab!'}
+            </DialogTitle>
+            <DialogDescription className="text-zinc-400 text-center">
+              {language === 'pt' 
+                ? 'Configure seu primeiro administrador para começar a usar o sistema.'
+                : 'Set up your first administrator to start using the system.'}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <form onSubmit={handleSetup} className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label className="text-zinc-300">
+                {language === 'pt' ? 'Nome' : 'Name'}
+              </Label>
+              <div className="relative">
+                <User className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
+                <Input
+                  value={setupData.name}
+                  onChange={(e) => setSetupData({ ...setupData, name: e.target.value })}
+                  placeholder={language === 'pt' ? 'Seu nome' : 'Your name'}
+                  className="pl-9 bg-zinc-800/50 border-zinc-700 text-white"
+                  required
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label className="text-zinc-300">Email</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
+                <Input
+                  type="email"
+                  value={setupData.email}
+                  onChange={(e) => setSetupData({ ...setupData, email: e.target.value })}
+                  placeholder="admin@exemplo.com"
+                  className="pl-9 bg-zinc-800/50 border-zinc-700 text-white"
+                  required
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label className="text-zinc-300">
+                {language === 'pt' ? 'Senha' : 'Password'}
+              </Label>
+              <div className="relative">
+                <Key className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
+                <Input
+                  type="password"
+                  value={setupData.password}
+                  onChange={(e) => setSetupData({ ...setupData, password: e.target.value })}
+                  placeholder="••••••••"
+                  className="pl-9 bg-zinc-800/50 border-zinc-700 text-white"
+                  required
+                  minLength={8}
+                />
+              </div>
+              <p className="text-xs text-zinc-500">
+                {language === 'pt' ? 'Mínimo de 8 caracteres' : 'Minimum 8 characters'}
               </p>
             </div>
-          )}
-          
-          <button 
-            type="submit" 
-            className="group relative w-full px-6 py-4 font-semibold text-white bg-gradient-to-r from-violet-600 to-sky-600 rounded-xl shadow-lg shadow-violet-500/30 hover:shadow-xl hover:shadow-violet-500/40 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-violet-500 transition-all duration-200 hover:scale-105 active:scale-95 overflow-hidden"
-          >
-            <span className="relative z-10 flex items-center justify-center gap-2">
-              Entrar
-              <svg className="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-              </svg>
-            </span>
-            <div className="absolute inset-0 bg-gradient-to-r from-violet-700 to-sky-700 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-          </button>
-        </form>
-      </div>
+            
+            <div className="space-y-2">
+              <Label className="text-zinc-300">
+                {language === 'pt' ? 'Confirmar Senha' : 'Confirm Password'}
+              </Label>
+              <div className="relative">
+                <Key className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
+                <Input
+                  type="password"
+                  value={setupData.confirmPassword}
+                  onChange={(e) => setSetupData({ ...setupData, confirmPassword: e.target.value })}
+                  placeholder="••••••••"
+                  className="pl-9 bg-zinc-800/50 border-zinc-700 text-white"
+                  required
+                />
+              </div>
+            </div>
+            
+            <DialogFooter className="pt-4">
+              <Button 
+                type="submit" 
+                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white"
+                disabled={setupLoading}
+              >
+                {setupLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {language === 'pt' ? 'Criando...' : 'Creating...'}
+                  </>
+                ) : (
+                  <>
+                    <Shield className="mr-2 h-4 w-4" />
+                    {language === 'pt' ? 'Criar Administrador' : 'Create Administrator'}
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+      
+      <Card className="w-full max-w-md relative z-10 bg-zinc-900/80 border-zinc-800 backdrop-blur-sm">
+        <CardHeader className="space-y-1 text-center">
+          <div className="flex justify-center mb-4">
+            <Link href="/" className="cursor-pointer hover:opacity-80 transition-opacity">
+              <LogoSmallDark size={56} className="rounded-xl" />
+            </Link>
+          </div>
+          <CardTitle className="text-2xl font-bold text-white">{t.login.title}</CardTitle>
+          <CardDescription className="text-zinc-400">
+            {t.login.subtitle}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-zinc-300">{t.login.email}</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
+                <Input
+                  ref={emailRef}
+                  id="email"
+                  type="email"
+                  placeholder={t.login.emailPlaceholder}
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="pl-9 bg-zinc-800/50 border-zinc-700 text-white placeholder:text-zinc-500 focus:border-emerald-500 focus:ring-emerald-500/20"
+                  required
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password" className="text-zinc-300">{t.login.password}</Label>
+                <Link 
+                  href="/forgot-password" 
+                  className="text-sm text-emerald-500 hover:text-emerald-400 transition-colors"
+                >
+                  {t.login.forgotPassword}
+                </Link>
+              </div>
+              <div className="relative">
+                <Lock className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
+                <Input
+                  ref={passwordRef}
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  className="pl-9 bg-zinc-800/50 border-zinc-700 text-white placeholder:text-zinc-500 focus:border-emerald-500 focus:ring-emerald-500/20"
+                  required
+                />
+              </div>
+            </div>
+            <Button 
+              type="submit" 
+              className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {t.login.loggingIn}
+                </>
+              ) : (
+                t.login.loginBtn
+              )}
+            </Button>
+          </form>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-zinc-700" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-zinc-900 px-2 text-zinc-500">{t.login.or} {t.login.continueWith}</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Button 
+              variant="outline" 
+              className="bg-zinc-800/50 border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-white"
+              onClick={() => toast.info(language === 'pt' ? "Login com Google em breve!" : "Google login coming soon!")}
+            >
+              <Chrome className="mr-2 h-4 w-4" />
+              Google
+            </Button>
+            <Button 
+              variant="outline" 
+              className="bg-zinc-800/50 border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-white"
+              onClick={() => toast.info(language === 'pt' ? "Login com GitHub em breve!" : "GitHub login coming soon!")}
+            >
+              <Github className="mr-2 h-4 w-4" />
+              GitHub
+            </Button>
+          </div>
+        </CardContent>
+        <CardFooter className="flex flex-col space-y-4">
+          <p className="text-center text-sm text-zinc-400">
+            {t.login.noAccount}{" "}
+            <Link href="/register" className="text-emerald-500 hover:text-emerald-400 font-medium transition-colors">
+              {t.login.createAccount}
+            </Link>
+          </p>
+        </CardFooter>
+      </Card>
     </div>
   );
-};
-
-export default LoginPage;
+}

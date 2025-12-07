@@ -1,18 +1,86 @@
-'use client';
-import React, { useState, useEffect } from 'react';
+"use client";
+
+import { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@frontend/components/ui/card";
+import { Button } from "@frontend/components/ui/button";
+import { Input } from "@frontend/components/ui/input";
+import { Label } from "@frontend/components/ui/label";
+import { Badge } from "@frontend/components/ui/badge";
+import { Avatar, AvatarFallback } from "@frontend/components/ui/avatar";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@frontend/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@frontend/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@frontend/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@frontend/components/ui/select";
+import { toast } from "sonner";
+import {
+  Search,
+  MoreHorizontal,
+  UserPlus,
+  Shield,
+  Trash2,
+  Users,
+  Loader2,
+} from "lucide-react";
+import { useTranslation } from "@/lib/i18n";
 
 interface User {
-  id: number;
-  username: string;
+  id: string;
+  email: string;
+  name: string;
+  username?: string;
   role: string;
+  plan: string;
+  isActive: boolean;
+  created_at?: string;
+  lastLoginAt?: string;
 }
 
-const UsersPage = () => {
+export default function UsersPage() {
+  const { t } = useTranslation();
   const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [newUser, setNewUser] = useState({ username: '', password: '', role: 'user' });
-  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [newUser, setNewUser] = useState({
+    name: "",
+    email: "",
+    password: "",
+    role: "user",
+    plan: "free",
+  });
 
   useEffect(() => {
     fetchUsers();
@@ -20,241 +88,348 @@ const UsersPage = () => {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch('/api/admin/users');
-      if (!response.ok) {
-        throw new Error('Failed to fetch users');
-      }
+      const response = await fetch("/api/admin/users");
       const data = await response.json();
-      setUsers(data);
-    } catch (err) {
-      setError((err as Error).message);
+      setUsers(data.users || []);
+    } catch (error) {
+      console.error("Erro ao buscar usuários:", error);
+      toast.error(t.admin.users.errorLoading);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCreateUser = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
+  const createUser = async () => {
+    if (!newUser.name || !newUser.email || !newUser.password) {
+      toast.error(t.admin.users.fillAllFields);
+      return;
+    }
+
+    if (newUser.password.length < 8) {
+      toast.error(t.admin.users.passwordMinLength);
+      return;
+    }
+
+    setCreating(true);
     try {
-      const response = await fetch('/api/admin/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newUser),
       });
-      
+
       const data = await response.json();
-      
+
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to create user');
+        throw new Error(data.message || t.admin.users.errorCreating);
       }
-      
-      // Mostrar mensagem de sucesso com credenciais ANTES de limpar o form
-      const credentials = `Usuário criado com sucesso!\n\nCredenciais:\nUsername: ${data.username || newUser.username}\nPassword: ${newUser.password}\nRole: ${data.role || newUser.role}\n\nID: ${data.userId}\n\nO usuário pode fazer login em /login`;
-      alert(credentials);
-      
-      setNewUser({ username: '', password: '', role: 'user' });
+
+      toast.success(t.admin.users.userCreated);
+      setDialogOpen(false);
+      setNewUser({ name: "", email: "", password: "", role: "user", plan: "free" });
       fetchUsers();
-    } catch (err) {
-      const errorMessage = (err as Error).message;
-      setError(errorMessage);
-      console.error('Erro ao criar usuário:', err);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t.admin.users.errorCreating);
+    } finally {
+      setCreating(false);
     }
   };
 
-  const handleUpdateUser = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingUser) return;
+  const deleteUser = async (userId: string) => {
+    if (!confirm(t.admin.users.deleteConfirm)) return;
+    
     try {
-      const response = await fetch(`/api/admin/users/${editingUser.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: editingUser.username, role: editingUser.role }),
+      const response = await fetch(`/api/admin/users/${userId}`, {
+        method: "DELETE",
       });
-      if (!response.ok) {
-        throw new Error('Failed to update user');
-      }
-      setEditingUser(null);
+      
+      if (!response.ok) throw new Error(t.admin.users.errorDeletingGeneric);
+      
+      toast.success(t.admin.users.userDeleted);
       fetchUsers();
-    } catch (err) {
-      setError((err as Error).message);
+    } catch {
+      toast.error(t.admin.users.errorDeleting);
     }
   };
 
-  const handleDeleteUser = async (id: number) => {
-    try {
-      const response = await fetch(`/api/admin/users/${id}`, {
-        method: 'DELETE',
-      });
-      if (!response.ok) {
-        throw new Error('Failed to delete user');
-      }
-      fetchUsers();
-    } catch (err) {
-      setError((err as Error).message);
+  const filteredUsers = users.filter(user =>
+    user.name?.toLowerCase().includes(search.toLowerCase()) ||
+    user.email?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const getRoleBadge = (role: string) => {
+    switch (role) {
+      case "admin":
+        return <Badge className="bg-red-500/10 text-red-500 border-red-500/30">{t.admin.users.roleAdmin}</Badge>;
+      case "user":
+        return <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30">{t.admin.users.roleUser}</Badge>;
+      default:
+        return <Badge className="bg-zinc-500/10 text-zinc-500 border-zinc-500/30">{t.admin.users.roleGuest}</Badge>;
     }
+  };
+
+  const getPlanBadge = (plan: string) => {
+    const colors: Record<string, string> = {
+      free: "bg-zinc-500/10 text-zinc-400 border-zinc-500/30",
+      developer: "bg-blue-500/10 text-blue-400 border-blue-500/30",
+      startup: "bg-purple-500/10 text-purple-400 border-purple-500/30",
+      enterprise: "bg-amber-500/10 text-amber-400 border-amber-500/30",
+    };
+    return <Badge className={colors[plan] || colors.free}>{plan}</Badge>;
   };
 
   if (loading) {
     return (
-      <main className="grow bg-gradient-to-br from-gray-50 via-white to-violet-50/20 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
-        <div className="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto">
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-600"></div>
-          </div>
-        </div>
-      </main>
-    );
-  }
-
-  if (error) {
-    return (
-      <main className="grow bg-gradient-to-br from-gray-50 via-white to-violet-50/20 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
-        <div className="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto">
-          <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded-xl p-4">
-            <p className="text-rose-600 dark:text-rose-400">Erro: {error}</p>
-          </div>
-        </div>
-      </main>
+      <div className="space-y-6">
+        <div className="h-8 bg-zinc-800 rounded w-48 animate-pulse" />
+        <Card className="bg-zinc-900/50 border-zinc-800">
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="h-16 bg-zinc-800 rounded animate-pulse" />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   return (
-    <main className="grow bg-gradient-to-br from-gray-50 via-white to-violet-50/20 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
-      <div className="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto">
-        <div className="mb-8">
-          <div className="inline-block mb-3">
-            <span className="px-3 py-1.5 rounded-full bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 text-xs font-semibold border border-violet-200 dark:border-violet-800">
-              👥 Gerenciamento de Usuários
-            </span>
-          </div>
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-violet-600 via-purple-600 to-sky-600 dark:from-violet-400 dark:via-purple-400 dark:to-sky-400 mt-2">
-            User Management
-          </h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-400 text-sm md:text-base">
-            Crie, edite e gerencie usuários do sistema
-          </p>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-white">{t.admin.users.title}</h1>
+          <p className="text-zinc-400 mt-1">{t.admin.users.manageUsers}</p>
         </div>
-
-        {/* Create New User */}
-        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-xl rounded-2xl p-6 sm:p-8 mb-8 border border-gray-200/50 dark:border-gray-700/50">
-          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-6 flex items-center gap-2">
-            <svg className="w-6 h-6 text-violet-600 dark:text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-            Criar Novo Usuário
-          </h2>
-          <form onSubmit={handleCreateUser} className="space-y-4">
-            <div>
-              <label htmlFor="newUsername" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Username</label>
-              <input
-                type="text"
-                id="newUsername"
-                className="form-input mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
-                value={newUser.username}
-                onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
-                required
-              />
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="bg-emerald-600 hover:bg-emerald-500 text-white">
+              <UserPlus className="h-4 w-4 mr-2" />
+              {t.admin.users.newUser}
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="bg-zinc-900 border-zinc-800">
+            <DialogHeader>
+              <DialogTitle className="text-white">{t.admin.users.createUser}</DialogTitle>
+              <DialogDescription className="text-zinc-400">
+                {t.admin.users.createUserDesc}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label className="text-zinc-300">{t.admin.users.nameLabel}</Label>
+                <Input
+                  placeholder={t.admin.users.namePlaceholder}
+                  value={newUser.name}
+                  onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                  className="bg-zinc-800/50 border-zinc-700 text-white"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-zinc-300">{t.admin.users.emailLabel}</Label>
+                <Input
+                  type="email"
+                  placeholder={t.admin.users.emailPlaceholder}
+                  value={newUser.email}
+                  onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                  className="bg-zinc-800/50 border-zinc-700 text-white"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-zinc-300">{t.admin.users.passwordLabel}</Label>
+                <Input
+                  type="password"
+                  placeholder={t.admin.users.passwordPlaceholder}
+                  value={newUser.password}
+                  onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                  className="bg-zinc-800/50 border-zinc-700 text-white"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-zinc-300">{t.admin.users.roleLabel}</Label>
+                  <Select
+                    value={newUser.role}
+                    onValueChange={(value) => setNewUser({ ...newUser, role: value })}
+                  >
+                    <SelectTrigger className="bg-zinc-800/50 border-zinc-700 text-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-zinc-900 border-zinc-800">
+                      <SelectItem value="user">{t.admin.users.roleUser}</SelectItem>
+                      <SelectItem value="admin">{t.admin.users.roleAdmin}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-zinc-300">{t.admin.users.planLabel}</Label>
+                  <Select
+                    value={newUser.plan}
+                    onValueChange={(value) => setNewUser({ ...newUser, plan: value })}
+                  >
+                    <SelectTrigger className="bg-zinc-800/50 border-zinc-700 text-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-zinc-900 border-zinc-800">
+                      <SelectItem value="free">Free</SelectItem>
+                      <SelectItem value="developer">Developer</SelectItem>
+                      <SelectItem value="startup">Startup</SelectItem>
+                      <SelectItem value="enterprise">Enterprise</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
-            <div>
-              <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
-              <input
-                type="password"
-                id="newPassword"
-                className="form-input mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
-                value={newUser.password}
-                onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                required
-              />
-            </div>
-            <div>
-              <label htmlFor="newRole" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Role</label>
-              <select
-                id="newRole"
-                className="form-select mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
-                value={newUser.role}
-                onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
-              >
-                <option value="user">User</option>
-                <option value="admin">Admin</option>
-              </select>
-            </div>
-            <button type="submit" className="w-full sm:w-auto px-6 py-3 font-semibold text-white bg-gradient-to-r from-violet-600 to-sky-600 rounded-xl shadow-lg shadow-violet-500/30 hover:shadow-xl hover:shadow-violet-500/40 transition-all duration-200 hover:scale-105 active:scale-95">
-              Criar Usuário
-            </button>
-          </form>
-        </div>
-
-        {/* User List */}
-        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-xl rounded-2xl p-6 sm:p-8 border border-gray-200/50 dark:border-gray-700/50">
-          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-6 flex items-center gap-2">
-            <svg className="w-6 h-6 text-violet-600 dark:text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-            </svg>
-            Usuários Existentes
-          </h2>
-          <div className="overflow-x-auto">
-            <table className="table-auto w-full dark:text-gray-300">
-              <thead className="text-xs uppercase text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-700/50 rounded-xs">
-                <tr>
-                  <th className="p-2 whitespace-nowrap"><div className="font-semibold text-left">ID</div></th>
-                  <th className="p-2 whitespace-nowrap"><div className="font-semibold text-left">Username</div></th>
-                  <th className="p-2 whitespace-nowrap"><div className="font-semibold text-left">Role</div></th>
-                  <th className="p-2 whitespace-nowrap"><div className="font-semibold text-center">Actions</div></th>
-                </tr>
-              </thead>
-              <tbody className="text-sm divide-y divide-gray-100 dark:divide-gray-700/60">
-                {users.map((user) => (
-                  <tr key={user.id}>
-                    <td className="p-2 whitespace-nowrap"><div className="text-left">{user.id}</div></td>
-                    <td className="p-2 whitespace-nowrap">
-                      {editingUser?.id === user.id ? (
-                        <input
-                          type="text"
-                          className="form-input w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
-                          value={editingUser.username}
-                          onChange={(e) => setEditingUser({ ...editingUser, username: e.target.value })}
-                        />
-                      ) : (
-                        <div className="text-left font-medium text-gray-800 dark:text-gray-100">{user.username}</div>
-                      )}
-                    </td>
-                    <td className="p-2 whitespace-nowrap">
-                      {editingUser?.id === user.id ? (
-                        <select
-                          className="form-select w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
-                          value={editingUser.role}
-                          onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value as 'user' | 'admin' })}
-                        >
-                          <option value="user">User</option>
-                          <option value="admin">Admin</option>
-                        </select>
-                      ) : (
-                        <div className="text-left">{user.role}</div>
-                      )}
-                    </td>
-                    <td className="p-2 whitespace-nowrap text-center">
-                      {editingUser?.id === user.id ? (
-                        <>
-                          <button onClick={handleUpdateUser} className="px-3 py-1.5 text-xs font-semibold bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-all mr-2">Salvar</button>
-                          <button onClick={() => setEditingUser(null)} className="px-3 py-1.5 text-xs font-semibold bg-gray-300 hover:bg-gray-400 text-gray-800 dark:bg-gray-600 dark:hover:bg-gray-500 dark:text-gray-200 rounded-lg transition-all">Cancelar</button>
-                        </>
-                      ) : (
-                        <>
-                          <button onClick={() => setEditingUser(user)} className="px-3 py-1.5 text-xs font-semibold bg-violet-500 hover:bg-violet-600 text-white rounded-lg transition-all mr-2">Editar</button>
-                          <button onClick={() => handleDeleteUser(user.id)} className="px-3 py-1.5 text-xs font-semibold bg-rose-500 hover:bg-rose-600 text-white rounded-lg transition-all">Excluir</button>
-                        </>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setDialogOpen(false)} className="text-zinc-400">
+                {t.admin.users.cancel}
+              </Button>
+              <Button onClick={createUser} disabled={creating} className="bg-emerald-600 hover:bg-emerald-500">
+                {creating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    {t.admin.users.creating}
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    {t.admin.users.createUserBtn}
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
-    </main>
-  );
-};
 
-export default UsersPage;
+      {/* Stats */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card className="bg-zinc-900/50 border-zinc-800">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="p-3 rounded-lg bg-emerald-500/10">
+              <Users className="h-5 w-5 text-emerald-500" />
+            </div>
+            <div>
+              <p className="text-sm text-zinc-400">{t.common.name}</p>
+              <p className="text-xl font-bold text-white">{users.length}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-zinc-900/50 border-zinc-800">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="p-3 rounded-lg bg-red-500/10">
+              <Shield className="h-5 w-5 text-red-500" />
+            </div>
+            <div>
+              <p className="text-sm text-zinc-400">{t.admin.users.stats.admins}</p>
+              <p className="text-xl font-bold text-white">
+                {users.filter(u => u.role === "admin").length}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-zinc-900/50 border-zinc-800">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="p-3 rounded-lg bg-blue-500/10">
+              <Users className="h-5 w-5 text-blue-500" />
+            </div>
+            <div>
+              <p className="text-sm text-zinc-400">{t.admin.users.stats.commonUsers}</p>
+              <p className="text-xl font-bold text-white">
+                {users.filter(u => u.role === "user").length}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Users Table */}
+      <Card className="bg-zinc-900/50 border-zinc-800">
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <CardTitle className="text-white">{t.admin.users.table.userList}</CardTitle>
+              <CardDescription className="text-zinc-400">
+                {filteredUsers.length} {t.admin.users.table.usersFound}
+              </CardDescription>
+            </div>
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+              <Input
+                placeholder={t.admin.users.searchUser}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9 bg-zinc-800/50 border-zinc-700 text-white placeholder:text-zinc-500"
+              />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow className="border-zinc-800 hover:bg-transparent">
+                <TableHead className="text-zinc-400">{t.admin.users.table.user}</TableHead>
+                <TableHead className="text-zinc-400">{t.admin.users.roleLabel}</TableHead>
+                <TableHead className="text-zinc-400">{t.admin.users.table.plan}</TableHead>
+                <TableHead className="text-zinc-400">{t.admin.users.table.createdAt}</TableHead>
+                <TableHead className="text-zinc-400 text-right">{t.admin.users.table.actions}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredUsers.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center text-zinc-500 py-8">
+                    {t.admin.users.table.noUsersFound}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredUsers.map((user) => (
+                  <TableRow key={user.id} className="border-zinc-800 hover:bg-zinc-800/30">
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-9 w-9">
+                          <AvatarFallback className="bg-zinc-700 text-white">
+                            {user.name?.charAt(0).toUpperCase() || "U"}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="font-medium text-white">{user.name}</p>
+                          <p className="text-sm text-zinc-500">{user.email}</p>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>{getRoleBadge(user.role)}</TableCell>
+                    <TableCell>{getPlanBadge(user.plan)}</TableCell>
+                    <TableCell className="text-zinc-400">
+                      {user.created_at ? new Date(user.created_at).toLocaleDateString() : "-"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-white">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800">
+                          <DropdownMenuItem 
+                            className="text-red-400 focus:bg-red-500/10 focus:text-red-400 cursor-pointer"
+                            onClick={() => deleteUser(user.id)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            {t.admin.users.actions.delete}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

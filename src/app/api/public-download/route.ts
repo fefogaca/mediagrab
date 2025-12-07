@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { appConfig, buildDownloadUrl } from '@/config/app.config';
 import { validateMediaUrl } from '@/lib/media/providers';
-import {
-  MediaResolverError,
-  resolveMediaInfo,
-  type ResolvedMediaFormat,
-} from '@/lib/server/mediaResolver';
+import { resolveMediaInfo, type ResolvedMediaFormat } from '@/lib/server/mediaResolver';
+import { MediaResolverError } from '@/lib/server/mediaResolverError';
 
 interface ApiErrorBody {
   error: {
@@ -97,7 +93,11 @@ function buildDownloadFormat(
   url: string,
   format: ResolvedMediaFormat,
 ) {
-  const downloadUrl = buildDownloadUrl(url, format.format_id, format.source);
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || request.nextUrl.origin;
+  const directDownloadUrl = new URL('/api/download-direct', baseUrl);
+  directDownloadUrl.searchParams.set('url', url);
+  directDownloadUrl.searchParams.set('format', format.format_id);
+  directDownloadUrl.searchParams.set('source', format.source);
 
   return {
     format_id: format.format_id,
@@ -108,6 +108,6 @@ function buildDownloadFormat(
     acodec: format.acodec,
     filesize_approx: format.filesize_approx,
     source: format.source,
-    download_url: downloadUrl,
+    download_url: directDownloadUrl.toString(),
   };
 }

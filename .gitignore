@@ -1,82 +1,306 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# ===========================================
+# MediaGrab - Git Ignore Configuration
+# ===========================================
+# Projeto: Next.js 16 + React 19 + TypeScript + MongoDB
+# Última atualização: 2025
 
-# dependencies
-/node_modules
-/.pnp
+# ===========================================
+# DEPENDÊNCIAS
+# ===========================================
+node_modules/
+.pnp/
 .pnp.js
+.yarn/
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
 
-# testing
-/coverage
+# ===========================================
+# BUILD OUTPUTS
+# ===========================================
+# Next.js
+.next/
+out/
+build/
+dist/
+.vercel
+.turbo
 
-# next.js
-/.next/
-/out/
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+*.js.map
+*.d.ts.map
 
-# production
-/build
-
-# misc
-.DS_Store
-*.pem
-# Environment variables
-.env*.local
+# ===========================================
+# ARQUIVOS DE AMBIENTE E SECRETOS
+# ===========================================
 .env
+.env.*
+!.env.example
 .env.local
-.env.production
-.env.development
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
 
-# Database
-*.sqlite
-*.sqlite3
-*.db
+# Arquivos de configuração sensíveis
+config/secrets.json
+config/credentials.json
+*.pem
+*.key
+*.cert
+*.crt
 
-# Logs
+# ===========================================
+# LOGS E DEBUG
+# ===========================================
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.pnpm-debug.log*
 
-# OS
-.DS_Store
-Thumbs.db
+# ===========================================
+# CACHE E TEMPORÁRIOS
+# ===========================================
+.cache/
+.parcel-cache/
+.eslintcache
+.stylelintcache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+.npm/
+.node_repl_history
+*.tgz
+*.tar.gz
 
-# IDE
+# ===========================================
+# BANCO DE DADOS
+# ===========================================
+*.sqlite
+*.sqlite3
+*.db
+*.db-shm
+*.db-wal
+*.sql
+data/
+*.mongo
+
+# ===========================================
+# ARQUIVOS PRIVADOS E SENSÍVEIS
+# ===========================================
+# Cookies e credenciais
+private/
+cookies/
+*.cookies.txt
+*.cookies.json
+credentials/
+secrets/
+
+# Arquivos de download temporários
+downloads/
+temp/
+tmp/
+*.tmp
+*.temp
+*.download
+
+# Arquivos de mídia temporários
+media/temp/
+media/downloads/
+*.mp4.tmp
+*.mp3.tmp
+*.webm.tmp
+
+# ===========================================
+# IDEs E EDITORES
+# ===========================================
+# VS Code
 .vscode/
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+*.code-workspace
+
+# IntelliJ IDEA / WebStorm
 .idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
 *.swp
 *.swo
 *~
+.vim/
 
-# Build
-.next/
-out/
-dist/
-build/
+# Emacs
+*~
+\#*\#
+.\#*
 
-# Dependencies
-node_modules/
-.pnp
-.pnp.js
+# ===========================================
+# SISTEMA OPERACIONAL
+# ===========================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.Spotlight-V100
+.Trashes
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
 
-# Testing
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.directory
+.Trash-*
+.nfs*
+
+# ===========================================
+# TESTES E COBERTURA
+# ===========================================
 coverage/
 .nyc_output/
+*.lcov
+.jest/
+test-results/
+playwright-report/
+playwright/.cache/
 
-# Misc
-*.pem
-*.key
-.cache/
+# ===========================================
+# PWA E SERVICE WORKERS
+# ===========================================
+public/sw.js
+public/workbox-*.js
+public/sw.js.map
+public/workbox-*.js.map
+public/precache-manifest.*.js
 
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
+# ===========================================
+# FERRAMENTAS DE BUILD E DEPLOY
+# ===========================================
+# Vercel
+.vercel
 
-# local sqlite database
-/mydb.sqlite
-/private/instagram_cookies.txt
-/private/youtube_cookies.txt
+# Netlify
+.netlify/
+.netlify.toml.local
 
-# context
-Context.md
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# ===========================================
+# ARQUIVOS ESPECÍFICOS DO PROJETO
+# ===========================================
+# yt-dlp cache e downloads
+yt-dlp/
+*.ytdl
+ytdl-cache/
+
+# Arquivos de backup
+*.bak
+*.backup
+*.old
+*.orig
+
+# Arquivos de lock (manter apenas um)
+# package-lock.json (mantido)
+# yarn.lock (se não usar yarn)
+# pnpm-lock.yaml (se não usar pnpm)
+
+# ===========================================
+# MISCELÂNEA
+# ===========================================
+# Arquivos temporários gerais
+*.tmp
+*.temp
+*.log
+*.pid
+*.seed
+*.pid.lock
+
+# Arquivos de sessão
+sessions/
+*.session
+
+# Arquivos de upload temporários
+uploads/
+uploads-temp/
+
+# Arquivos de análise
+.analytics/
+stats/
+
+# Arquivos de documentação gerados
+docs/build/
+docs/.vuepress/dist/
+
+# Arquivos de migração
+migrations/*.js
+!migrations/index.js
+
+# ===========================================
+# FERRAMENTAS DE QUALIDADE DE CÓDIGO
+# ===========================================
+.eslintcache
+.stylelintcache
+.prettiercache
+.sonarlint/
+
+# ===========================================
+# ARQUIVOS DE CONFIGURAÇÃO LOCAL
+# ===========================================
+# Configurações locais que não devem ser commitadas
+.local/
+local.config.*
+*.local.*
+
+# ===========================================
+# ARQUIVOS DE DESENVOLVIMENTO
+# ===========================================
+# Storybook
+storybook-static/
+.out/
+
+# ===========================================
+# NOTAS
+# ===========================================
+# - Mantenha este arquivo atualizado conforme novas dependências são adicionadas
+# - Arquivos de exemplo (.example) devem ser commitados
+# - Nunca commite arquivos .env ou credenciais
+# - Arquivos de lock (package-lock.json) devem ser commitados para garantir builds consistentes

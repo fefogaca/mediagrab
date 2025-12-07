@@ -1,213 +1,316 @@
+"use client";
 
-'use client';
-import React, { useState } from 'react';
-import Link from 'next/link';
-import StandardLayout from '../components/StandardLayout';
+import Link from "next/link";
+import { Navbar } from "@frontend/components/shared/Navbar";
+import { Footer } from "@frontend/components/shared/Footer";
+import { Button } from "@frontend/components/ui/button";
+import { Badge } from "@frontend/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@frontend/components/ui/card";
+import {
+  Check,
+  ChevronRight,
+  Zap,
+  Star,
+  Crown,
+  Rocket,
+  HelpCircle,
+} from "lucide-react";
+import { useTranslation } from "@/lib/i18n";
 
-const CheckIcon = () => (
-  <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-  </svg>
-);
-
-const PricingPage = () => {
-  const [apiKey, setApiKey] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
-
-  const handleCopyApiKey = async () => {
-    if (!apiKey) return;
-    await navigator.clipboard.writeText(apiKey);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleGetStarted = async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch('/api/generate-free-api-key', { method: 'POST' });
-      const data = await response.json();
-
-      if (response.ok) {
-        setApiKey(data.apiKey);
-      } else {
-        throw new Error(data.message || 'Failed to generate API key.');
-      }
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const tiers = [
+export default function PricingPage() {
+  const { t, language } = useTranslation();
+  const plans = [
     {
-      name: 'Developer',
-      price: 'Free',
-      description: 'For personal projects and exploring the API.',
+      name: "Free",
+      description: "Perfeito para testar",
+      price: "0",
+      icon: Star,
+      color: "zinc",
       features: [
-        '5 API calls/month',
-        'Community support',
+        "5 requests/mês",
+        "1 API Key",
+        "Qualidade SD (480p)",
+        "Sem marca d'água",
+        "Suporte por email",
       ],
-      cta: 'Get Started',
-      href: '#',
-      mostPopular: false,
+      limitations: [
+        "Rate limit: 5 req/min",
+      ],
+      cta: "Começar Grátis",
+      popular: false,
+      href: "/register",
     },
     {
-      name: 'Pro',
-      price: '$10',
-      priceSuffix: '/ month',
-      description: 'For production applications with growing usage.',
+      name: "Developer",
+      description: "Para desenvolvedores individuais",
+      price: "10,00",
+      icon: Zap,
+      color: "blue",
       features: [
-        '10,000 API calls/month',
-        'Email support',
-        'Access to all features',
+        "1.000 requests/mês",
+        "5 API Keys",
+        "Qualidade HD (1080p)",
+        "Sem marca d'água",
+        "Suporte prioritário",
+        "Rate limit: 60 req/min",
       ],
-      cta: 'Choose Pro',
-      href: '/contact',
-      mostPopular: true,
+      limitations: [],
+      cta: "Assinar Agora",
+      popular: false,
+      href: "/register?plan=developer",
     },
     {
-      name: 'Enterprise',
-      price: 'Custom',
-      description: 'For large-scale applications requiring custom limits and support.',
+      name: "Startup",
+      description: "Para pequenas empresas",
+      price: "30,00",
+      icon: Rocket,
+      color: "purple",
       features: [
-        'Unlimited API calls',
-        'Dedicated support & SLA',
-        'Custom integration help',
+        "10.000 requests/mês",
+        "20 API Keys",
+        "Qualidade 4K",
+        "Sem marca d'água",
+        "Suporte 24/7",
+        "Rate limit: 200 req/min",
+        "Analytics detalhados",
       ],
-      cta: 'Contact Us',
-      href: '/contact',
-      mostPopular: false,
+      limitations: [],
+      cta: "Assinar Agora",
+      popular: true,
+      href: "/register?plan=startup",
+    },
+    {
+      name: "Enterprise",
+      description: "Para grandes empresas",
+      price: "50,00",
+      icon: Crown,
+      color: "amber",
+      features: [
+        "Requests ilimitados",
+        "API Keys ilimitadas",
+        "Qualidade 8K",
+        "Sem marca d'água",
+        "Suporte dedicado",
+        "Rate limit: ilimitado",
+        "Analytics avançados",
+        "SLA garantido (99.9%)",
+      ],
+      limitations: [],
+      cta: "Assinar Agora",
+      popular: false,
+      href: "/register?plan=enterprise",
+    },
+  ];
+
+  const faqs = [
+    {
+      question: "Posso mudar de plano a qualquer momento?",
+      answer: "Sim! Você pode fazer upgrade ou downgrade do seu plano a qualquer momento. As mudanças são aplicadas imediatamente.",
+    },
+    {
+      question: "Como funciona o limite de downloads?",
+      answer: "O limite é resetado todo mês. Downloads bem-sucedidos contam para o limite. Se você exceder, pode fazer upgrade ou aguardar o próximo mês.",
+    },
+    {
+      question: "Quais formas de pagamento são aceitas?",
+      answer: "Aceitamos PIX, cartão de crédito (Visa, Mastercard, Elo) e boleto bancário através do AbacatePay.",
+    },
+    {
+      question: "Tem garantia de reembolso?",
+      answer: "Sim! Oferecemos garantia de 7 dias. Se não ficar satisfeito, devolvemos seu dinheiro sem perguntas.",
+    },
+    {
+      question: "O que acontece se eu exceder o rate limit?",
+      answer: "Suas requisições serão temporariamente bloqueadas até o período de rate limit resetar (geralmente 1 minuto).",
     },
   ];
 
   return (
-    <StandardLayout>
-      <div className="min-h-screen py-16 sm:py-24">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <div className="inline-block mb-4">
-              <span className="px-4 py-2 rounded-full bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 text-sm font-medium border border-violet-200 dark:border-violet-800">
-                💰 Planos Transparentes
-              </span>
-            </div>
-            <h1 className="text-5xl font-extrabold tracking-tight sm:text-6xl lg:text-7xl mt-6">
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-violet-600 via-purple-600 to-sky-600 dark:from-violet-400 dark:via-purple-400 dark:to-sky-400">
-                Pricing Plans
-              </span>
-            </h1>
-            <p className="mt-6 max-w-2xl mx-auto text-xl text-gray-600 dark:text-gray-300 leading-relaxed">Preços simples e transparentes para projetos de todos os tamanhos.</p>
-          </div>
+    <div className="min-h-screen bg-zinc-950">
+      <Navbar />
 
-          <div className="mt-12 grid gap-8 lg:grid-cols-3 lg:gap-8">
-            {tiers.map((tier, index) => (
-              <div 
-                key={tier.name} 
-                className={`relative group p-8 bg-white dark:bg-gray-800 border-2 ${tier.mostPopular ? 'border-violet-500 dark:border-violet-400 shadow-2xl shadow-violet-500/20' : 'border-gray-200 dark:border-gray-700'} rounded-2xl shadow-lg hover:shadow-2xl flex flex-col transition-all duration-300 hover:scale-105 hover:-translate-y-1`}
-                style={{ animationDelay: `${index * 100}ms` }}
+      {/* Hero */}
+      <section className="pt-32 pb-16 px-4">
+        <div className="max-w-7xl mx-auto text-center">
+          <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 mb-6">
+            {t.pricing.badge}
+          </Badge>
+          <h1 className="text-4xl sm:text-5xl font-bold text-white mb-4">
+            {t.pricing.title}
+          </h1>
+          <p className="text-xl text-zinc-400 max-w-2xl mx-auto">
+            {t.pricing.subtitle}
+          </p>
+        </div>
+      </section>
+
+      {/* Pricing Grid */}
+      <section className="py-12 px-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {plans.map((plan) => (
+              <Card 
+                key={plan.name} 
+                className={`bg-zinc-900/50 border-zinc-800 relative flex flex-col ${plan.popular ? 'ring-2 ring-emerald-500/50 lg:scale-105' : ''}`}
               >
-                {tier.mostPopular && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1.5 text-sm font-bold tracking-wide text-white bg-gradient-to-r from-violet-600 to-sky-600 rounded-full shadow-lg">
-                    Mais Popular
+                {plan.popular && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                    <Badge className="bg-emerald-600 text-white border-0">
+                      {t.pricing.popular}
+                    </Badge>
                   </div>
                 )}
-                <div className="mt-2">
-                  <h3 className="text-3xl font-bold text-gray-900 dark:text-white">{tier.name}</h3>
-                  <p className="mt-3 text-gray-600 dark:text-gray-400 leading-relaxed">{tier.description}</p>
-                  <div className="mt-6 flex items-baseline">
-                    <span className="text-5xl font-extrabold text-gray-900 dark:text-white">{tier.price}</span>
-                    {tier.priceSuffix && <span className="ml-2 text-lg font-medium text-gray-500 dark:text-gray-400">{tier.priceSuffix}</span>}
+                <CardHeader className="text-center pb-2">
+                  <div className={`w-12 h-12 rounded-xl mx-auto flex items-center justify-center mb-4 bg-${plan.color}-500/10`}>
+                    <plan.icon className={`h-6 w-6 text-${plan.color}-500`} />
                   </div>
-                </div>
-
-                <ul className="mt-8 space-y-4 flex-1">
-                  {tier.features.map((feature) => (
-                    <li key={feature} className="flex items-start gap-3">
-                      <div className="flex-shrink-0 mt-0.5"><CheckIcon /></div>
-                      <p className="text-base text-gray-700 dark:text-gray-300 leading-relaxed">{feature}</p>
-                    </li>
-                  ))}
-                </ul>
-
-                <div className="mt-8">
-                  {tier.name === 'Developer' ? (
-                    <button 
-                      onClick={handleGetStarted} 
-                      disabled={loading} 
-                      className="w-full py-4 px-6 text-center rounded-xl font-semibold bg-gradient-to-r from-violet-600 to-sky-600 text-white shadow-lg shadow-violet-500/30 hover:shadow-xl hover:shadow-violet-500/40 transition-all duration-200 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                  <CardTitle className="text-white">{plan.name}</CardTitle>
+                  <CardDescription className="text-zinc-400">{plan.description}</CardDescription>
+                </CardHeader>
+                <CardContent className="text-center flex-1">
+                  <div className="mb-6">
+                    <span className="text-4xl font-bold text-white">
+                      {plan.price === "0" ? t.pricing.free : `R$${plan.price}`}
+                    </span>
+                    {plan.price !== "0" && <span className="text-zinc-400">{t.pricing.month}</span>}
+                  </div>
+                  <ul className="space-y-3 text-left">
+                    {plan.features.map((feature) => (
+                      <li key={feature} className="flex items-start gap-2 text-sm text-zinc-300">
+                        <Check className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                        {feature}
+                      </li>
+                    ))}
+                    {plan.limitations.map((limitation) => (
+                      <li key={limitation} className="flex items-start gap-2 text-sm text-zinc-500">
+                        <span className="h-4 w-4 shrink-0 mt-0.5 text-center">✕</span>
+                        {limitation}
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+                <CardFooter>
+                  <Link 
+                    href={plan.href} 
+                    className="w-full"
+                  >
+                    <Button 
+                      className={`w-full ${plan.popular ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-zinc-800 hover:bg-zinc-700'} text-white`}
                     >
-                      {loading ? (
-                        <span className="flex items-center justify-center gap-2">
-                          <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          Gerando...
-                        </span>
-                      ) : tier.cta}
-                </button>
-                  ) : (
-                    <Link 
-                      href={tier.href}
-                      className={`block w-full py-4 px-6 text-center rounded-xl font-semibold transition-all duration-200 hover:scale-105 active:scale-95 ${
-                        tier.mostPopular 
-                          ? 'bg-gradient-to-r from-violet-600 to-sky-600 text-white shadow-lg shadow-violet-500/30 hover:shadow-xl hover:shadow-violet-500/40' 
-                          : 'bg-gray-100 dark:bg-gray-700 text-violet-600 dark:text-violet-400 hover:bg-gray-200 dark:hover:bg-gray-600'
-                      }`}
-                    >
-                      {tier.cta}
-                    </Link>
-                  )}
-                {tier.name === 'Developer' && apiKey && (
-                    <div className="mt-4 p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-200 dark:border-emerald-800">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">Sua API Key:</p>
-                        <button
-                          onClick={handleCopyApiKey}
-                          className="text-xs font-medium text-emerald-700 dark:text-emerald-300 hover:text-emerald-900 dark:hover:text-emerald-100 transition-colors flex items-center gap-1 px-2 py-1 rounded hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
-                        >
-                          {copied ? (
-                            <>
-                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                              </svg>
-                              Copiado!
-                            </>
-                          ) : (
-                            <>
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                              </svg>
-                              Copiar
-                            </>
-                          )}
-                        </button>
-                      </div>
-                      <button
-                        onClick={handleCopyApiKey}
-                        className="w-full text-left text-base font-mono text-emerald-900 dark:text-emerald-100 break-all bg-emerald-100 dark:bg-emerald-900/40 p-3 rounded hover:bg-emerald-200 dark:hover:bg-emerald-900/60 transition-colors cursor-pointer"
-                      >
-                        {apiKey}
-                      </button>
-                  </div>
-                )}
-                {tier.name === 'Developer' && error && (
-                    <div className="mt-4 p-4 bg-rose-50 dark:bg-rose-900/20 rounded-xl border border-rose-200 dark:border-rose-800">
-                      <p className="text-sm text-rose-800 dark:text-rose-200">{error}</p>
-                  </div>
-                )}
-                </div>
-              </div>
+                      {plan.cta}
+                      <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </Link>
+                </CardFooter>
+              </Card>
             ))}
           </div>
         </div>
-      </div>
-    </StandardLayout>
-  );
-};
+      </section>
 
-export default PricingPage;
+      {/* Comparison Table */}
+      <section className="py-20 px-4 bg-zinc-900/30">
+        <div className="max-w-5xl mx-auto">
+          <h2 className="text-3xl font-bold text-white text-center mb-12">
+            Compare os planos
+          </h2>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-zinc-800">
+                  <th className="text-left py-4 px-4 text-zinc-400 font-medium">Recurso</th>
+                  <th className="py-4 px-4 text-zinc-300 font-medium">Free</th>
+                  <th className="py-4 px-4 text-zinc-300 font-medium">Developer</th>
+                  <th className="py-4 px-4 text-zinc-300 font-medium">Startup</th>
+                  <th className="py-4 px-4 text-zinc-300 font-medium">Enterprise</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  { feature: "Requests/mês", values: ["5", "1.000", "10.000", "Ilimitado"] },
+                  { feature: "API Keys", values: ["1", "5", "20", "Ilimitado"] },
+                  { feature: "Qualidade máxima", values: ["480p", "1080p", "4K", "8K"] },
+                  { feature: "Rate limit", values: ["5/min", "60/min", "200/min", "Ilimitado"] },
+                  { feature: "Sem marca d'água", values: [true, true, true, true] },
+                  { feature: "Suporte", values: ["Email", "Prioritário", "24/7", "Dedicado"] },
+                  { feature: "SLA", values: [false, false, false, true] },
+                ].map((row) => (
+                  <tr key={row.feature} className="border-b border-zinc-800/50">
+                    <td className="py-4 px-4 text-zinc-400">{row.feature}</td>
+                    {row.values.map((value, i) => (
+                      <td key={i} className="py-4 px-4 text-center">
+                        {typeof value === "boolean" ? (
+                          value ? (
+                            <Check className="h-5 w-5 text-emerald-500 mx-auto" />
+                          ) : (
+                            <span className="text-zinc-600">—</span>
+                          )
+                        ) : (
+                          <span className="text-zinc-300">{value}</span>
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="py-20 px-4">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-3xl font-bold text-white text-center mb-12">
+            {t.pricing.faq.title}
+          </h2>
+          
+          <div className="space-y-4">
+            {t.pricing.faq.items.map((faq, index) => (
+              <Card key={index} className="bg-zinc-900/50 border-zinc-800">
+                <CardContent className="p-6">
+                  <div className="flex gap-4">
+                    <HelpCircle className="h-5 w-5 text-emerald-500 shrink-0 mt-0.5" />
+                    <div>
+                      <h3 className="font-medium text-white mb-2">{faq.question}</h3>
+                      <p className="text-zinc-400 text-sm">{faq.answer}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="py-20 px-4">
+        <div className="max-w-4xl mx-auto text-center">
+          <div className="bg-gradient-to-r from-emerald-900/20 to-emerald-800/20 border border-emerald-800/50 rounded-3xl p-12">
+            <h2 className="text-3xl font-bold text-white mb-4">
+              {t.pricing.contact.title}
+            </h2>
+            <p className="text-zinc-400 mb-8">
+              {t.pricing.contact.description}
+            </p>
+            <Link href="/contact">
+              <Button size="lg" className="bg-emerald-600 hover:bg-emerald-500 text-white px-8">
+                {t.pricing.contact.cta}
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <Footer />
+    </div>
+  );
+}

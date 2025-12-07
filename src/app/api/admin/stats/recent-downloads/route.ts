@@ -1,14 +1,29 @@
-
 import { NextResponse } from 'next/server';
-import { openDb } from '@/lib/database';
+import connectDB from '@backend/lib/mongodb';
+import DownloadLog from '@models/DownloadLog';
 
 export async function GET() {
   try {
-    const db = await openDb();
-    const logs = await db.all('SELECT * FROM download_logs ORDER BY downloaded_at DESC LIMIT 10');
-    return NextResponse.json(logs, { status: 200 });
+    await connectDB();
+    
+    const downloads = await DownloadLog.find({})
+      .populate('userId', 'name email')
+      .sort({ createdAt: -1 })
+      .limit(50);
+
+    const formattedDownloads = downloads.map(d => ({
+      id: d._id.toString(),
+      url: d.url,
+      platform: d.platform,
+      userId: d.userId?._id?.toString(),
+      username: (d.userId as { name?: string })?.name || 'Anônimo',
+      createdAt: d.createdAt,
+      downloaded_at: d.createdAt, // compatibilidade
+    }));
+
+    return NextResponse.json({ downloads: formattedDownloads }, { status: 200 });
   } catch (error) {
     console.error('Failed to fetch recent downloads:', error);
-    return NextResponse.json({ message: 'Failed to fetch recent downloads', error: (error as Error).message }, { status: 500 });
+    return NextResponse.json({ message: 'Erro ao buscar downloads', error: (error as Error).message }, { status: 500 });
   }
 }

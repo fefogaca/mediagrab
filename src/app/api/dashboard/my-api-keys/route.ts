@@ -1,63 +1,58 @@
-
 import { NextResponse } from 'next/server';
-import { openDb } from '@/lib/database';
+import { cookies } from 'next/headers';
 import jwt from 'jsonwebtoken';
+import connectDB from '@/backend/lib/mongodb';
+import ApiKey from '@/backend/models/ApiKey';
 
-const JWT_SECRET: string = process.env.JWT_SECRET as string;
-
-if (!JWT_SECRET) {
-  throw new Error('JWT_SECRET is not defined in environment variables');
-}
+const JWT_SECRET = process.env.JWT_SECRET || '';
 
 interface DecodedToken {
-  id: number;
-  username: string;
+  id: string;
+  email: string;
   role: string;
 }
 
-function getUserIdFromRequest(request: Request): number | null {
+async function getUserFromRequest(): Promise<DecodedToken | null> {
   try {
-    const token = request.headers.get('authorization')?.split(' ')[1];
-    if (!token) {
-      // Tentar pegar do cookie
-      const cookies = request.headers.get('cookie');
-      if (cookies) {
-        const tokenMatch = cookies.match(/token=([^;]+)/);
-        if (tokenMatch) {
-          const decoded = jwt.verify(tokenMatch[1], JWT_SECRET);
-          if (typeof decoded !== 'string' && 'id' in decoded) {
-            return (decoded as DecodedToken).id;
-          }
-        }
-      }
-      return null;
-    }
-    const decoded = jwt.verify(token, JWT_SECRET);
-    if (typeof decoded === 'string' || !('id' in decoded)) {
-      return null;
-    }
-    return (decoded as DecodedToken).id;
-  } catch (error) {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('token')?.value;
+    
+    if (!token) return null;
+    
+    const decoded = jwt.verify(token, JWT_SECRET) as DecodedToken;
+    return decoded;
+  } catch {
     return null;
   }
 }
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    const userId = getUserIdFromRequest(request);
-    if (!userId) {
-      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    const userData = await getUserFromRequest();
+    if (!userData) {
+      return NextResponse.json({ message: 'Não autorizado' }, { status: 401 });
     }
 
-    const db = await openDb();
-    const apiKeys = await db.all('SELECT id, key, user_id, created_at, expires_at, usage_count, usage_limit FROM api_keys WHERE user_id = ?', userId);
+    await connectDB();
+    
+    const apiKeys = await ApiKey.find({ userId: userData.id })
+      .sort({ createdAt: -1 })
+      .lean();
 
-    return NextResponse.json(apiKeys, { status: 200 });
+    // Transformar para formato esperado pelo frontend
+    const formattedKeys = apiKeys.map(key => ({
+      id: key._id.toString(),
+      key: key.key,
+      created_at: key.createdAt,
+      expires_at: key.expiresAt,
+      usage_count: key.usageCount || 0,
+      usage_limit: key.usageLimit || 5,
+      is_active: key.isActive,
+    }));
+
+    return NextResponse.json({ apiKeys: formattedKeys }, { status: 200 });
   } catch (error) {
-    console.error('Failed to fetch API keys:', error);
-    if (error instanceof jwt.JsonWebTokenError) {
-      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
-    }
-    return NextResponse.json({ message: 'Failed to fetch API keys', error: (error as Error).message }, { status: 500 });
+    console.error('Erro ao buscar API keys:', error);
+    return NextResponse.json({ message: 'Erro ao buscar API keys', apiKeys: [] }, { status: 500 });
   }
 }

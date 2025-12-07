@@ -1,277 +1,264 @@
-# MediaGrab API
+# 🎬 MediaGrab
 
-> Plataforma completa para download de mídia multi-plataforma (YouTube, Instagram, TikTok, X/Twitter, Vimeo, Facebook, Dailymotion, SoundCloud) com painel administrativo, painel de usuário e documentação interativa.
-
-## 📚 Índice
-
-1. [Visão Geral](#visão-geral)
-2. [Principais Recursos](#principais-recursos)
-3. [Arquitetura](#arquitetura)
-4. [Pré-requisitos](#pré-requisitos)
-5. [Instalação Passo a Passo](#instalação-passo-a-passo)
-6. [Configuração de Cookies (Instagram & YouTube)](#configuração-de-cookies-instagram--youtube)
-7. [Executando o Projeto](#executando-o-projeto)
-8. [Painéis (Admin & Usuário)](#painéis-admin--usuário)
-9. [Referência da API](#referência-da-api)
-10. [Estrutura do Projeto](#estrutura-do-projeto)
-11. [Fluxo de Desenvolvimento](#fluxo-de-desenvolvimento)
-12. [Diagnóstico e Boas Práticas](#diagnóstico-e-boas-práticas)
-13. [Contribuição](#contribuição)
-14. [Licença](#licença)
+<div align="center">
+  <img src="public/images/logo-longEscrito.png" alt="MediaGrab Logo" width="300" />
+  
+  <p><strong>The Ultimate Media Downloading API</strong></p>
+  
+  [![Next.js](https://img.shields.io/badge/Next.js-14-black?style=flat-square&logo=next.js)](https://nextjs.org/)
+  [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
+  [![MongoDB](https://img.shields.io/badge/MongoDB-7-green?style=flat-square&logo=mongodb)](https://www.mongodb.com/)
+  [![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38B2AC?style=flat-square&logo=tailwind-css)](https://tailwindcss.com/)
+  [![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
+</div>
 
 ---
 
-## Visão Geral
+## ✨ Features
 
-A MediaGrab foi concebida para equipes que precisam integrar downloads de mídia em aplicações ou fluxos internos. A plataforma combina uma API em Next.js 16, interfaces modernas (landing page, documentação e dashboards) e automações com `yt-dlp`/`ytdl-core`, tudo preparado para execução local ou em produção.
+- 🎥 **Download de Mídia** - Suporte para 1000+ plataformas (YouTube, Instagram, TikTok, Twitter, etc.)
+- 🔄 **Sistema de Fallback** - 4 providers (yt-dlp, @distube/ytdl-core, ytdl-core, play-dl) para máxima disponibilidade
+- 🌐 **API RESTful** - API completa para integração em qualquer projeto
+- 👤 **Sistema de Usuários** - Autenticação completa com JWT
+- 🔑 **API Keys** - Gerenciamento de chaves de API por usuário
+- 📊 **Dashboard Admin** - Painel completo para gerenciar a plataforma
+- 📱 **Dashboard Usuário** - Painel para usuários gerenciarem suas API Keys
+- 🌍 **Internacionalização** - Suporte para Português e Inglês
+- 💳 **Pagamentos** (Opcional) - Integração com AbacatePay (PIX) e Stripe
+- 📧 **Emails** (Opcional) - Integração com SendGrid
+- 🔐 **OAuth** (Opcional) - Login com Google e GitHub
 
----
+## 🚀 Quick Start
 
-## Principais Recursos
+### Pré-requisitos
 
-- **API multi-plataforma**: suporte a YouTube (vídeos e Shorts), Instagram (reels/posts), TikTok, X/Twitter, Vimeo, Facebook, Dailymotion e SoundCloud.
-- **UX moderna**: landing page animada, modal de download com filtros e documentação interativa com exemplos práticos.
-- **Autenticação e gestão**: painéis separados para administradores e usuários finais, criação de API Keys, métricas em tempo real, notificações internas e controle de limites.
-- **Fallbacks inteligentes**: tratamento automático para formatos indisponíveis, cookies opcionais para conteúdos que exigem login e limpeza de arquivos temporários.
-- **Configuração declarativa**: `.env.local` documentado, arquivos de configuração centralizados em `src/config/app.config.ts` e scripts de automação para banco de dados.
-- **Experiência pronta para DevOps**: scripts `npm run build`, `npm run dev`, documentação de troubleshooting e arquivos `.gitignore` alinhados (cookies e artefatos temporários estão fora do versionamento).
+- Node.js 20+
+- MongoDB (local ou [MongoDB Atlas](https://www.mongodb.com/atlas))
+- [yt-dlp](https://github.com/yt-dlp/yt-dlp) instalado no sistema
 
----
+### Instalação
 
-## Arquitetura
-
-```
-Next.js 16 (App Router, Turbopack)
-├─ API Routes (/api/**)
-│  ├─ download (yt-dlp + cookies opcionais)
-│  ├─ download-direct (streaming ou arquivo mp4 temp)
-│  ├─ admin/** (usuários, chaves, notificações)
-│  └─ dashboard/** (dados do usuário final)
-├─ UI (React 19 + Tailwind 4)
-│  ├─ Landing page (modal de formatos, cards interativos)
-│  ├─ Docs page (Quick Start, referência e exemplos de respostas)
-│  └─ Painéis (admin + usuário)
-├─ `src/lib/server/mediaResolver.ts`
-│  └─ Resolve metadados e formatos usando yt-dlp/ytdl-core
-└─ SQLite (via `src/lib/database.ts`)
-   ├─ Tabelas: usuários, api_keys, notifications, download_logs
-   └─ Scripts: `npm run create-admin`, `node scripts/setup.js`
-```
-
----
-
-## Pré-requisitos
-
-- **Node.js** ≥ 20.x (desenvolvimento em `v25.1.0`)
-- **npm** ≥ 10.x
-- **Python 3.9+** + `yt-dlp` e `ffmpeg` instalados no PATH (yt-dlp é empacotado via `yt-dlp-wrap`, mas dependências do sistema são necessárias)
-- **SQLite** (instalado por padrão em macOS/Linux)
-- (Opcional) Acesso autenticado aos serviços suportados para cookies (Instagram/YouTube)
-
----
-
-## Instalação Passo a Passo
-
-### 1. Clonar o repositório
 ```bash
-git clone https://github.com/<seu-usuario>/<seu-repo>.git
-cd <seu-repo>
-```
+# Clone o repositório
+git clone https://github.com/seu-usuario/mediagrab.git
+cd mediagrab
 
-### 2. Instalar dependências Node
-```bash
+# Instale as dependências
 npm install
-```
 
-### 3. Criar arquivo `.env.local`
-Crie o arquivo na raiz do projeto com o conteúdo mínimo:
-```dotenv
-NEXT_PUBLIC_API_BASE_URL=http://localhost:3000
-JWT_SECRET=defina_um_segredo_forte_aqui
-INSTAGRAM_APP_ID=936619743392459
-INSTAGRAM_COOKIES_PATH=private/instagram_cookies.txt
-YOUTUBE_COOKIES_PATH=private/youtube_cookies.txt
-```
-> 🔐 **Por que manter `JWT_SECRET`?** Ele assina/valida os tokens emitidos no login. Mesmo ambientes de desenvolvimento devem ter um valor definido para garantir compatibilidade com o fluxo de autenticação.
+# Copie o arquivo de exemplo de variáveis de ambiente
+cp .env.example .env.local
 
-### 4. Configurar banco de dados
-```bash
-node scripts/setup.js        # cria/atualiza a base SQLite
-npm run create-admin         # guia interativo para criar o primeiro usuário admin
-```
+# Edite o .env.local com suas credenciais
+# (veja seção "Configuração" abaixo)
 
----
-
-## Configuração de Cookies (Instagram & YouTube)
-
-Alguns vídeos exigem autenticação. Para replicar o comportamento do CLI (`yt-dlp --cookies`):
-
-1. Use uma extensão do navegador (ex.: “Get cookies.txt”) para exportar cookies em formato Netscape.
-2. Salve os arquivos em `private/instagram_cookies.txt` e `private/youtube_cookies.txt` (nomes padrão ignorados pelo Git).
-3. Ajuste se preferir caminhos personalizados:
-   ```dotenv
-   INSTAGRAM_COOKIES_PATH=private/meus_cookies_instagram.txt
-   YOUTUBE_COOKIES_PATH=private/meus_cookies_youtube.txt
-   ```
-4. Reinicie o servidor (`npm run dev`) para recarregar as variáveis.
-
-Durante as requisições, a API registrará logs indicando se os cookies foram encontrados (`YouTube: usando cookies em ...`).
-
----
-
-## Executando o Projeto
-
-### Desenvolvimento
-```bash
+# Inicie o servidor de desenvolvimento
 npm run dev
-# Local: http://localhost:3000
 ```
 
-### Build de produção (validação)
+Acesse: http://localhost:3000
+
+### 🎉 Primeiro Acesso
+
+Na primeira execução, ao acessar a página de login, um popup aparecerá automaticamente para você criar o primeiro administrador. Basta preencher:
+- Nome
+- Email
+- Senha (mínimo 8 caracteres)
+
+Após criar o admin, faça login normalmente e comece a usar!
+
+## ⚙️ Configuração
+
+### Variáveis de Ambiente Obrigatórias
+
+```env
+# MongoDB
+MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/mediagrab
+
+# Autenticação
+JWT_SECRET=sua-chave-secreta-de-32-caracteres
+NEXTAUTH_SECRET=sua-chave-nextauth
+NEXTAUTH_URL=http://localhost:3000
+
+# URL da aplicação
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
+
+### Variáveis Opcionais (Integrações)
+
+```env
+# Pagamentos - AbacatePay (PIX para brasileiros)
+ABACATEPAY_API_KEY=sua-api-key
+
+# Pagamentos - Stripe (Internacional)
+STRIPE_SECRET_KEY=sk_test_xxx
+STRIPE_PUBLISHABLE_KEY=pk_test_xxx
+
+# Email - SendGrid
+SENDGRID_API_KEY=sua-api-key
+SENDGRID_FROM_EMAIL=noreply@seudominio.com
+
+# OAuth - Google
+GOOGLE_CLIENT_ID=xxx
+GOOGLE_CLIENT_SECRET=xxx
+
+# OAuth - GitHub
+GITHUB_CLIENT_ID=xxx
+GITHUB_CLIENT_SECRET=xxx
+```
+
+> **Nota:** Se as integrações não estiverem configuradas, os botões correspondentes mostrarão uma mensagem informando que a funcionalidade será implementada em breve.
+
+## 📁 Estrutura do Projeto
+
+```
+mediagrab/
+├── src/
+│   ├── app/                    # Next.js App Router
+│   │   ├── admin/              # Painel de administração
+│   │   ├── dashboard/          # Painel do usuário
+│   │   ├── api/                # API Routes
+│   │   │   ├── auth/           # Autenticação
+│   │   │   ├── admin/          # Endpoints admin
+│   │   │   ├── dashboard/      # Endpoints usuário
+│   │   │   ├── download/       # API de download
+│   │   │   ├── setup/          # Setup inicial
+│   │   │   └── webhooks/       # Webhooks
+│   │   └── ...                 # Páginas públicas
+│   │
+│   ├── frontend/               # Código do frontend
+│   │   ├── components/
+│   │   │   ├── ui/             # Componentes Shadcn UI
+│   │   │   └── shared/         # Componentes compartilhados
+│   │   └── hooks/
+│   │
+│   ├── backend/                # Código do backend
+│   │   ├── models/             # Mongoose models
+│   │   ├── services/           # Serviços (email, pagamento)
+│   │   └── lib/                # Utilitários
+│   │
+│   └── lib/                    # Utilitários compartilhados
+│       └── i18n/               # Internacionalização
+│
+├── public/                     # Assets estáticos
+└── private/                    # Arquivos sensíveis (cookies)
+```
+
+## 🔄 Sistema de Fallback
+
+O MediaGrab utiliza um sistema robusto de fallback com 4 providers para garantir máxima disponibilidade:
+
+| Provider | Plataformas | Prioridade |
+|----------|-------------|------------|
+| **yt-dlp** | 1000+ sites | Primário |
+| **@distube/ytdl-core** | YouTube | Fallback 1 |
+| **ytdl-core** | YouTube | Fallback 2 |
+| **play-dl** | YouTube, SoundCloud | Fallback 3 |
+
+Se um provider falhar, o sistema automaticamente tenta o próximo. Isso garante que:
+- ✅ Se o YouTube mudar algo, outro provider pode funcionar
+- ✅ Atualizações independentes de cada biblioteca
+- ✅ Logs detalhados de qual provider foi usado
+- ✅ Formato de resposta JSON sempre consistente
+
+## 🔌 API
+
+### Autenticação
+
+Todas as requisições à API devem incluir uma API Key no header:
+
 ```bash
-npm run build
-npm start
+curl -X GET "http://localhost:3000/api/download?url=VIDEO_URL" \
+  -H "X-API-Key: sua-api-key"
 ```
 
-> Se aparecer `Unable to acquire lock`, finalize instâncias antigas: `pkill -f "next dev"`.
+### Endpoints
 
----
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+| GET | `/api/download?url={url}` | Obtém informações e formatos do vídeo |
+| GET | `/api/download-direct?url={url}&format={format}` | Download direto |
+| GET | `/api/public-download?url={url}` | Download público (para testes) |
 
-## Painéis (Admin & Usuário)
+### Exemplo de Resposta
 
-- **Admin (`/login` → `/admin`)**
-  - Gerenciar usuários (criação, edição, senha temporária)
-  - Criar/rotacionar API Keys para qualquer usuário
-  - Painel de métricas gerais (total de downloads, maiores consumidores)
-  - Sistema de notificações: enviar alertas para todos ou usuários específicos
-
-- **Usuário (`/login` → `/dashboard`)**
-  - Visualizar métricas pessoais (downloads por período, top formatos)
-  - Criar/revogar as próprias API Keys
-  - Receber notificações enviadas pelo admin
-
-Ambos os painéis usam o mesmo backend (`/api/admin/**` e `/api/dashboard/**`) com checagens de role.
-
----
-
-## Referência da API
-
-### Endpoint principal: `GET /api/download`
-
-#### Requisição
-```
-GET /api/download?url=<URL_DO_VIDEO>&apikey=<SUA_API_KEY>
-```
-
-#### Resposta (200)
 ```json
 {
-  "title": "Example Video Title",
-  "requested_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-  "provider": {
-    "id": "youtube",
-    "label": "YouTube"
-  },
-  "library": "yt-dlp",
-  "formats": [
-    {
-      "format_id": "313",
-      "ext": "mp4",
-      "resolution": "3840x2160",
-      "quality": "4K",
-      "vcodec": "av01.0.13M.10",
-      "acodec": "none",
-      "filesize_approx": 157383383,
-      "source": "yt-dlp",
-      "download_url": "https://api.seudominio.com/api/download-direct?url=...&format=313&source=yt-dlp"
-    },
-    {
-      "format_id": "140",
-      "ext": "m4a",
-      "resolution": "Audio Only",
-      "quality": "High",
-      "vcodec": "none",
-      "acodec": "mp4a.40.2",
-      "filesize_approx": 3094343,
-      "source": "yt-dlp",
-      "download_url": "https://api.seudominio.com/api/download-direct?url=...&format=140&source=yt-dlp"
-    }
-  ]
+  "success": true,
+  "data": {
+    "title": "Video Title",
+    "thumbnail": "https://...",
+    "duration": 120,
+    "platform": "youtube",
+    "formats": [
+      {
+        "quality": "1080p",
+        "format": "mp4",
+        "url": "https://..."
+      }
+    ]
+  }
 }
 ```
 
-#### Fluxo com API Key
-1. Gere a chave no painel.
-2. Envie em todas as requisições (`apikey=<SUA_KEY>`).
-3. Trate erros comuns (401 `INVALID_API_KEY`, 429 `USAGE_LIMIT_EXCEEDED`, etc.).
+## 👤 Primeiro Acesso
 
-### Endpoint de download direto: `GET /api/download-direct`
-- Usado internamente pelos links em `download_url`.
-- Para Instagram/YouTube, se necessário, baixa o arquivo para `/tmp` e responde o `.mp4` final com cabeçalhos `Content-Length`.
+Ao acessar `/login` pela primeira vez (sem nenhum admin no banco), um popup de setup aparecerá automaticamente para você criar suas credenciais de administrador.
 
-> Consulte `/docs` na aplicação para uma documentação interativa com exemplos copy&paste.
+> **Nota:** Todo o setup é feito automaticamente pelo sistema - sem necessidade de scripts!
 
----
+## 💳 Planos
 
-## Estrutura do Projeto
+| Plano | Preço | Requests/mês | API Keys |
+|-------|-------|--------------|----------|
+| Free | R$ 0 | 5 | 1 |
+| Developer | R$ 10 | 1.000 | 5 |
+| Startup | R$ 30 | 10.000 | 20 |
+| Enterprise | R$ 50 | Ilimitado | Ilimitado |
 
+## 🌐 URLs de Acesso
+
+| Página | URL |
+|--------|-----|
+| Landing Page | http://localhost:3000 |
+| Login | http://localhost:3000/login |
+| Registro | http://localhost:3000/register |
+| Dashboard Admin | http://localhost:3000/admin |
+| Dashboard Usuário | http://localhost:3000/dashboard |
+| Documentação | http://localhost:3000/docs |
+| Preços | http://localhost:3000/pricing |
+
+## 🛠️ Scripts Disponíveis
+
+```bash
+npm run dev          # Inicia em modo desenvolvimento
+npm run build        # Compila para produção
+npm run start        # Inicia em modo produção
+npm run lint         # Executa linter
+npm run clean        # Limpa cache do Next.js
 ```
-src/
-├─ app/
-│  ├─ page.tsx                 # Landing page + modal de download
-│  ├─ docs/page.tsx            # Documentação interativa
-│  ├─ pricing/, contact/, ...  # Páginas estáticas com StandardLayout
-│  ├─ admin/, dashboard/       # Painéis com componentes próprios
-│  └─ api/                     # Rotas HTTP (App Router)
-├─ config/app.config.ts        # Configurações centralizadas (URLs, features)
-├─ lib/
-│  ├─ server/mediaResolver.ts  # Resolve metadados, usa yt-dlp/ytdl-core
-│  ├─ database.ts              # Conexão SQLite e migrações básicas
-│  └─ media/providers.ts       # Lista de provedores suportados
-└─ app/components              # Layouts reutilizáveis (StandardLayout, ThemeProvider)
-```
+
+## 🤝 Contribuindo
+
+1. Fork o projeto
+2. Crie uma branch (`git checkout -b feature/nova-funcionalidade`)
+3. Commit suas mudanças (`git commit -m 'Adiciona nova funcionalidade'`)
+4. Push para a branch (`git push origin feature/nova-funcionalidade`)
+5. Abra um Pull Request
+
+## 📄 Licença
+
+Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+
+## 🙏 Agradecimentos
+
+- [yt-dlp](https://github.com/yt-dlp/yt-dlp) - Backend de download
+- [Shadcn UI](https://ui.shadcn.com/) - Componentes UI
+- [Next.js](https://nextjs.org/) - Framework React
+- [MongoDB](https://www.mongodb.com/) - Banco de dados
 
 ---
 
-## Fluxo de Desenvolvimento
-
-| Comando | Descrição |
-|--------|-----------|
-| `npm run dev` | Inicia o servidor Next.js com Turbopack |
-| `npm run build` | Gera build otimizando API e páginas |
-| `npm start` | Sobe o servidor em modo produção |
-| `npm run create-admin` | CLI para criação de usuário admin |
-| `node scripts/setup.js` | Cria/atualiza schema SQLite |
-
-Depois de alterações nas rotas ou scripts que dependem de cookies, reinicie o servidor para carregar as novas variáveis.
-
----
-
-## Diagnóstico e Boas Práticas
-
-- **`FORMAT_NOT_AVAILABLE` no download**: o CLI `yt-dlp` com o mesmo URL é o melhor teste A/B. Se funcionar apenas com cookies, garanta que o arquivo Netscape está acessível e o caminho em `.env.local` é válido.
-- **`Unable to acquire lock`** ao reiniciar `next dev`: finalize os processos antigos (`pkill -f "next dev"`).
-- **Build falhando com erros de permissão**: remover diretórios externos (`rm -rf path/to/venv`) antes do `npm run build`.
-- **Rotas respondendo 502**: veja os logs da API. Informações completas (`stderr` do yt-dlp) são emitidas no console.
-- **Segurança**: nunca versionar cookies ou `.env.local`. O `.gitignore` já cobre `private/instagram_cookies.txt` e `private/youtube_cookies.txt`.
-
----
-
-## Contribuição
-
-Pull requests são bem-vindos! Antes de abrir uma PR:
-
-1. Faça fork e crie uma branch (`git checkout -b feature/minha-feature`).
-2. Certifique-se de rodar `npm run build` e testar os fluxos críticos.
-3. Atualize documentação se alterar contratos da API ou variáveis.
-4. Abra a PR descrevendo o cenário (passos de reprodução e screenshots, se aplicável).
-
----
-
-## Licença
-
-Este projeto está licenciado sob a [LICENÇA GPL-2.0](LICENSE). Consulte o arquivo para detalhes.
-
----
-
-> Suporte e contato: [felipefogaca.net](https://felipefogaca.net)
+<div align="center">
+  <p>Feito com ❤️ por <a href="https://github.com/seu-usuario">Seu Nome</a></p>
+</div>

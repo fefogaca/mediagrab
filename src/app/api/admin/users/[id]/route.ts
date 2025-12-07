@@ -1,91 +1,88 @@
-import { NextResponse, NextRequest } from 'next/server';
-import { openDb } from '@/lib/database';
-import bcrypt from 'bcryptjs';
+import { NextResponse } from 'next/server';
+import connectDB from '@backend/lib/mongodb';
+import User from '@models/User';
 
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const db = await openDb();
-    const user = await db.get('SELECT id, username, role FROM users WHERE id = ?', id);
-
+    const { id } = await params;
+    
+    await connectDB();
+    
+    const user = await User.findById(id).select('-password');
+    
     if (!user) {
-      return NextResponse.json({ message: 'User not found' }, { status: 404 });
+      return NextResponse.json({ message: 'Usuário não encontrado' }, { status: 404 });
     }
 
-    return NextResponse.json(user, { status: 200 });
+    return NextResponse.json({ user }, { status: 200 });
   } catch (error) {
     console.error('Failed to fetch user:', error);
-    return NextResponse.json({ message: 'Failed to fetch user', error: (error as Error).message }, { status: 500 });
+    return NextResponse.json({ message: 'Erro ao buscar usuário', error: (error as Error).message }, { status: 500 });
   }
 }
 
-export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  // Extract user ID from the awaited params object
-  const { id } = await params;
-  // Extract update fields from the request body
-  const { username, password, role } = await request.json();
-
-  // Validate if any fields are provided for update
-  if (!username && !password && !role) {
-    return NextResponse.json({ message: 'No fields to update' }, { status: 400 });
-  }
-
+export async function PUT(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const db = await openDb();
-    let updateQuery = 'UPDATE users SET';
-    const updateParams: (string | number)[] = [];
-    const fields: string[] = [];
-
-    // Conditionally add fields to update query
-    if (username) {
-      fields.push('username = ?');
-      updateParams.push(username);
-    }
-    if (password) {
-      // Hash password before updating for security
-      const hashedPassword = await bcrypt.hash(password, 10);
-      fields.push('password = ?');
-      updateParams.push(hashedPassword);
-    }
-    if (role) {
-      fields.push('role = ?');
-      updateParams.push(role);
+    const { id } = await params;
+    const updates = await request.json();
+    
+    await connectDB();
+    
+    // Remover campos que não devem ser atualizados diretamente
+    delete updates.password;
+    delete updates._id;
+    
+    const user = await User.findByIdAndUpdate(
+      id,
+      { $set: updates },
+      { new: true }
+    ).select('-password');
+    
+    if (!user) {
+      return NextResponse.json({ message: 'Usuário não encontrado' }, { status: 404 });
     }
 
-    // Construct the final update query
-    updateQuery += ' ' + fields.join(', ') + ' WHERE id = ?';
-    updateParams.push(id);
-
-    // Execute the update query
-    const result = await db.run(updateQuery, ...updateParams);
-
-    // Check if any rows were affected
-    if (result.changes === 0) {
-      return NextResponse.json({ message: 'User not found or no changes made' }, { status: 404 });
-    }
-
-    return NextResponse.json({ message: 'User updated successfully' }, { status: 200 });
+    return NextResponse.json({ message: 'Usuário atualizado', user }, { status: 200 });
   } catch (error) {
     console.error('Failed to update user:', error);
-    return NextResponse.json({ message: 'Failed to update user', error: (error as Error).message }, { status: 500 });
+    return NextResponse.json({ message: 'Erro ao atualizar usuário', error: (error as Error).message }, { status: 500 });
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const db = await openDb();
-    const result = await db.run('DELETE FROM users WHERE id = ?', id);
-
-    if (result.changes === 0) {
-      return NextResponse.json({ message: 'User not found' }, { status: 404 });
+    const { id } = await params;
+    
+    await connectDB();
+    
+    // Primeiro, verificar se o usuário existe e se é admin
+    const user = await User.findById(id);
+    
+    if (!user) {
+      return NextResponse.json({ message: 'Usuário não encontrado' }, { status: 404 });
     }
+    
+    // Impedir exclusão de administradores
+    if (user.role === 'admin') {
+      return NextResponse.json({ 
+        message: 'Não é possível excluir um administrador. Remova o cargo de admin primeiro.' 
+      }, { status: 403 });
+    }
+    
+    await User.findByIdAndDelete(id);
 
-    return NextResponse.json({ message: 'User deleted successfully' }, { status: 200 });
+    return NextResponse.json({ message: 'Usuário excluído com sucesso' }, { status: 200 });
   } catch (error) {
     console.error('Failed to delete user:', error);
-    return NextResponse.json({ message: 'Failed to delete user', error: (error as Error).message }, { status: 500 });
+    return NextResponse.json({ message: 'Erro ao excluir usuário', error: (error as Error).message }, { status: 500 });
   }
 }

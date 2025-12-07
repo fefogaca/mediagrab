@@ -1,43 +1,277 @@
-'use client';
-import React, { useState, useEffect } from 'react';
-import DashboardCardMyStats from './partials/DashboardCardMyStats';
-import DashboardCardMyApiKeys from './partials/DashboardCardMyApiKeys';
-import DashboardCardMyDownloads from './partials/DashboardCardMyDownloads';
-import dynamic from 'next/dynamic';
+"use client";
 
-const DynamicDashboardCardDownloadsOverTime = dynamic(() => import('./partials/DashboardCardDownloadsOverTime'), { ssr: false });
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@frontend/components/ui/card";
+import { Button } from "@frontend/components/ui/button";
+import { Badge } from "@frontend/components/ui/badge";
+import { Progress } from "@frontend/components/ui/progress";
+import {
+  Key,
+  Download,
+  Activity,
+  ArrowRight,
+  Zap,
+  TrendingUp,
+} from "lucide-react";
 
-function Dashboard() {
-  const isBrowser = typeof window !== 'undefined';
-
-  return (
-    <main className="grow bg-gradient-to-br from-gray-50 via-white to-violet-50/20 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
-      <div className="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto">
-        <div className="sm:flex sm:justify-between sm:items-center mb-8">
-          <div className="mb-4 sm:mb-0">
-            <div className="inline-block mb-3">
-              <span className="px-3 py-1.5 rounded-full bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 text-xs font-semibold border border-violet-200 dark:border-violet-800">
-                📊 Minhas Métricas
-              </span>
-            </div>
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-violet-600 via-purple-600 to-sky-600 dark:from-violet-400 dark:via-purple-400 dark:to-sky-400 mt-2">
-              Dashboard
-            </h1>
-            <p className="mt-2 text-gray-600 dark:text-gray-400 text-sm md:text-base">
-              Visualize suas métricas pessoais e estatísticas de uso da API
-            </p>
-          </div>
-        </div>
-        <div className="grid grid-cols-12 gap-6">
-          <DashboardCardMyStats />
-          <DashboardCardMyApiKeys />
-          <DashboardCardMyDownloads />
-          {isBrowser && <DynamicDashboardCardDownloadsOverTime />}
-        </div>
-      </div>
-    </main>
-  );
+interface Stats {
+  totalKeys: number;
+  totalDownloads: number;
+  usageCount: number;
+  usageLimit: number;
 }
 
-export default Dashboard;
+interface RecentDownload {
+  id: string;
+  url: string;
+  downloaded_at: string;
+}
 
+export default function DashboardPage() {
+  const [stats, setStats] = useState<Stats>({
+    totalKeys: 0,
+    totalDownloads: 0,
+    usageCount: 0,
+    usageLimit: 5, // Limite gratuito: 5 requests
+  });
+  const [recentDownloads, setRecentDownloads] = useState<RecentDownload[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  const fetchStats = async () => {
+    try {
+      const [statsRes, downloadsRes] = await Promise.all([
+        fetch("/api/dashboard/my-stats"),
+        fetch("/api/dashboard/my-recent-downloads"),
+      ]);
+
+      const statsData = await statsRes.json().catch(() => ({}));
+      const downloadsData = await downloadsRes.json().catch(() => ({ downloads: [] }));
+
+      setStats({
+        totalKeys: statsData.totalKeys || 0,
+        totalDownloads: statsData.totalDownloads || 0,
+        usageCount: statsData.usageCount || 0,
+        usageLimit: statsData.usageLimit || 100,
+      });
+      setRecentDownloads(downloadsData.downloads?.slice(0, 5) || []);
+    } catch (error) {
+      console.error("Erro ao buscar estatísticas:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const usagePercentage = Math.min((stats.usageCount / stats.usageLimit) * 100, 100);
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="h-8 bg-zinc-800 rounded w-48 animate-pulse" />
+        <div className="grid gap-4 md:grid-cols-3">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-32 bg-zinc-800 rounded animate-pulse" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-white">Dashboard</h1>
+        <p className="text-zinc-400 mt-1">Bem-vindo ao seu painel de controle</p>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card className="bg-zinc-900/50 border-zinc-800 hover:border-zinc-700 transition-colors">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-2 rounded-lg bg-emerald-500/10">
+                <Key className="h-5 w-5 text-emerald-500" />
+              </div>
+              <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30">
+                Ativas
+              </Badge>
+            </div>
+            <p className="text-sm text-zinc-400">API Keys</p>
+            <p className="text-2xl font-bold text-white mt-1">{stats.totalKeys}</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-zinc-900/50 border-zinc-800 hover:border-zinc-700 transition-colors">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-2 rounded-lg bg-blue-500/10">
+                <Download className="h-5 w-5 text-blue-500" />
+              </div>
+              <TrendingUp className="h-4 w-4 text-emerald-500" />
+            </div>
+            <p className="text-sm text-zinc-400">Total de Downloads</p>
+            <p className="text-2xl font-bold text-white mt-1">{stats.totalDownloads}</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-zinc-900/50 border-zinc-800 hover:border-zinc-700 transition-colors">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-2 rounded-lg bg-purple-500/10">
+                <Activity className="h-5 w-5 text-purple-500" />
+              </div>
+              <span className="text-xs text-zinc-500">
+                {stats.usageCount}/{stats.usageLimit}
+              </span>
+            </div>
+            <p className="text-sm text-zinc-400">Uso do Plano</p>
+            <div className="mt-2">
+              <Progress 
+                value={usagePercentage} 
+                className={`h-2 ${usagePercentage >= 80 ? 'bg-amber-500' : ''}`}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Main Content */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Quick Actions */}
+        <Card className="bg-zinc-900/50 border-zinc-800">
+          <CardHeader>
+            <CardTitle className="text-white">Ações Rápidas</CardTitle>
+            <CardDescription className="text-zinc-400">
+              Acesse as funcionalidades mais usadas
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3">
+            <Link href="/dashboard/api-keys" className="block">
+              <div className="flex items-center justify-between p-4 rounded-xl bg-zinc-800/50 border border-zinc-700/50 hover:border-emerald-500/50 hover:bg-zinc-800 transition-all group">
+                <div className="flex items-center gap-4">
+                  <div className="p-2.5 rounded-lg bg-emerald-500/10 group-hover:bg-emerald-500/20 transition-colors">
+                    <Key className="h-5 w-5 text-emerald-500" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-white">Gerenciar API Keys</p>
+                    <p className="text-xs text-zinc-500">Crie e gerencie suas chaves</p>
+                  </div>
+                </div>
+                <ArrowRight className="h-5 w-5 text-zinc-500 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" />
+              </div>
+            </Link>
+            <Link href="/" className="block">
+              <div className="flex items-center justify-between p-4 rounded-xl bg-zinc-800/50 border border-zinc-700/50 hover:border-blue-500/50 hover:bg-zinc-800 transition-all group">
+                <div className="flex items-center gap-4">
+                  <div className="p-2.5 rounded-lg bg-blue-500/10 group-hover:bg-blue-500/20 transition-colors">
+                    <Download className="h-5 w-5 text-blue-500" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-white">Fazer Download</p>
+                    <p className="text-xs text-zinc-500">Baixe vídeos de qualquer plataforma</p>
+                  </div>
+                </div>
+                <ArrowRight className="h-5 w-5 text-zinc-500 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" />
+              </div>
+            </Link>
+            <Link href="/dashboard/subscription" className="block">
+              <div className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-emerald-900/30 to-emerald-800/30 border border-emerald-500/30 hover:border-emerald-500/50 transition-all group">
+                <div className="flex items-center gap-4">
+                  <div className="p-2.5 rounded-lg bg-emerald-500/20">
+                    <Zap className="h-5 w-5 text-emerald-400" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-white">Fazer Upgrade</p>
+                    <p className="text-xs text-emerald-400/80">Desbloqueie mais recursos</p>
+                  </div>
+                </div>
+                <ArrowRight className="h-5 w-5 text-emerald-500 group-hover:translate-x-1 transition-all" />
+              </div>
+            </Link>
+          </CardContent>
+        </Card>
+
+        {/* Recent Downloads */}
+        <Card className="bg-zinc-900/50 border-zinc-800">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-white">Downloads Recentes</CardTitle>
+              <CardDescription className="text-zinc-400">
+                Seus últimos downloads
+              </CardDescription>
+            </div>
+            <Link href="/dashboard/downloads">
+              <Button variant="ghost" size="sm" className="text-zinc-400 hover:text-white">
+                Ver todos
+                <ArrowRight className="h-4 w-4 ml-1" />
+              </Button>
+            </Link>
+          </CardHeader>
+          <CardContent>
+            {recentDownloads.length === 0 ? (
+              <div className="text-center py-8">
+                <Download className="h-12 w-12 text-zinc-600 mx-auto mb-4" />
+                <p className="text-zinc-400">Nenhum download ainda</p>
+                <Link href="/">
+                  <Button className="mt-4 bg-emerald-600 hover:bg-emerald-500">
+                    Fazer Primeiro Download
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {recentDownloads.map((download) => (
+                  <div
+                    key={download.id}
+                    className="flex items-center gap-3 p-3 rounded-lg bg-zinc-800/50 hover:bg-zinc-800 transition-colors"
+                  >
+                    <div className="p-2 rounded-lg bg-emerald-500/10">
+                      <Download className="h-4 w-4 text-emerald-500" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-zinc-300 truncate">{download.url}</p>
+                      <p className="text-xs text-zinc-500">
+                        {new Date(download.downloaded_at).toLocaleString("pt-BR")}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Usage Info */}
+      <Card className="bg-gradient-to-r from-emerald-900/20 to-emerald-800/20 border-emerald-800/50">
+        <CardContent className="p-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-semibold text-white">Precisa de mais requests?</h3>
+              <p className="text-zinc-400 mt-1">
+                Faça upgrade do seu plano para obter mais downloads e funcionalidades
+              </p>
+            </div>
+            <Link href="/dashboard/subscription">
+              <Button className="bg-emerald-600 hover:bg-emerald-500 text-white">
+                <Zap className="h-4 w-4 mr-2" />
+                Ver Planos
+              </Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

@@ -1,122 +1,96 @@
 import { NextResponse } from 'next/server';
-import { openDb } from '@/lib/database';
+import connectDB from '@backend/lib/mongodb';
+import Notification from '@models/Notification';
+import User from '@models/User';
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET: string = process.env.JWT_SECRET as string;
 
-if (!JWT_SECRET) {
-  throw new Error('JWT_SECRET is not defined in environment variables');
-}
-
-interface DecodedToken {
-  id: number;
-  username: string;
-  role: string;
-}
-
-function getUserIdFromRequest(request: Request): number | null {
+function getUserFromRequest(request: Request): { id: string; role: string } | null {
   try {
-    const token = request.headers.get('authorization')?.split(' ')[1];
-    if (!token) {
-      const cookies = request.headers.get('cookie');
-      if (cookies) {
-        const tokenMatch = cookies.match(/token=([^;]+)/);
-        if (tokenMatch) {
-          const decoded = jwt.verify(tokenMatch[1], JWT_SECRET);
-          if (typeof decoded !== 'string' && 'id' in decoded) {
-            return (decoded as DecodedToken).id;
-          }
-        }
+    const cookies = request.headers.get('cookie');
+    if (cookies) {
+      const tokenMatch = cookies.match(/token=([^;]+)/);
+      if (tokenMatch) {
+        const decoded = jwt.verify(tokenMatch[1], JWT_SECRET) as { id: string; role: string };
+        return decoded;
       }
-      return null;
     }
-    const decoded = jwt.verify(token, JWT_SECRET);
-    if (typeof decoded === 'string' || !('id' in decoded)) {
-      return null;
-    }
-    return (decoded as DecodedToken).id;
-  } catch (error) {
+    return null;
+  } catch {
     return null;
   }
 }
 
 export async function GET(request: Request) {
   try {
-    const userId = getUserIdFromRequest(request);
-    if (!userId) {
-      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
-    }
-
-    const db = await openDb();
-    
-    // Buscar notificações do usuário ou todas se for admin
-    const user = await db.get('SELECT role FROM users WHERE id = ?', userId);
+    const user = getUserFromRequest(request);
     if (!user) {
-      return NextResponse.json({ message: 'User not found' }, { status: 404 });
+      return NextResponse.json({ message: 'Não autorizado' }, { status: 401 });
     }
 
-    let notifications;
-    if (user.role === 'admin') {
-      // Admin vê todas as notificações
-      notifications = await db.all(`
-        SELECT n.*, u.username as created_by_username
-        FROM notifications n
-        LEFT JOIN users u ON n.created_by = u.id
-        ORDER BY n.created_at DESC
-        LIMIT 50
-      `);
-    } else {
-      // Usuário vê apenas suas notificações
-      notifications = await db.all(`
-        SELECT n.*, u.username as created_by_username
-        FROM notifications n
-        LEFT JOIN users u ON n.created_by = u.id
-        WHERE (n.target_audience = 'all' OR (n.target_audience = 'user' AND n.target_user_id = ?))
-        ORDER BY n.created_at DESC
-        LIMIT 50
-      `, userId);
-    }
+    await connectDB();
 
-    return NextResponse.json(notifications, { status: 200 });
+    const notifications = await Notification.find({})
+      .populate('createdBy', 'name email')
+      .sort({ createdAt: -1 })
+      .limit(50);
+
+    const formattedNotifications = notifications.map(n => ({
+      id: n._id.toString(),
+      title: n.title,
+      message: n.message,
+      type: n.type,
+      target_audience: n.targetAudience,
+      created_at: n.createdAt,
+      created_by_name: (n.createdBy as { name?: string })?.name || 'Sistema',
+    }));
+
+    return NextResponse.json({ notifications: formattedNotifications }, { status: 200 });
   } catch (error) {
     console.error('Failed to fetch notifications:', error);
-    return NextResponse.json({ message: 'Failed to fetch notifications', error: (error as Error).message }, { status: 500 });
+    return NextResponse.json({ message: 'Erro ao buscar notificações', error: (error as Error).message }, { status: 500 });
   }
 }
 
 export async function POST(request: Request) {
   try {
-    const userId = getUserIdFromRequest(request);
-    if (!userId) {
-      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    const user = getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ message: 'Não autorizado' }, { status: 401 });
     }
 
-    const user = await openDb().then(db => db.get('SELECT role FROM users WHERE id = ?', userId));
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ message: 'Forbidden: Admin access required' }, { status: 403 });
+    if (user.role !== 'admin') {
+      return NextResponse.json({ message: 'Acesso negado' }, { status: 403 });
     }
 
-    const { title, message, type, target_audience, target_user_id } = await request.json();
+    const { title, message, type, target_audience } = await request.json();
 
     if (!title || !message) {
-      return NextResponse.json({ message: 'Title and message are required' }, { status: 400 });
+      return NextResponse.json({ message: 'Título e mensagem são obrigatórios' }, { status: 400 });
     }
 
-    const db = await openDb();
-    const result = await db.run(
-      'INSERT INTO notifications (title, message, type, target_audience, target_user_id, created_by) VALUES (?, ?, ?, ?, ?, ?)',
+    await connectDB();
+
+    const notification = await Notification.create({
       title,
       message,
-      type || 'info',
-      target_audience || 'all',
-      target_user_id || null,
-      userId
-    );
+      type: type || 'info',
+      targetAudience: target_audience || 'all',
+      createdBy: user.id,
+    });
 
-    return NextResponse.json({ message: 'Notification created successfully', id: result.lastID }, { status: 201 });
+    return NextResponse.json({ 
+      message: 'Notificação criada com sucesso', 
+      notification: {
+        id: notification._id.toString(),
+        title: notification.title,
+        message: notification.message,
+        type: notification.type,
+      }
+    }, { status: 201 });
   } catch (error) {
     console.error('Failed to create notification:', error);
-    return NextResponse.json({ message: 'Failed to create notification', error: (error as Error).message }, { status: 500 });
+    return NextResponse.json({ message: 'Erro ao criar notificação', error: (error as Error).message }, { status: 500 });
   }
 }
-

@@ -1,98 +1,129 @@
 import { NextResponse } from 'next/server';
-import { openDb } from '@/lib/database';
-import { v4 as uuidv4 } from 'uuid';
+import { cookies } from 'next/headers';
 import jwt from 'jsonwebtoken';
+import { v4 as uuidv4 } from 'uuid';
+import connectDB from '@/backend/lib/mongodb';
+import User from '@/backend/models/User';
+import ApiKey from '@/backend/models/ApiKey';
 
-const JWT_SECRET: string = process.env.JWT_SECRET as string;
-
-if (!JWT_SECRET) {
-  throw new Error('JWT_SECRET is not defined in environment variables');
-}
+const JWT_SECRET = process.env.JWT_SECRET || '';
 
 interface DecodedToken {
-  id: number;
-  username: string;
+  id: string;
+  email: string;
   role: string;
 }
 
-function getUserIdFromRequest(request: Request): number | null {
+// Limites de API Keys e requests por plano
+const PLAN_LIMITS = {
+  free: { maxKeys: 1, requestLimit: 5 },
+  developer: { maxKeys: 5, requestLimit: 1000 },
+  startup: { maxKeys: 20, requestLimit: 10000 },
+  enterprise: { maxKeys: -1, requestLimit: -1 }, // Ilimitado
+};
+
+async function getUserFromRequest(): Promise<DecodedToken | null> {
   try {
-    const token = request.headers.get('authorization')?.split(' ')[1];
-    if (!token) {
-      // Tentar pegar do cookie
-      const cookies = request.headers.get('cookie');
-      if (cookies) {
-        const tokenMatch = cookies.match(/token=([^;]+)/);
-        if (tokenMatch) {
-          const decoded = jwt.verify(tokenMatch[1], JWT_SECRET);
-          if (typeof decoded !== 'string' && 'id' in decoded) {
-            return (decoded as DecodedToken).id;
-          }
-        }
-      }
-      return null;
-    }
-    const decoded = jwt.verify(token, JWT_SECRET);
-    if (typeof decoded === 'string' || !('id' in decoded)) {
-      return null;
-    }
-    return (decoded as DecodedToken).id;
-  } catch (error) {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('token')?.value;
+    
+    if (!token) return null;
+    
+    const decoded = jwt.verify(token, JWT_SECRET) as DecodedToken;
+    return decoded;
+  } catch {
     return null;
   }
 }
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    const userId = getUserIdFromRequest(request);
-    if (!userId) {
-      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    const userData = await getUserFromRequest();
+    if (!userData) {
+      return NextResponse.json({ message: 'Não autorizado' }, { status: 401 });
     }
 
-    const db = await openDb();
-    const apiKeys = await db.all('SELECT id, key, user_id, created_at, expires_at, usage_count, usage_limit FROM api_keys WHERE user_id = ?', userId);
+    await connectDB();
+    
+    const apiKeys = await ApiKey.find({ userId: userData.id })
+      .sort({ createdAt: -1 })
+      .lean();
 
-    return NextResponse.json(apiKeys, { status: 200 });
+    return NextResponse.json({ apiKeys }, { status: 200 });
   } catch (error) {
-    console.error('Failed to fetch API keys:', error);
-    return NextResponse.json({ message: 'Failed to fetch API keys', error: (error as Error).message }, { status: 500 });
+    console.error('Erro ao buscar API keys:', error);
+    return NextResponse.json({ message: 'Erro ao buscar API keys' }, { status: 500 });
   }
 }
 
-export async function POST(request: Request) {
+export async function POST() {
   try {
-    const userId = getUserIdFromRequest(request);
-    if (!userId) {
-      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    const userData = await getUserFromRequest();
+    if (!userData) {
+      return NextResponse.json({ message: 'Não autorizado' }, { status: 401 });
     }
 
-    const { expires_at, usage_limit } = await request.json();
+    await connectDB();
+    
+    // Buscar usuário para verificar plano e email verificado
+    const user = await User.findById(userData.id);
+    if (!user) {
+      return NextResponse.json({ message: 'Usuário não encontrado' }, { status: 404 });
+    }
 
-    const db = await openDb();
-    const apiKey = `user-${uuidv4()}`;
+    // Verificar se email está verificado (preparado para SendGrid)
+    // Por enquanto, permitir criação mesmo sem verificação
+    const requireEmailVerification = false; // Mudar para true quando SendGrid estiver configurado
+    if (requireEmailVerification && !user.emailVerified) {
+      return NextResponse.json({ 
+        message: 'Você precisa verificar seu email antes de criar uma API Key',
+        requiresEmailVerification: true 
+      }, { status: 403 });
+    }
 
-    let expiresAtToSend: string | null = null;
-    if (expires_at) {
-      const date = new Date(expires_at);
-      if (!isNaN(date.getTime())) {
-        expiresAtToSend = date.toISOString();
+    // Verificar limites do plano
+    const plan = user.plan || 'free';
+    const limits = PLAN_LIMITS[plan as keyof typeof PLAN_LIMITS] || PLAN_LIMITS.free;
+    
+    // Contar keys existentes
+    const existingKeysCount = await ApiKey.countDocuments({ userId: user._id, isActive: true });
+    
+    if (limits.maxKeys !== -1 && existingKeysCount >= limits.maxKeys) {
+      return NextResponse.json({ 
+        message: `Você atingiu o limite de ${limits.maxKeys} API Key(s) do plano ${plan}. Faça upgrade para criar mais.` 
+      }, { status: 403 });
+    }
+
+    // Criar nova API Key
+    const apiKeyValue = `mg_${uuidv4().replace(/-/g, '')}`;
+    const keyNumber = existingKeysCount + 1;
+    
+    const apiKey = await ApiKey.create({
+      key: apiKeyValue,
+      name: `API Key ${keyNumber}`,
+      userId: user._id,
+      usageLimit: limits.requestLimit,
+      usageCount: 0,
+      isActive: true,
+      expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 ano
+    });
+
+    return NextResponse.json({ 
+      message: 'API Key criada com sucesso!',
+      apiKey: {
+        id: apiKey._id,
+        key: apiKey.key,
+        created_at: apiKey.createdAt,
+        expires_at: apiKey.expiresAt,
+        usage_count: apiKey.usageCount,
+        usage_limit: apiKey.usageLimit,
       }
-    }
-
-    const limitToSend = usage_limit || 100; // Default to Developer plan limit
-
-    await db.run(
-      'INSERT INTO api_keys (key, user_id, expires_at, usage_limit) VALUES (?, ?, ?, ?)',
-      apiKey,
-      userId,
-      expiresAtToSend,
-      limitToSend
-    );
-
-    return NextResponse.json({ message: 'API key created successfully', apiKey }, { status: 201 });
+    }, { status: 201 });
   } catch (error) {
-    console.error('Failed to create API key:', error);
-    return NextResponse.json({ message: 'Failed to create API key', error: (error as Error).message }, { status: 500 });
+    console.error('Erro ao criar API key:', error);
+    return NextResponse.json({ 
+      message: 'Erro ao criar API key', 
+      error: (error as Error).message 
+    }, { status: 500 });
   }
 }
-

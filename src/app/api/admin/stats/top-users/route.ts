@@ -1,11 +1,41 @@
-
 import { NextResponse } from 'next/server';
-import { openDb } from '@/lib/database';
+import connectDB from '@backend/lib/mongodb';
+import DownloadLog from '@backend/models/DownloadLog';
 
 export async function GET() {
   try {
-    const db = await openDb();
-    const topUsers = await db.all("SELECT u.username, COUNT(d.id) as download_count FROM download_logs d JOIN users u ON d.user_id = u.id WHERE d.user_id IS NOT NULL GROUP BY u.id ORDER BY download_count DESC LIMIT 5");
+    await connectDB();
+    
+    const topUsers = await DownloadLog.aggregate([
+      {
+        $match: { userId: { $exists: true, $ne: null } }
+      },
+      {
+        $group: {
+          _id: "$userId",
+          download_count: { $sum: 1 }
+        }
+      },
+      { $sort: { download_count: -1 } },
+      { $limit: 5 },
+      {
+        $lookup: {
+          from: 'users',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'user'
+        }
+      },
+      { $unwind: '$user' },
+      {
+        $project: {
+          username: '$user.name',
+          email: '$user.email',
+          download_count: 1
+        }
+      }
+    ]);
+    
     return NextResponse.json(topUsers, { status: 200 });
   } catch (error) {
     console.error('Failed to fetch top users:', error);

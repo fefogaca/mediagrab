@@ -1,66 +1,59 @@
 import { NextResponse } from 'next/server';
-import { openDb } from '@/lib/database';
+import connectDB from '@backend/lib/mongodb';
+import DownloadLog from '@backend/models/DownloadLog';
 import jwt from 'jsonwebtoken';
+import { cookies } from 'next/headers';
 
 const JWT_SECRET: string = process.env.JWT_SECRET as string;
 
-if (!JWT_SECRET) {
-  throw new Error('JWT_SECRET is not defined in environment variables');
-}
-
 interface DecodedToken {
-  id: number;
-  username: string;
+  id: string;
+  email: string;
   role: string;
 }
 
-function getUserIdFromRequest(request: Request): number | null {
+async function getUserIdFromRequest(): Promise<string | null> {
   try {
-    const token = request.headers.get('authorization')?.split(' ')[1];
-    if (!token) {
-      const cookies = request.headers.get('cookie');
-      if (cookies) {
-        const tokenMatch = cookies.match(/token=([^;]+)/);
-        if (tokenMatch) {
-          const decoded = jwt.verify(tokenMatch[1], JWT_SECRET);
-          if (typeof decoded !== 'string' && 'id' in decoded) {
-            return (decoded as DecodedToken).id;
-          }
-        }
-      }
-      return null;
-    }
-    const decoded = jwt.verify(token, JWT_SECRET);
-    if (typeof decoded === 'string' || !('id' in decoded)) {
-      return null;
-    }
-    return (decoded as DecodedToken).id;
-  } catch (error) {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('token')?.value;
+    
+    if (!token) return null;
+    
+    const decoded = jwt.verify(token, JWT_SECRET) as DecodedToken;
+    return decoded.id;
+  } catch {
     return null;
   }
 }
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    const userId = getUserIdFromRequest(request);
+    const userId = await getUserIdFromRequest();
     if (!userId) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
-    const db = await openDb();
+    await connectDB();
     
-    // Buscar downloads dos últimos 30 dias agrupados por dia
-    const downloads = await db.all(
-      `SELECT 
-        DATE(downloaded_at) as date,
-        COUNT(*) as count
-      FROM download_logs 
-      WHERE user_id = ? 
-        AND downloaded_at >= datetime('now', '-30 days')
-      GROUP BY DATE(downloaded_at)
-      ORDER BY date ASC`,
-      userId
-    );
+    // Buscar downloads dos últimos 30 dias
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const downloads = await DownloadLog.aggregate([
+      {
+        $match: {
+          userId: userId,
+          createdAt: { $gte: thirtyDaysAgo }
+        }
+      },
+      {
+        $group: {
+          _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { _id: 1 } }
+    ]);
 
     const labels: string[] = [];
     const values: number[] = [];
@@ -73,7 +66,7 @@ export async function GET(request: Request) {
       const dateStr = date.toISOString().split('T')[0];
       labels.push(date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }));
       
-      const download = downloads.find((d: any) => d.date === dateStr);
+      const download = downloads.find((d: { _id: string }) => d._id === dateStr);
       values.push(download ? download.count : 0);
     }
 
@@ -83,4 +76,3 @@ export async function GET(request: Request) {
     return NextResponse.json({ message: 'Failed to fetch downloads over time', error: (error as Error).message }, { status: 500 });
   }
 }
-

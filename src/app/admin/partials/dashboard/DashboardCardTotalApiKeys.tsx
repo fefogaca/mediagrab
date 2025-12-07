@@ -1,31 +1,20 @@
-
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@frontend/components/ui/card';
+import { useTranslation } from '@/lib/i18n';
 
-const DashboardCardTotalApiKeys = () => {
-  const [count, setCount] = useState(0);
-
-  useEffect(() => {
-    const fetchCount = async () => {
-      try {
-        const response = await fetch('/api/admin/stats/total-api-keys');
-        const data = await response.json();
-        setCount(data.count);
-      } catch (error) {
-        console.error('Failed to fetch total api keys:', error);
-      }
-    };
-
-    fetchCount();
-  }, []);
-
+export default function DashboardCardTotalApiKeys() {
+  const { t } = useTranslation();
   return (
-    <div className="flex flex-col col-span-full sm:col-span-6 xl:col-span-4 bg-white dark:bg-gray-800 shadow-xs rounded-xl p-5">
-      <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">Total API Keys</h2>
-      <div className="text-3xl font-bold text-gray-800 dark:text-gray-100">{count}</div>
-    </div>
+    <Card className="col-span-12 sm:col-span-6 lg:col-span-3">
+      <CardHeader>
+        <CardTitle className="text-sm font-medium text-zinc-400">{t.admin.dashboard.totalApiKeys}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold text-white">0</div>
+      </CardContent>
+    </Card>
   );
-};
+}
 
-export default DashboardCardTotalApiKeys;

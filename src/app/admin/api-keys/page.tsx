@@ -1,279 +1,497 @@
-'use client';
-import React, { useState, useEffect } from 'react';
+"use client";
+
+import { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@frontend/components/ui/card";
+import { Button } from "@frontend/components/ui/button";
+import { Input } from "@frontend/components/ui/input";
+import { Badge } from "@frontend/components/ui/badge";
+import { Progress } from "@frontend/components/ui/progress";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@frontend/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@frontend/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@frontend/components/ui/dialog";
+import { toast } from "sonner";
+import {
+  Search,
+  MoreHorizontal,
+  Key,
+  Copy,
+  Trash2,
+  RefreshCw,
+  Activity,
+  Ban,
+  CheckCircle,
+  XCircle,
+  Eye,
+  Mail,
+} from "lucide-react";
+import { useTranslation } from "@/lib/i18n";
 
 interface ApiKey {
-  id: number;
+  _id: string;
   key: string;
-  user_id: number;
-  created_at: string;
-  expires_at: string | null;
-  usage_limit: number;
-  usage_count: number;
-  username?: string;
-  role?: string;
+  name: string;
+  userId: {
+    _id: string;
+    name: string;
+    email: string;
+    plan: string;
+  };
+  isActive: boolean;
+  usageCount: number;
+  usageLimit: number;
+  createdAt: string;
+  lastUsedAt?: string;
 }
 
-interface User {
-  id: number;
-  username: string;
-  role: string;
-}
-
-const ApiKeysPage = () => {
+export default function AdminApiKeysPage() {
+  const { t, language } = useTranslation();
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [newApiKeyExpiresAt, setNewApiKeyExpiresAt] = useState<string>('');
-  const [selectedUsageLimit, setSelectedUsageLimit] = useState<string>('100'); // Default to 100
-  const [customUsageLimit, setCustomUsageLimit] = useState<string>('');
-  const [selectedUserId, setSelectedUserId] = useState<string>('');
-  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [selectedKey, setSelectedKey] = useState<ApiKey | null>(null);
+  const [showDetails, setShowDetails] = useState(false);
 
   useEffect(() => {
-    fetchData();
+    fetchApiKeys();
   }, []);
 
-  const fetchData = async () => {
+  const fetchApiKeys = async () => {
     try {
-      setLoading(true);
-      const [apiKeysResponse, usersResponse] = await Promise.all([
-        fetch('/api/admin/api-keys'),
-        fetch('/api/admin/users')
-      ]);
-
-      if (!apiKeysResponse.ok) throw new Error('Failed to fetch API keys');
-      if (!usersResponse.ok) throw new Error('Failed to fetch users');
-
-      const apiKeysData = await apiKeysResponse.json();
-      const usersData = await usersResponse.json();
-
-      setApiKeys(apiKeysData);
-      setUsers(usersData);
-    } catch (err) {
-      setError((err as Error).message);
+      const response = await fetch("/api/admin/api-keys");
+      const data = await response.json();
+      setApiKeys(data.apiKeys || []);
+    } catch (error) {
+      console.error("Error fetching API keys:", error);
+      toast.error(t.admin.apiKeys.errorLoading);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCreateApiKey = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    let expiresAtToSend: string | null = null;
-    if (newApiKeyExpiresAt) {
-      const date = new Date(newApiKeyExpiresAt);
-      if (isNaN(date.getTime())) {
-        setError('Please enter a valid expiration date.');
-        return;
-      }
-      expiresAtToSend = date.toISOString();
-    }
-
-    let limitToSend = parseInt(selectedUsageLimit);
-    if (selectedUsageLimit === 'custom') {
-      limitToSend = parseInt(customUsageLimit);
-      if (isNaN(limitToSend) || limitToSend <= 0) {
-        setError('Please enter a valid custom usage limit.');
-        return;
-      }
-    }
-
+  const toggleKeyStatus = async (keyId: string, currentStatus: boolean) => {
     try {
-      if (!selectedUserId) {
-        setError('Por favor, selecione um usuário.');
-        return;
-      }
-
-      const response = await fetch('/api/admin/api-keys', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: parseInt(selectedUserId), usage_limit: limitToSend, expires_at: expiresAtToSend }),
+      const response = await fetch(`/api/admin/api-keys/${keyId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: !currentStatus }),
       });
       
-      const data = await response.json();
+      if (!response.ok) throw new Error("Error updating");
       
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to create API key');
-      }
-      
-      setNewApiKeyExpiresAt('');
-      setSelectedUsageLimit('100');
-      setCustomUsageLimit('');
-      setSelectedUserId('');
-      setError(null);
-      fetchData();
-      
-      alert(`API Key criada com sucesso para o usuário! Key: ${data.apiKey}`);
-    } catch (err) {
-      setError((err as Error).message);
+      toast.success(
+        !currentStatus ? t.admin.apiKeys.keyActivated : t.admin.apiKeys.keyDeactivated
+      );
+      fetchApiKeys();
+    } catch {
+      toast.error(t.admin.apiKeys.errorUpdating);
     }
   };
 
-  const handleDeleteApiKey = async (id: number) => {
+  const deleteApiKey = async (keyId: string) => {
+    if (!confirm(t.admin.apiKeys.deleteConfirm)) return;
+    
     try {
-      const response = await fetch(`/api/admin/api-keys/${id}`, {
-        method: 'DELETE',
+      const response = await fetch(`/api/admin/api-keys/${keyId}`, {
+        method: "DELETE",
       });
-      if (!response.ok) {
-        throw new Error('Failed to delete API key');
-      }
-      fetchData();
-    } catch (err) {
-      setError((err as Error).message);
+      
+      if (!response.ok) throw new Error("Error deleting");
+      
+      toast.success(t.admin.apiKeys.keyDeleted);
+      fetchApiKeys();
+    } catch {
+      toast.error(t.admin.apiKeys.errorDeleting);
     }
   };
+
+  const resetUsage = async (keyId: string) => {
+    try {
+      const response = await fetch(`/api/admin/api-keys/${keyId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ usageCount: 0 }),
+      });
+      
+      if (!response.ok) throw new Error("Error resetting");
+      
+      toast.success(t.admin.apiKeys.usageReset);
+      fetchApiKeys();
+    } catch {
+      toast.error(t.admin.apiKeys.errorResetting);
+    }
+  };
+
+  const copyKey = (key: string) => {
+    navigator.clipboard.writeText(key);
+    toast.success(t.admin.apiKeys.keyCopied);
+  };
+
+  const filteredKeys = apiKeys.filter(key =>
+    key.key.toLowerCase().includes(search.toLowerCase()) ||
+    key.name?.toLowerCase().includes(search.toLowerCase()) ||
+    key.userId?.name?.toLowerCase().includes(search.toLowerCase()) ||
+    key.userId?.email?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const getUsagePercentage = (usage: number, limit: number) => {
+    return Math.min((usage / limit) * 100, 100);
+  };
+
+  const getUsageColor = (percentage: number) => {
+    if (percentage >= 90) return "bg-red-500";
+    if (percentage >= 70) return "bg-amber-500";
+    return "bg-emerald-500";
+  };
+
+  const activeKeys = apiKeys.filter(k => k.isActive).length;
+  const totalUsage = apiKeys.reduce((sum, key) => sum + key.usageCount, 0);
+  const keysAtLimit = apiKeys.filter(k => k.usageCount >= k.usageLimit).length;
 
   if (loading) {
     return (
-      <main className="grow bg-gradient-to-br from-gray-50 via-white to-violet-50/20 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
-        <div className="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto">
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-600"></div>
-          </div>
-        </div>
-      </main>
-    );
-  }
-
-  if (error) {
-    return (
-      <main className="grow bg-gradient-to-br from-gray-50 via-white to-violet-50/20 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
-        <div className="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto">
-          <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded-xl p-4">
-            <p className="text-rose-600 dark:text-rose-400">Erro: {error}</p>
-          </div>
-        </div>
-      </main>
+      <div className="space-y-6">
+        <div className="h-8 bg-zinc-800 rounded w-48 animate-pulse" />
+        <Card className="bg-zinc-900/50 border-zinc-800">
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="h-16 bg-zinc-800 rounded animate-pulse" />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   return (
-    <main className="grow bg-gradient-to-br from-gray-50 via-white to-violet-50/20 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
-      <div className="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto">
-        <div className="mb-8">
-          <div className="inline-block mb-3">
-            <span className="px-3 py-1.5 rounded-full bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 text-xs font-semibold border border-violet-200 dark:border-violet-800">
-              🔑 Gerenciamento de API Keys
-            </span>
-          </div>
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-violet-600 via-purple-600 to-sky-600 dark:from-violet-400 dark:via-purple-400 dark:to-sky-400 mt-2">
-            API Key Management
-          </h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-400 text-sm md:text-base">
-            Gere e gerencie chaves de API para acesso à plataforma
-          </p>
-        </div>
-
-        {/* Create New API Key */}
-        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-xl rounded-2xl p-6 sm:p-8 mb-8 border border-gray-200/50 dark:border-gray-700/50">
-          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-6 flex items-center gap-2">
-            <svg className="w-6 h-6 text-violet-600 dark:text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-            </svg>
-            Gerar Nova API Key
-          </h2>
-          <form onSubmit={handleCreateApiKey} className="space-y-4">
-            <div>
-              <label htmlFor="selectedUserId" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Usuário</label>
-              <select
-                id="selectedUserId"
-                className="form-select mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
-                value={selectedUserId}
-                onChange={(e) => setSelectedUserId(e.target.value)}
-                required
-              >
-                <option value="">Selecione um usuário</option>
-                {users.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.username} ({user.role})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label htmlFor="newApiKeyExpiresAt" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Data de Expiração (Opcional)</label>
-              <input
-                id="newApiKeyExpiresAt"
-                type="datetime-local"
-                className="form-input mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
-                value={newApiKeyExpiresAt}
-                onChange={(e) => setNewApiKeyExpiresAt(e.target.value)}
-              />
-            </div>
-            <div>
-              <label htmlFor="usageLimit" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Usage Limit</label>
-              <select
-                id="usageLimit"
-                className="form-select mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
-                value={selectedUsageLimit}
-                onChange={(e) => setSelectedUsageLimit(e.target.value)}
-              >
-                <option value="100">100 calls/month (Developer)</option>
-                <option value="10000">10,000 calls/month (Pro)</option>
-                <option value="100000">100,000 calls/month (Business)</option>
-                <option value="custom">Custom</option>
-              </select>
-              {selectedUsageLimit === 'custom' && (
-                <input
-                  type="number"
-                  className="form-input mt-2 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
-                  placeholder="Enter custom limit"
-                  value={customUsageLimit}
-                  onChange={(e) => setCustomUsageLimit(e.target.value)}
-                  min="1"
-                />
-              )}
-            </div>
-            <button type="submit" className="w-full sm:w-auto px-6 py-3 font-semibold text-white bg-gradient-to-r from-violet-600 to-sky-600 rounded-xl shadow-lg shadow-violet-500/30 hover:shadow-xl hover:shadow-violet-500/40 transition-all duration-200 hover:scale-105 active:scale-95">
-              Gerar API Key
-            </button>
-          </form>
-        </div>
-
-        {/* API Key List */}
-        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-xl rounded-2xl p-6 sm:p-8 border border-gray-200/50 dark:border-gray-700/50">
-          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-6 flex items-center gap-2">
-            <svg className="w-6 h-6 text-violet-600 dark:text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            API Keys Existentes
-          </h2>
-          <div className="overflow-x-auto">
-            <table className="table-auto w-full dark:text-gray-300">
-              <thead className="text-xs uppercase text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-700/50 rounded-xs">
-                <tr>
-                  <th className="p-2 whitespace-nowrap"><div className="font-semibold text-left">ID</div></th>
-                  <th className="p-2 whitespace-nowrap"><div className="font-semibold text-left">Key</div></th>
-                  <th className="p-2 whitespace-nowrap"><div className="font-semibold text-left">Usuário</div></th>
-                  <th className="p-2 whitespace-nowrap"><div className="font-semibold text-left">Limit</div></th>
-                  <th className="p-2 whitespace-nowrap"><div className="font-semibold text-left">Usage</div></th>
-                  <th className="p-2 whitespace-nowrap"><div className="font-semibold text-left">Created At</div></th>
-                  <th className="p-2 whitespace-nowrap"><div className="font-semibold text-left">Expires At</div></th>
-                  <th className="p-2 whitespace-nowrap"><div className="font-semibold text-center">Actions</div></th>
-                </tr>
-              </thead>
-              <tbody className="text-sm divide-y divide-gray-100 dark:divide-gray-700/60">
-                {apiKeys.map((apiKey) => (
-                  <tr key={apiKey.id}>
-                    <td className="p-2 whitespace-nowrap"><div className="text-left">{apiKey.id}</div></td>
-                    <td className="p-2 whitespace-nowrap"><div className="text-left font-medium text-gray-800 dark:text-gray-100 font-mono text-xs">{apiKey.key}</div></td>
-                    <td className="p-2 whitespace-nowrap"><div className="text-left">{apiKey.username || `User #${apiKey.user_id}`} {apiKey.role && `(${apiKey.role})`}</div></td>
-                    <td className="p-2 whitespace-nowrap"><div className="text-left">{apiKey.usage_limit}</div></td>
-                    <td className="p-2 whitespace-nowrap"><div className="text-left">{apiKey.usage_count || 0}</div></td>
-                    <td className="p-2 whitespace-nowrap"><div className="text-left">{new Date(apiKey.created_at).toLocaleDateString('pt-BR')}</div></td>
-                    <td className="p-2 whitespace-nowrap"><div className="text-left">{apiKey.expires_at ? new Date(apiKey.expires_at).toLocaleDateString('pt-BR') : 'Nunca'}</div></td>
-                    <td className="p-2 whitespace-nowrap text-center">
-                      <button onClick={() => handleDeleteApiKey(apiKey.id)} className="px-3 py-1.5 text-xs font-semibold bg-rose-500 hover:bg-rose-600 text-white rounded-lg transition-all">Excluir</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-white">{t.admin.apiKeys.title}</h1>
+          <p className="text-zinc-400 mt-1">{t.admin.apiKeys.subtitle}</p>
         </div>
       </div>
-    </main>
-  );
-};
 
-export default ApiKeysPage;
+      {/* Stats */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card className="bg-zinc-900/50 border-zinc-800">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="p-3 rounded-lg bg-emerald-500/10">
+              <Key className="h-5 w-5 text-emerald-500" />
+            </div>
+            <div>
+              <p className="text-sm text-zinc-400">{t.admin.apiKeys.stats.totalKeys}</p>
+              <p className="text-xl font-bold text-white">{apiKeys.length}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-zinc-900/50 border-zinc-800">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="p-3 rounded-lg bg-green-500/10">
+              <CheckCircle className="h-5 w-5 text-green-500" />
+            </div>
+            <div>
+              <p className="text-sm text-zinc-400">{t.admin.apiKeys.stats.activeKeys}</p>
+              <p className="text-xl font-bold text-white">{activeKeys}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-zinc-900/50 border-zinc-800">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="p-3 rounded-lg bg-blue-500/10">
+              <Activity className="h-5 w-5 text-blue-500" />
+            </div>
+            <div>
+              <p className="text-sm text-zinc-400">{t.admin.apiKeys.stats.totalRequests}</p>
+              <p className="text-xl font-bold text-white">{totalUsage.toLocaleString()}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-zinc-900/50 border-zinc-800">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="p-3 rounded-lg bg-amber-500/10">
+              <Ban className="h-5 w-5 text-amber-500" />
+            </div>
+            <div>
+              <p className="text-sm text-zinc-400">{t.admin.apiKeys.stats.keysAtLimit}</p>
+              <p className="text-xl font-bold text-white">{keysAtLimit}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* API Keys Table */}
+      <Card className="bg-zinc-900/50 border-zinc-800">
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <CardTitle className="text-white">
+                {t.admin.apiKeys.table.listTitle}
+              </CardTitle>
+              <CardDescription className="text-zinc-400">
+                {filteredKeys.length} {t.admin.apiKeys.table.keysFound}
+              </CardDescription>
+            </div>
+            <div className="relative w-full sm:w-80">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+              <Input
+                placeholder={t.admin.apiKeys.searchPlaceholder}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9 bg-zinc-800/50 border-zinc-700 text-white placeholder:text-zinc-500"
+              />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-zinc-800 hover:bg-transparent">
+                  <TableHead className="text-zinc-400">{t.admin.apiKeys.table.name}</TableHead>
+                  <TableHead className="text-zinc-400">{t.admin.apiKeys.table.key}</TableHead>
+                  <TableHead className="text-zinc-400">{t.admin.apiKeys.table.user}</TableHead>
+                  <TableHead className="text-zinc-400">{t.admin.apiKeys.table.usage}</TableHead>
+                  <TableHead className="text-zinc-400">{t.admin.apiKeys.table.status}</TableHead>
+                  <TableHead className="text-zinc-400">{t.admin.apiKeys.table.lastUsed}</TableHead>
+                  <TableHead className="text-zinc-400 text-right">{t.admin.apiKeys.table.actions}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredKeys.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center text-zinc-500 py-8">
+                      {t.admin.apiKeys.noKeys}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredKeys.map((apiKey) => {
+                    const usagePercentage = getUsagePercentage(apiKey.usageCount, apiKey.usageLimit);
+                    return (
+                      <TableRow key={apiKey._id} className="border-zinc-800 hover:bg-zinc-800/30">
+                        <TableCell className="text-white font-medium">
+                          {apiKey.name || "Unnamed"}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <code className="text-sm text-zinc-300 bg-zinc-800 px-2 py-1 rounded font-mono">
+                              {apiKey.key.substring(0, 8)}...{apiKey.key.substring(apiKey.key.length - 4)}
+                            </code>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-zinc-400 hover:text-white"
+                              onClick={() => copyKey(apiKey.key)}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <p className="text-zinc-300">{apiKey.userId?.name || "Unknown"}</p>
+                            <p className="text-xs text-zinc-500">{apiKey.userId?.email}</p>
+                            <Badge className="mt-1 capitalize" variant="outline">
+                              {apiKey.userId?.plan || "free"}
+                            </Badge>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1 w-32">
+                            <div className="flex justify-between text-xs">
+                              <span className="text-zinc-400">{apiKey.usageCount}</span>
+                              <span className="text-zinc-500">/ {apiKey.usageLimit}</span>
+                            </div>
+                            <Progress 
+                              value={usagePercentage} 
+                              className={`h-1.5 ${getUsageColor(usagePercentage)}`}
+                            />
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {!apiKey.isActive ? (
+                            <Badge className="bg-red-500/10 text-red-500 border-red-500/30">
+                              <XCircle className="h-3 w-3 mr-1" />
+                              {t.admin.apiKeys.status.inactive}
+                            </Badge>
+                          ) : usagePercentage >= 100 ? (
+                            <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/30">
+                              <Ban className="h-3 w-3 mr-1" />
+                              {t.admin.apiKeys.status.exhausted}
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30">
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              {t.admin.apiKeys.status.active}
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-zinc-400 text-sm">
+                          {apiKey.lastUsedAt 
+                            ? new Date(apiKey.lastUsedAt).toLocaleDateString(language === 'pt' ? 'pt-BR' : 'en-US')
+                            : t.admin.apiKeys.never}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-white">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800">
+                              <DropdownMenuItem 
+                                className="text-zinc-300 focus:bg-zinc-800 focus:text-white cursor-pointer"
+                                onClick={() => {
+                                  setSelectedKey(apiKey);
+                                  setShowDetails(true);
+                                }}
+                              >
+                                <Eye className="mr-2 h-4 w-4" />
+                                {t.admin.apiKeys.actions.viewDetails}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                className="text-zinc-300 focus:bg-zinc-800 focus:text-white cursor-pointer"
+                                onClick={() => copyKey(apiKey.key)}
+                              >
+                                <Copy className="mr-2 h-4 w-4" />
+                                {t.admin.apiKeys.actions.copyKey}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                className="text-zinc-300 focus:bg-zinc-800 focus:text-white cursor-pointer"
+                                onClick={() => resetUsage(apiKey._id)}
+                              >
+                                <RefreshCw className="mr-2 h-4 w-4" />
+                                {t.admin.apiKeys.actions.resetUsage}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                className={`cursor-pointer ${apiKey.isActive ? 'text-amber-400 focus:bg-amber-500/10' : 'text-green-400 focus:bg-green-500/10'}`}
+                                onClick={() => toggleKeyStatus(apiKey._id, apiKey.isActive)}
+                              >
+                                {apiKey.isActive ? (
+                                  <>
+                                    <Ban className="mr-2 h-4 w-4" />
+                                    {t.admin.apiKeys.actions.revoke}
+                                  </>
+                                ) : (
+                                  <>
+                                    <CheckCircle className="mr-2 h-4 w-4" />
+                                    {t.admin.apiKeys.actions.activate}
+                                  </>
+                                )}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                className="text-red-400 focus:bg-red-500/10 focus:text-red-400 cursor-pointer"
+                                onClick={() => deleteApiKey(apiKey._id)}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                {t.admin.apiKeys.actions.delete}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Details Dialog */}
+      <Dialog open={showDetails} onOpenChange={setShowDetails}>
+        <DialogContent className="bg-zinc-900 border-zinc-800 max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <Key className="h-5 w-5 text-emerald-500" />
+              {t.admin.apiKeys.details.title}
+            </DialogTitle>
+            <DialogDescription className="text-zinc-400">
+              {selectedKey?.name || "Unnamed Key"}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedKey && (
+            <div className="space-y-4 mt-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-zinc-500">{t.admin.apiKeys.details.owner}</p>
+                  <p className="text-white">{selectedKey.userId?.name}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-zinc-500">{t.common.email}</p>
+                  <p className="text-white flex items-center gap-1">
+                    <Mail className="h-3 w-3" />
+                    {selectedKey.userId?.email}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-zinc-500">{t.admin.apiKeys.details.plan}</p>
+                  <Badge className="capitalize">{selectedKey.userId?.plan}</Badge>
+                </div>
+                <div>
+                  <p className="text-sm text-zinc-500">{t.common.status}</p>
+                  <Badge className={selectedKey.isActive ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"}>
+                    {selectedKey.isActive ? t.admin.apiKeys.status.active : t.admin.apiKeys.status.inactive}
+                  </Badge>
+                </div>
+                <div>
+                  <p className="text-sm text-zinc-500">{t.admin.apiKeys.details.usage}</p>
+                  <p className="text-white">{selectedKey.usageCount} / {selectedKey.usageLimit}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-zinc-500">{t.admin.apiKeys.details.created}</p>
+                  <p className="text-white">{new Date(selectedKey.createdAt).toLocaleDateString(language === 'pt' ? 'pt-BR' : 'en-US')}</p>
+                </div>
+              </div>
+              
+              <div>
+                <p className="text-sm text-zinc-500 mb-2">API Key</p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 text-sm text-zinc-300 bg-zinc-800 px-3 py-2 rounded font-mono break-all">
+                    {selectedKey.key}
+                  </code>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="shrink-0"
+                    onClick={() => copyKey(selectedKey.key)}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

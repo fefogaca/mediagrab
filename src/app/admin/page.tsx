@@ -7,29 +7,22 @@ import DashboardCardTotalApiKeys from './partials/dashboard/DashboardCardTotalAp
 import DashboardCardRecentDownloads from './partials/dashboard/DashboardCardRecentDownloads';
 import DashboardCardTopUsers from './partials/dashboard/DashboardCardTopUsers';
 import dynamic from 'next/dynamic';
+import { useTranslation } from '@/lib/i18n';
 
 const DynamicDashboardCardDownloadsOverTime = dynamic(() => import('./partials/dashboard/DashboardCardDownloadsOverTime'), { ssr: false });
 const DynamicDashboardCardApiKeyUsage = dynamic(() => import('./partials/dashboard/DashboardCardApiKeyUsage'), { ssr: false });
 
 function Dashboard() {
   const isBrowser = typeof window !== 'undefined';
+  const { t } = useTranslation();
 
   return (
-    <main className="grow bg-gradient-to-br from-gray-50 via-white to-violet-50/20 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
+    <main className="grow">
       <div className="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto">
         <div className="sm:flex sm:justify-between sm:items-center mb-8">
           <div className="mb-4 sm:mb-0">
-            <div className="inline-block mb-3">
-              <span className="px-3 py-1.5 rounded-full bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 text-xs font-semibold border border-violet-200 dark:border-violet-800">
-                📊 Métricas em Tempo Real
-              </span>
-            </div>
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-violet-600 via-purple-600 to-sky-600 dark:from-violet-400 dark:via-purple-400 dark:to-sky-400 mt-2">
-              Dashboard
-            </h1>
-            <p className="mt-2 text-gray-600 dark:text-gray-400 text-sm md:text-base">
-              Visualize métricas e estatísticas calculadas a partir das requisições da API
-            </p>
+            <h1 className="text-2xl md:text-3xl text-gray-800 dark:text-gray-100 font-bold">{t.admin.dashboard.title}</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">{t.admin.dashboard.welcome}</p>
           </div>
         </div>
         <div className="grid grid-cols-12 gap-6">

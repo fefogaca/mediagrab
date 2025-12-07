@@ -1,71 +1,93 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { openDb } from '@/lib/database';
+import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import jwt from 'jsonwebtoken';
+import connectDB from '@/backend/lib/mongodb';
+import ApiKey from '@/backend/models/ApiKey';
 
-const JWT_SECRET: string = process.env.JWT_SECRET as string;
-
-if (!JWT_SECRET) {
-  throw new Error('JWT_SECRET is not defined in environment variables');
-}
+const JWT_SECRET = process.env.JWT_SECRET || '';
 
 interface DecodedToken {
-  id: number;
-  username: string;
+  id: string;
+  email: string;
   role: string;
 }
 
-function getUserIdFromRequest(request: Request): number | null {
+async function getUserFromRequest(): Promise<DecodedToken | null> {
   try {
-    const token = request.headers.get('authorization')?.split(' ')[1];
-    if (!token) {
-      // Tentar pegar do cookie
-      const cookies = request.headers.get('cookie');
-      if (cookies) {
-        const tokenMatch = cookies.match(/token=([^;]+)/);
-        if (tokenMatch) {
-          const decoded = jwt.verify(tokenMatch[1], JWT_SECRET);
-          if (typeof decoded !== 'string' && 'id' in decoded) {
-            return (decoded as DecodedToken).id;
-          }
-        }
-      }
-      return null;
-    }
-    const decoded = jwt.verify(token, JWT_SECRET);
-    if (typeof decoded === 'string' || !('id' in decoded)) {
-      return null;
-    }
-    return (decoded as DecodedToken).id;
-  } catch (error) {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('token')?.value;
+    
+    if (!token) return null;
+    
+    const decoded = jwt.verify(token, JWT_SECRET) as DecodedToken;
+    return decoded;
+  } catch {
     return null;
   }
 }
 
 export async function DELETE(
-  request: NextRequest,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const userId = getUserIdFromRequest(request);
-    if (!userId) {
-      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    const userData = await getUserFromRequest();
+    if (!userData) {
+      return NextResponse.json({ message: 'Não autorizado' }, { status: 401 });
     }
 
     const { id } = await params;
-    const db = await openDb();
 
-    // Verificar se a API key pertence ao usuário
-    const apiKey = await db.get('SELECT * FROM api_keys WHERE id = ? AND user_id = ?', id, userId);
+    await connectDB();
+    
+    // Verificar se a key pertence ao usuário
+    const apiKey = await ApiKey.findOne({ _id: id, userId: userData.id });
+    
     if (!apiKey) {
-      return NextResponse.json({ message: 'API key not found or access denied' }, { status: 404 });
+      return NextResponse.json({ message: 'API Key não encontrada' }, { status: 404 });
     }
 
-    await db.run('DELETE FROM api_keys WHERE id = ?', id);
+    await ApiKey.deleteOne({ _id: id });
 
-    return NextResponse.json({ message: 'API key deleted successfully' }, { status: 200 });
+    return NextResponse.json({ message: 'API Key excluída com sucesso' }, { status: 200 });
   } catch (error) {
-    console.error('Failed to delete API key:', error);
-    return NextResponse.json({ message: 'Failed to delete API key', error: (error as Error).message }, { status: 500 });
+    console.error('Erro ao excluir API key:', error);
+    return NextResponse.json({ message: 'Erro ao excluir API key' }, { status: 500 });
   }
 }
 
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const userData = await getUserFromRequest();
+    if (!userData) {
+      return NextResponse.json({ message: 'Não autorizado' }, { status: 401 });
+    }
+
+    const { id } = await params;
+
+    await connectDB();
+    
+    const apiKey = await ApiKey.findOne({ _id: id, userId: userData.id }).lean();
+    
+    if (!apiKey) {
+      return NextResponse.json({ message: 'API Key não encontrada' }, { status: 404 });
+    }
+
+    return NextResponse.json({ 
+      apiKey: {
+        id: apiKey._id.toString(),
+        key: apiKey.key,
+        created_at: apiKey.createdAt,
+        expires_at: apiKey.expiresAt,
+        usage_count: apiKey.usageCount || 0,
+        usage_limit: apiKey.usageLimit || 5,
+      }
+    }, { status: 200 });
+  } catch (error) {
+    console.error('Erro ao buscar API key:', error);
+    return NextResponse.json({ message: 'Erro ao buscar API key' }, { status: 500 });
+  }
+}

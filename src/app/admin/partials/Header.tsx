@@ -1,87 +1,96 @@
+'use client';
 
-import React, { useState } from 'react';
-import Link from 'next/link';
-
-import SearchModal from '../components/ModalSearch';
-import Notifications from '../components/DropdownNotifications';
-import Help from '../components/DropdownHelp';
-import UserMenu from '../components/DropdownProfile';
-import ThemeToggle from '../components/ThemeToggle';
+import React from 'react';
+import { Button } from '@frontend/components/ui/button';
+import { Menu } from 'lucide-react';
+import { useTranslation } from '@/lib/i18n';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@frontend/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback } from '@frontend/components/ui/avatar';
+import { useRouter } from 'next/navigation';
 
 interface HeaderProps {
   sidebarOpen: boolean;
-  setSidebarOpen: (isOpen: boolean) => void;
-  variant?: string;
+  setSidebarOpen: (open: boolean) => void;
 }
 
-function Header({
-  sidebarOpen,
-  setSidebarOpen,
-  variant = 'default',
-}: HeaderProps) {
+export default function Header({ sidebarOpen, setSidebarOpen }: HeaderProps) {
+  const { t, language, setLanguage } = useTranslation();
+  const router = useRouter();
 
-  const [searchModalOpen, setSearchModalOpen] = useState(false)
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      router.push('/login');
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+    }
+  };
 
   return (
-    <header className={`sticky top-0 before:absolute before:inset-0 before:backdrop-blur-md max-lg:before:bg-white/90 dark:max-lg:before:bg-gray-800/90 before:-z-10 z-30 ${variant === 'v2' || variant === 'v3' ? 'before:bg-white after:absolute after:h-px after:inset-x-0 after:top-full after:bg-gray-200 dark:after:bg-gray-700/60 after:-z-10' : 'max-lg:shadow-xs lg:before:bg-gray-100/90 dark:lg:before:bg-gray-900/90'} ${variant === 'v2' ? 'dark:before:bg-gray-800' : ''} ${variant === 'v3' ? 'dark:before:bg-gray-900' : ''}`}>
-      <div className="px-4 sm:px-6 lg:px-8">
-        <div className={`flex items-center justify-between h-16 ${variant === 'v2' || variant === 'v3' ? '' : 'lg:border-b border-gray-200 dark:border-gray-700/60'}`}>
-
-          {/* Header: Left side */}
-          <div className="flex">
-
-            {/* Hamburger button */}
-            <button
-              className="text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 lg:hidden"
-              aria-controls="sidebar"
-              aria-expanded={sidebarOpen}
-              onClick={(e) => { e.stopPropagation(); setSidebarOpen(!sidebarOpen); }}
-            >
-              <span className="sr-only">Open sidebar</span>
-              <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <rect x="4" y="5" width="16" height="2" />
-                <rect x="4" y="11" width="16" height="2" />
-                <rect x="4" y="17" width="16" height="2" />
-              </svg>
-            </button>
-
-          </div>
-
-          {/* Header: Right side */}
-          <div className="flex items-center space-x-3">
-            <ThemeToggle />
-            <div>
-              <button
-                className={`w-8 h-8 flex items-center justify-center hover:bg-gray-100 lg:hover:bg-gray-200 dark:hover:bg-gray-700/50 dark:lg:hover:bg-gray-800 rounded-full ml-3 ${searchModalOpen && 'bg-gray-200 dark:bg-gray-800'}`}
-                onClick={(e) => { e.stopPropagation(); setSearchModalOpen(true); }}
-                aria-controls="search-modal"
-              >
-                <span className="sr-only">Search</span>
-                <svg
-                  className="fill-current text-gray-500/80 dark:text-gray-400/80"
-                  width={16}
-                  height={16}
-                  viewBox="0 0 16 16"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path d="M7 14c-3.86 0-7-3.14-7-7s3.14-7 7-7 7 3.14 7 7-3.14 7-7 7ZM7 2C4.243 2 2 4.243 2 7s2.243 5 5 5 5-2.243 5-5-2.243-5-5-5Z" />
-                  <path d="m13.314 11.9 2.393 2.393a.999.999 0 1 1-1.414 1.414L11.9 13.314a8.019 8.019 0 0 0 1.414-1.414Z" />
-                </svg>
-              </button>
-              <SearchModal id="search-modal" searchId="search" modalOpen={searchModalOpen} setModalOpen={setSearchModalOpen} />
-            </div>
-            <Notifications align="right" />
-            <Help align="right" />
-            {/*  Divider */}
-            <hr className="w-px h-6 bg-gray-200 dark:bg-gray-700/60 border-none" />
-            <UserMenu align="right" />
-
-          </div>
-
+    <header className="sticky top-0 z-40 h-16 bg-zinc-900 border-b border-zinc-800 flex items-center justify-between px-4">
+      <Button
+        variant="ghost"
+        size="icon"
+        className="lg:hidden text-zinc-400"
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+      >
+        <Menu className="h-5 w-5" />
+      </Button>
+      <div className="flex-1" />
+      <div className="flex items-center gap-4">
+        {/* Language Selector */}
+        <div className="flex items-center gap-2">
+          <Button
+            variant={language === 'pt' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setLanguage('pt')}
+            className={language === 'pt' ? 'bg-emerald-600 hover:bg-emerald-500' : ''}
+          >
+            PT
+          </Button>
+          <Button
+            variant={language === 'en' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setLanguage('en')}
+            className={language === 'en' ? 'bg-emerald-600 hover:bg-emerald-500' : ''}
+          >
+            EN
+          </Button>
         </div>
+        
+        {/* User Menu */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="flex items-center gap-2">
+              <Avatar className="h-8 w-8">
+                <AvatarFallback className="bg-emerald-500 text-white">
+                  A
+                </AvatarFallback>
+              </Avatar>
+              <span className="hidden md:block text-sm text-zinc-300">
+                {t.admin.administrator}
+              </span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800">
+            <DropdownMenuItem className="text-zinc-300">
+              {t.admin.myAccount}
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              onClick={handleLogout}
+              className="text-red-400 focus:text-red-400 focus:bg-red-500/10"
+            >
+              {t.admin.logout}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );
 }
 
-export default Header;

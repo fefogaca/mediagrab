@@ -1,5 +1,46 @@
-'use client';
-import React, { useState, useEffect } from 'react';
+"use client";
+
+import { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@frontend/components/ui/card";
+import { Button } from "@frontend/components/ui/button";
+import { Input } from "@frontend/components/ui/input";
+import { Label } from "@frontend/components/ui/label";
+import { Textarea } from "@frontend/components/ui/textarea";
+import { Badge } from "@frontend/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@frontend/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@frontend/components/ui/dialog";
+import { toast } from "sonner";
+import {
+  Bell,
+  Plus,
+  Send,
+  Trash2,
+  AlertCircle,
+  Info,
+  CheckCircle,
+  AlertTriangle,
+} from "lucide-react";
+import { useTranslation } from "@/lib/i18n";
 
 interface Notification {
   id: number;
@@ -7,337 +48,299 @@ interface Notification {
   message: string;
   type: string;
   target_audience: string;
-  target_user_id: number | null;
   created_at: string;
-  created_by_username?: string;
 }
 
-interface User {
-  id: number;
-  username: string;
-  role: string;
-}
-
-const NotificationsPage = () => {
+export default function NotificationsPage() {
+  const { t, language } = useTranslation();
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [newNotification, setNewNotification] = useState({
-    title: '',
-    message: '',
-    type: 'info',
-    target_audience: 'all',
-    target_user_id: '',
+    title: "",
+    message: "",
+    type: "info",
+    target_audience: "all",
   });
 
   useEffect(() => {
-    fetchData();
+    fetchNotifications();
   }, []);
 
-  const fetchData = async () => {
+  const fetchNotifications = async () => {
     try {
-      setLoading(true);
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('Not authenticated');
-      }
-
-      const [notificationsResponse, usersResponse] = await Promise.all([
-        fetch('/api/admin/notifications', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        }),
-        fetch('/api/admin/users')
-      ]);
-
-      if (!notificationsResponse.ok) throw new Error('Failed to fetch notifications');
-      if (!usersResponse.ok) throw new Error('Failed to fetch users');
-
-      const notificationsData = await notificationsResponse.json();
-      const usersData = await usersResponse.json();
-
-      setNotifications(notificationsData);
-      setUsers(usersData);
-    } catch (err) {
-      setError((err as Error).message);
+      const response = await fetch("/api/admin/notifications");
+      const data = await response.json();
+      setNotifications(data.notifications || []);
+    } catch (error) {
+      console.error("Erro ao buscar notificações:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCreateNotification = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('Not authenticated');
-      }
-
-      const payload: any = {
-        title: newNotification.title,
-        message: newNotification.message,
-        type: newNotification.type,
-        target_audience: newNotification.target_audience,
-      };
-
-      if (newNotification.target_audience === 'user' && newNotification.target_user_id) {
-        payload.target_user_id = parseInt(newNotification.target_user_id);
-      }
-
-      const response = await fetch('/api/admin/notifications', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to create notification');
-      }
-
-      setNewNotification({
-        title: '',
-        message: '',
-        type: 'info',
-        target_audience: 'all',
-        target_user_id: '',
-      });
-      fetchData();
-      alert('Notificação criada com sucesso!');
-    } catch (err) {
-      setError((err as Error).message);
-    }
-  };
-
-  const handleDeleteNotification = async (id: number) => {
-    if (!confirm('Tem certeza que deseja deletar esta notificação?')) {
+  const createNotification = async () => {
+    if (!newNotification.title || !newNotification.message) {
+      toast.error(t.admin.notifications.fillAllFields);
       return;
     }
 
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('Not authenticated');
-      }
-
-      const response = await fetch(`/api/admin/notifications/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+      const response = await fetch("/api/admin/notifications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newNotification),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to delete notification');
-      }
+      if (!response.ok) throw new Error("Erro ao criar");
 
-      fetchData();
-    } catch (err) {
-      setError((err as Error).message);
+      toast.success(t.admin.notifications.created);
+      setDialogOpen(false);
+      setNewNotification({ title: "", message: "", type: "info", target_audience: "all" });
+      fetchNotifications();
+    } catch {
+      toast.error(t.admin.notifications.errorCreating);
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+  const deleteNotification = async (id: number) => {
+    if (!confirm(t.common.delete + "?")) return;
+
+    try {
+      const response = await fetch(`/api/admin/notifications/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) throw new Error("Erro ao excluir");
+
+      toast.success(t.admin.notifications.deleteAll.replace('todas', ''));
+      fetchNotifications();
+    } catch {
+      toast.error(t.admin.notifications.errorCreating);
+    }
   };
 
-  const getTypeColor = (type: string) => {
+  const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'success':
-        return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300';
-      case 'warning':
-        return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300';
-      case 'error':
-        return 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300';
+      case "success":
+        return <CheckCircle className="h-4 w-4 text-emerald-500" />;
+      case "warning":
+        return <AlertTriangle className="h-4 w-4 text-amber-500" />;
+      case "error":
+        return <AlertCircle className="h-4 w-4 text-red-500" />;
       default:
-        return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300';
+        return <Info className="h-4 w-4 text-blue-500" />;
+    }
+  };
+
+  const getTypeBadge = (type: string) => {
+    switch (type) {
+      case "success":
+        return <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30">{t.admin.notifications.types.success}</Badge>;
+      case "warning":
+        return <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/30">{t.admin.notifications.types.warning}</Badge>;
+      case "error":
+        return <Badge className="bg-red-500/10 text-red-500 border-red-500/30">{t.admin.notifications.types.error}</Badge>;
+      default:
+        return <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/30">{t.admin.notifications.types.info}</Badge>;
     }
   };
 
   if (loading) {
     return (
-      <main className="grow bg-gradient-to-br from-gray-50 via-white to-violet-50/20 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
-        <div className="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto">
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-600"></div>
-          </div>
+      <div className="space-y-6">
+        <div className="h-8 bg-zinc-800 rounded w-48 animate-pulse" />
+        <div className="space-y-4">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-24 bg-zinc-800 rounded animate-pulse" />
+          ))}
         </div>
-      </main>
+      </div>
     );
   }
 
   return (
-    <main className="grow bg-gradient-to-br from-gray-50 via-white to-violet-50/20 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
-      <div className="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto">
-        <div className="mb-8">
-          <div className="inline-block mb-3">
-            <span className="px-3 py-1.5 rounded-full bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 text-xs font-semibold border border-violet-200 dark:border-violet-800">
-              📢 Gerenciamento de Notificações
-            </span>
-          </div>
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-violet-600 via-purple-600 to-sky-600 dark:from-violet-400 dark:via-purple-400 dark:to-sky-400 mt-2">
-            Notificações
-          </h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-400 text-sm md:text-base">
-            Crie e gerencie notificações para usuários
-          </p>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-white">{t.admin.notifications.title}</h1>
+          <p className="text-zinc-400 mt-1">{t.admin.notifications.subtitle}</p>
         </div>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="bg-emerald-600 hover:bg-emerald-500 text-white">
+              <Plus className="h-4 w-4 mr-2" />
+              {t.admin.notifications.create}
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="bg-zinc-900 border-zinc-800">
+            <DialogHeader>
+              <DialogTitle className="text-white">{t.admin.notifications.create}</DialogTitle>
+              <DialogDescription className="text-zinc-400">
+                {t.admin.notifications.subtitle}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label className="text-zinc-300">{t.admin.notifications.form.title}</Label>
+                <Input
+                  placeholder={t.admin.notifications.form.title}
+                  value={newNotification.title}
+                  onChange={(e) => setNewNotification({ ...newNotification, title: e.target.value })}
+                  className="bg-zinc-800/50 border-zinc-700 text-white"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-zinc-300">{t.admin.notifications.form.message}</Label>
+                <Textarea
+                  placeholder={t.admin.notifications.form.message}
+                  value={newNotification.message}
+                  onChange={(e) => setNewNotification({ ...newNotification, message: e.target.value })}
+                  className="bg-zinc-800/50 border-zinc-700 text-white min-h-[100px]"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-zinc-300">{t.admin.notifications.form.type}</Label>
+                  <Select
+                    value={newNotification.type}
+                    onValueChange={(value) => setNewNotification({ ...newNotification, type: value })}
+                  >
+                    <SelectTrigger className="bg-zinc-800/50 border-zinc-700 text-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-zinc-900 border-zinc-800">
+                      <SelectItem value="info">{t.admin.notifications.types.info}</SelectItem>
+                      <SelectItem value="success">{t.admin.notifications.types.success}</SelectItem>
+                      <SelectItem value="warning">{t.admin.notifications.types.warning}</SelectItem>
+                      <SelectItem value="error">{t.admin.notifications.types.error}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-zinc-300">{t.admin.notifications.form.targetAudience}</Label>
+                  <Select
+                    value={newNotification.target_audience}
+                    onValueChange={(value) => setNewNotification({ ...newNotification, target_audience: value })}
+                  >
+                    <SelectTrigger className="bg-zinc-800/50 border-zinc-700 text-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-zinc-900 border-zinc-800">
+                      <SelectItem value="all">{t.admin.notifications.targetAudience.all}</SelectItem>
+                      <SelectItem value="free">{t.admin.notifications.targetAudience.free}</SelectItem>
+                      <SelectItem value="developer">{t.admin.notifications.targetAudience.developer}</SelectItem>
+                      <SelectItem value="startup">{t.admin.notifications.targetAudience.startup}</SelectItem>
+                      <SelectItem value="enterprise">{t.admin.notifications.targetAudience.enterprise}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setDialogOpen(false)} className="text-zinc-400">
+                {t.common.cancel}
+              </Button>
+              <Button onClick={createNotification} className="bg-emerald-600 hover:bg-emerald-500">
+                <Send className="h-4 w-4 mr-2" />
+                {t.admin.notifications.form.send}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
 
-        {/* Create Notification Form */}
-        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-xl rounded-2xl p-6 sm:p-8 mb-8 border border-gray-200/50 dark:border-gray-700/50">
-          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-6 flex items-center gap-2">
-            <svg className="w-6 h-6 text-violet-600 dark:text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-            </svg>
-            Criar Nova Notificação
-          </h2>
-          <form onSubmit={handleCreateNotification} className="space-y-4">
-            <div>
-              <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Título</label>
-              <input
-                type="text"
-                id="title"
-                className="form-input mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
-                value={newNotification.title}
-                onChange={(e) => setNewNotification({ ...newNotification, title: e.target.value })}
-                required
-              />
+      {/* Stats */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card className="bg-zinc-900/50 border-zinc-800">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="p-3 rounded-lg bg-emerald-500/10">
+              <Bell className="h-5 w-5 text-emerald-500" />
             </div>
             <div>
-              <label htmlFor="message" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Mensagem</label>
-              <textarea
-                id="message"
-                rows={4}
-                className="form-textarea mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
-                value={newNotification.message}
-                onChange={(e) => setNewNotification({ ...newNotification, message: e.target.value })}
-                required
-              />
+              <p className="text-sm text-zinc-400">{t.admin.notifications.totalNotifications}</p>
+              <p className="text-xl font-bold text-white">{notifications.length}</p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="type" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Tipo</label>
-                <select
-                  id="type"
-                  className="form-select mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
-                  value={newNotification.type}
-                  onChange={(e) => setNewNotification({ ...newNotification, type: e.target.value })}
-                >
-                  <option value="info">Info</option>
-                  <option value="success">Sucesso</option>
-                  <option value="warning">Aviso</option>
-                  <option value="error">Erro</option>
-                </select>
-              </div>
-              <div>
-                <label htmlFor="target_audience" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Público-alvo</label>
-                <select
-                  id="target_audience"
-                  className="form-select mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
-                  value={newNotification.target_audience}
-                  onChange={(e) => setNewNotification({ ...newNotification, target_audience: e.target.value, target_user_id: '' })}
-                >
-                  <option value="all">Todos os usuários</option>
-                  <option value="user">Usuário específico</option>
-                </select>
-              </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-zinc-900/50 border-zinc-800">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="p-3 rounded-lg bg-blue-500/10">
+              <Info className="h-5 w-5 text-blue-500" />
             </div>
-            {newNotification.target_audience === 'user' && (
-              <div>
-                <label htmlFor="target_user_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Usuário</label>
-                <select
-                  id="target_user_id"
-                  className="form-select mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
-                  value={newNotification.target_user_id}
-                  onChange={(e) => setNewNotification({ ...newNotification, target_user_id: e.target.value })}
-                  required
-                >
-                  <option value="">Selecione um usuário</option>
-                  {users.map((user) => (
-                    <option key={user.id} value={user.id}>
-                      {user.username} ({user.role})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-            {error && (
-              <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded-xl p-4">
-                <p className="text-rose-600 dark:text-rose-400 text-sm">{error}</p>
-              </div>
-            )}
-            <button
-              type="submit"
-              className="w-full sm:w-auto px-6 py-3 font-semibold text-white bg-gradient-to-r from-violet-600 to-sky-600 rounded-xl shadow-lg shadow-violet-500/30 hover:shadow-xl hover:shadow-violet-500/40 transition-all duration-200 hover:scale-105 active:scale-95"
-            >
-              Criar Notificação
-            </button>
-          </form>
-        </div>
+            <div>
+              <p className="text-sm text-zinc-400">{t.admin.notifications.sent}</p>
+              <p className="text-xl font-bold text-white">
+                {notifications.filter(n => n.type === "info").length}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-zinc-900/50 border-zinc-800">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="p-3 rounded-lg bg-amber-500/10">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+            </div>
+            <div>
+              <p className="text-sm text-zinc-400">{t.admin.notifications.unread}</p>
+              <p className="text-xl font-bold text-white">
+                {notifications.filter(n => n.type === "warning").length}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-        {/* Notifications List */}
-        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-xl rounded-2xl p-6 sm:p-8 border border-gray-200/50 dark:border-gray-700/50">
-          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-6 flex items-center gap-2">
-            <svg className="w-6 h-6 text-violet-600 dark:text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            Notificações Existentes
-          </h2>
-          <div className="space-y-4">
-            {notifications.length === 0 ? (
-              <p className="text-gray-600 dark:text-gray-400">Nenhuma notificação criada ainda.</p>
-            ) : (
-              notifications.map((notification) => (
+      {/* Notifications List */}
+      <Card className="bg-zinc-900/50 border-zinc-800">
+        <CardHeader>
+          <CardTitle className="text-white">{t.admin.notifications.table.listTitle}</CardTitle>
+          <CardDescription className="text-zinc-400">
+            {notifications.length} {t.admin.notifications.table.notificationsFound}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {notifications.length === 0 ? (
+            <div className="text-center py-12">
+              <Bell className="h-12 w-12 text-zinc-600 mx-auto mb-4" />
+              <p className="text-zinc-400">{t.admin.notifications.noNotifications}</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {notifications.map((notification) => (
                 <div
                   key={notification.id}
-                  className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4 border border-gray-200 dark:border-gray-700"
+                  className="flex items-start gap-4 p-4 rounded-lg bg-zinc-800/50 hover:bg-zinc-800 transition-colors"
                 >
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className={`px-2 py-1 rounded text-xs font-semibold ${getTypeColor(notification.type)}`}>
-                          {notification.type}
-                        </span>
-                        <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{notification.title}</h3>
-                      </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{notification.message}</p>
-                      <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
-                        <span>Público: {notification.target_audience === 'all' ? 'Todos' : `Usuário #${notification.target_user_id}`}</span>
-                        <span>Criado: {formatDate(notification.created_at)}</span>
-                        {notification.created_by_username && (
-                          <span>Por: {notification.created_by_username}</span>
-                        )}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => handleDeleteNotification(notification.id)}
-                      className="px-3 py-1.5 text-xs font-semibold bg-rose-500 hover:bg-rose-600 text-white rounded-lg transition-all"
-                    >
-                      Deletar
-                    </button>
+                  <div className="p-2 rounded-lg bg-zinc-700">
+                    {getTypeIcon(notification.type)}
                   </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-medium text-white">{notification.title}</h3>
+                      {getTypeBadge(notification.type)}
+                    </div>
+                    <p className="text-sm text-zinc-400 mb-2">{notification.message}</p>
+                    <p className="text-xs text-zinc-500">
+                      {new Date(notification.created_at).toLocaleString(language === 'pt' ? 'pt-BR' : 'en-US')} • 
+                      {t.admin.notifications.targetAudience.all}: {notification.target_audience === "all" ? t.admin.notifications.targetAudience.all : notification.target_audience}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-zinc-400 hover:text-red-400"
+                    onClick={() => deleteNotification(notification.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
-    </main>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
-};
-
-export default NotificationsPage;
-
+}

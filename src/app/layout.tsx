@@ -1,34 +1,33 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { LanguageProvider } from "@/lib/i18n/LanguageContext";
+import { ThemeProvider } from "@/app/components/ThemeProvider";
+import { Toaster } from "@frontend/components/ui/sonner";
 import "./globals.css";
-import { ThemeProvider } from "./components/ThemeProvider";
 
 export const metadata: Metadata = {
-  title: "MediaGrab",
-  description: "The Ultimate Media Downloading API",
-  icons: { icon: "/mountain.svg" },
+  title: "MediaGrab - The Ultimate Media Downloading API",
+  description: "Download media from 1000+ platforms. Powerful, reliable, and easy to integrate API.",
+  keywords: ["media download", "video download", "API", "youtube download", "instagram download"],
 };
-
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-  display: "swap",
-  weight: ["400", "500", "600", "700", "800"],
-});
-
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html lang="en">
-      <body
-        className={`${inter.variable} font-sans antialiased`}
-      >
-        <ThemeProvider>{children}</ThemeProvider>
-      </body> 
+    <html lang="pt" suppressHydrationWarning>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+      </head>
+      <body className="antialiased min-h-screen bg-zinc-950 text-white">
+        <ThemeProvider>
+          <LanguageProvider>
+            {children}
+            <Toaster />
+          </LanguageProvider>
+        </ThemeProvider>
+      </body>
     </html>
   );
 }

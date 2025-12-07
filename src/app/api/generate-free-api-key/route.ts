@@ -1,31 +1,43 @@
-
 import { NextResponse } from 'next/server';
-import { openDb } from '@/lib/database';
-import { v4 as uuidv4 } from 'uuid';
+import connectDB from '@backend/lib/mongodb';
+import User from '@backend/models/User';
+import ApiKey from '@backend/models/ApiKey';
+import crypto from 'crypto';
 
 export async function POST() {
   try {
-    const db = await openDb();
+    await connectDB();
 
     // Find the guest user to associate the key with
-    const guestUser = await db.get("SELECT * FROM users WHERE username = ?", "guest");
+    let guestUser = await User.findOne({ email: 'guest@mediagrab.com' });
+    
     if (!guestUser) {
-      throw new Error("Guest user not found. Please run the setup script.");
+      // Create guest user if not exists
+      guestUser = await User.create({
+        name: 'Guest User',
+        email: 'guest@mediagrab.com',
+        password: crypto.randomBytes(32).toString('hex'),
+        role: 'user',
+        plan: 'free',
+      });
     }
 
-    // Generate a new UUID for the API key
-    const apiKey = uuidv4();
+    // Generate a new API key
+    const apiKey = `mg_guest_${crypto.randomBytes(16).toString('hex')}`;
+    
     // Set an expiration date for 2 days from now
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 2);
 
-    // Insert the new API key into the database
-    await db.run(
-      'INSERT INTO api_keys (key, user_id, expires_at) VALUES (?, ?, ?)',
-      apiKey,
-      guestUser.id,
-      expiresAt.toISOString()
-    );
+    // Create the API key
+    await ApiKey.create({
+      key: apiKey,
+      name: 'Free Trial Key',
+      userId: guestUser._id,
+      usageLimit: 5,
+      expiresAt,
+      isActive: true,
+    });
 
     return NextResponse.json({ apiKey }, { status: 201 });
   } catch (error) {
