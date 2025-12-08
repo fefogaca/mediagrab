@@ -52,6 +52,10 @@ export async function PUT(request: Request) {
       return NextResponse.json({ message: 'Usuário não encontrado' }, { status: 404 });
     }
 
+    if (!user.password) {
+      return NextResponse.json({ message: 'Usuário não possui senha configurada' }, { status: 400 });
+    }
+
     // Verificar senha atual
     const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
     if (!isPasswordValid) {

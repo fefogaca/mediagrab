@@ -75,15 +75,25 @@ export async function POST(request: NextRequest) {
     // Registrar pagamento
     await Payment.create({
       userId: userData.id,
-      plan: plan,
-      amount: planConfig.price.brl,
+      abacatePayBillingId: billingId || sessionId || `stripe_${Date.now()}`,
+      abacatePayUrl: billingId ? undefined : undefined, // URL do AbacatePay se disponível
+      amount: Math.round(planConfig.price.brl * 100), // Converter para centavos
       currency: 'BRL',
-      status: 'completed',
-      provider: billingId ? 'abacatepay' : 'stripe',
-      providerId: billingId || sessionId,
+      method: 'CREDIT_CARD', // Método padrão, pode ser ajustado conforme necessário
+      products: [{
+        externalId: plan,
+        name: planConfig.name,
+        quantity: 1,
+        price: Math.round(planConfig.price.brl * 100), // Em centavos
+      }],
+      planPurchased: plan as 'developer' | 'startup' | 'enterprise',
+      planDuration: 1, // 1 mês
+      status: 'paid',
+      paidAt: new Date(),
       metadata: {
         planName: planConfig.name,
         expiresAt: planExpiresAt,
+        provider: billingId ? 'abacatepay' : 'stripe',
       },
     });
 

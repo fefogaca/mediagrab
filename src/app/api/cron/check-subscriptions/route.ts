@@ -34,23 +34,19 @@ export async function GET(request: NextRequest) {
     // Criar notificações para planos prestes a expirar
     for (const user of expiringUsers) {
       const existingNotification = await Notification.findOne({
-        userId: user._id,
-        type: 'subscription_expiring',
+        targetUserId: user._id,
+        type: 'warning',
         createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }, // Últimas 24h
       });
 
       if (!existingNotification) {
         await Notification.create({
-          userId: user._id,
+          targetUserId: user._id,
+          targetAudience: 'specific',
           title: 'Seu plano está prestes a expirar',
           message: `Seu plano ${user.plan} expira em breve. Renove agora para não perder seus recursos.`,
-          type: 'subscription_expiring',
+          type: 'warning',
           priority: 'high',
-          read: false,
-          metadata: {
-            plan: user.plan,
-            expiresAt: user.planExpiresAt,
-          },
         });
       }
     }
@@ -69,16 +65,12 @@ export async function GET(request: NextRequest) {
       });
 
       await Notification.create({
-        userId: user._id,
+        targetUserId: user._id,
+        targetAudience: 'specific',
         title: 'Seu plano expirou',
         message: `Seu plano ${user.plan} expirou. Você foi movido para o plano Free. Renove para recuperar seus recursos.`,
-        type: 'subscription_expired',
+        type: 'error',
         priority: 'high',
-        read: false,
-        metadata: {
-          previousPlan: user.plan,
-          expiredAt: user.planExpiresAt,
-        },
       });
     }
 

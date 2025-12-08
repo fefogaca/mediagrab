@@ -47,7 +47,17 @@ import {
   XCircle,
   Eye,
   Mail,
+  Plus,
+  User,
 } from "lucide-react";
+import { Label } from "@frontend/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@frontend/components/ui/select";
 import { useTranslation } from "@/lib/i18n";
 
 interface ApiKey {
@@ -67,6 +77,13 @@ interface ApiKey {
   lastUsedAt?: string;
 }
 
+interface UserOption {
+  id: string;
+  _id?: string; // Para compatibilidade
+  name: string;
+  email: string;
+}
+
 export default function AdminApiKeysPage() {
   const { t, language } = useTranslation();
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
@@ -74,10 +91,77 @@ export default function AdminApiKeysPage() {
   const [search, setSearch] = useState("");
   const [selectedKey, setSelectedKey] = useState<ApiKey | null>(null);
   const [showDetails, setShowDetails] = useState(false);
+  
+  // Create API Key states
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [users, setUsers] = useState<UserOption[]>([]);
+  const [newKeyData, setNewKeyData] = useState({
+    name: "",
+    userId: "",
+    usageLimit: 1000,
+  });
 
   useEffect(() => {
     fetchApiKeys();
+    fetchUsers();
   }, []);
+
+  const fetchUsers = async () => {
+    try {
+      const response = await fetch("/api/admin/users");
+      const data = await response.json();
+      // A API retorna 'id', não '_id'
+      setUsers(data.users || []);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      toast.error(language === 'pt' ? 'Erro ao carregar usuários' : 'Error loading users');
+    }
+  };
+
+  const createApiKey = async () => {
+    if (!newKeyData.name || !newKeyData.userId) {
+      toast.error(language === 'pt' ? 'Preencha todos os campos obrigatórios' : 'Fill in all required fields');
+      return;
+    }
+
+    if (!newKeyData.userId || newKeyData.userId.trim() === '') {
+      toast.error(language === 'pt' ? 'Selecione um usuário' : 'Please select a user');
+      return;
+    }
+
+    setCreating(true);
+    try {
+      const response = await fetch("/api/admin/api-keys", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newKeyData.name.trim(),
+          userId: newKeyData.userId,
+          usageLimit: newKeyData.usageLimit || 1000,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || data.error || "Error creating API key");
+      }
+
+      toast.success(language === 'pt' ? 'API Key criada com sucesso!' : 'API Key created successfully!');
+      setShowCreateDialog(false);
+      setNewKeyData({ name: "", userId: "", usageLimit: 1000 });
+      fetchApiKeys();
+    } catch (error) {
+      console.error('Error creating API key:', error);
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : (language === 'pt' ? 'Erro ao criar API Key' : 'Error creating API Key');
+      toast.error(errorMessage);
+    } finally {
+      setCreating(false);
+    }
+  };
 
   const fetchApiKeys = async () => {
     try {
@@ -196,6 +280,13 @@ export default function AdminApiKeysPage() {
           <h1 className="text-2xl font-bold text-white">{t.admin.apiKeys.title}</h1>
           <p className="text-zinc-400 mt-1">{t.admin.apiKeys.subtitle}</p>
         </div>
+        <Button 
+          onClick={() => setShowCreateDialog(true)}
+          className="bg-emerald-600 hover:bg-emerald-500 text-white"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          {language === 'pt' ? 'Criar API Key' : 'Create API Key'}
+        </Button>
       </div>
 
       {/* Stats */}
@@ -490,6 +581,115 @@ export default function AdminApiKeysPage() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Create API Key Dialog */}
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent className="bg-zinc-900 border-zinc-800 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <Plus className="h-5 w-5 text-emerald-500" />
+              {language === 'pt' ? 'Criar Nova API Key' : 'Create New API Key'}
+            </DialogTitle>
+            <DialogDescription className="text-zinc-400">
+              {language === 'pt' 
+                ? 'Crie uma nova API Key para um usuário do sistema.'
+                : 'Create a new API Key for a system user.'}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label className="text-zinc-300">
+                {language === 'pt' ? 'Nome da Key' : 'Key Name'} *
+              </Label>
+              <Input
+                placeholder={language === 'pt' ? 'Ex: Chave de Produção' : 'Ex: Production Key'}
+                value={newKeyData.name}
+                onChange={(e) => setNewKeyData({ ...newKeyData, name: e.target.value })}
+                className="bg-zinc-800/50 border-zinc-700 text-white"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-zinc-300">
+                {language === 'pt' ? 'Usuário' : 'User'} *
+              </Label>
+              <Select
+                value={newKeyData.userId}
+                onValueChange={(value) => setNewKeyData({ ...newKeyData, userId: value })}
+              >
+                <SelectTrigger className="bg-zinc-800/50 border-zinc-700 text-white">
+                  <SelectValue placeholder={language === 'pt' ? 'Selecione um usuário' : 'Select a user'} />
+                </SelectTrigger>
+                <SelectContent className="bg-zinc-900 border-zinc-800">
+                  {users.map((user) => {
+                    const userId = user.id || user._id; // Compatibilidade com ambos os formatos
+                    return (
+                      <SelectItem 
+                        key={userId} 
+                        value={userId}
+                        className="text-zinc-300 focus:bg-zinc-800 focus:text-white"
+                      >
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4" />
+                          <span>{user.name}</span>
+                          <span className="text-zinc-500 text-xs">({user.email})</span>
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-zinc-300">
+                {language === 'pt' ? 'Limite de Uso' : 'Usage Limit'}
+              </Label>
+              <Input
+                type="number"
+                min={1}
+                value={newKeyData.usageLimit}
+                onChange={(e) => setNewKeyData({ ...newKeyData, usageLimit: parseInt(e.target.value) || 1000 })}
+                className="bg-zinc-800/50 border-zinc-700 text-white"
+              />
+              <p className="text-xs text-zinc-500">
+                {language === 'pt' 
+                  ? 'Número máximo de requisições permitidas'
+                  : 'Maximum number of allowed requests'}
+              </p>
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <Button
+                variant="outline"
+                className="flex-1 border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+                onClick={() => setShowCreateDialog(false)}
+                disabled={creating}
+              >
+                {language === 'pt' ? 'Cancelar' : 'Cancel'}
+              </Button>
+              <Button
+                className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white"
+                onClick={createApiKey}
+                disabled={creating}
+              >
+                {creating ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    {language === 'pt' ? 'Criando...' : 'Creating...'}
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4 mr-2" />
+                    {language === 'pt' ? 'Criar Key' : 'Create Key'}
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

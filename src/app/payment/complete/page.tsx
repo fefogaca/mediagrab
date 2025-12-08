@@ -6,7 +6,6 @@ import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@frontend/components/ui/card";
 import { Button } from "@frontend/components/ui/button";
 import { CheckCircle, ArrowRight, Loader2, PartyPopper } from "lucide-react";
-import confetti from "canvas-confetti";
 
 function PaymentCompleteContent() {
   const searchParams = useSearchParams();
@@ -34,12 +33,6 @@ function PaymentCompleteContent() {
         });
 
         if (response.ok) {
-          // Sucesso! Mostrar confetti
-          confetti({
-            particleCount: 100,
-            spread: 70,
-            origin: { y: 0.6 }
-          });
         }
       } catch (error) {
         console.error('Erro ao completar compra:', error);

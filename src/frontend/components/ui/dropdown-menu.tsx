@@ -5,30 +5,8 @@ import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu"
 import { Check, ChevronRight, Circle } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-// Wrapper to prevent body scroll lock
-const DropdownMenu = React.forwardRef<
-  React.ElementRef<typeof DropdownMenuPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Root> & { modal?: boolean }
->(({ modal = false, ...props }, ref) => {
-  React.useEffect(() => {
-    if (!modal && typeof document !== 'undefined') {
-      // Prevent body scroll lock when modal is false
-      const originalOverflow = document.body.style.overflow;
-      const originalPaddingRight = document.body.style.paddingRight;
-      
-      // Keep scrollbar visible
-      document.body.style.overflow = 'auto';
-      
-      return () => {
-        document.body.style.overflow = originalOverflow;
-        document.body.style.paddingRight = originalPaddingRight;
-      };
-    }
-  }, [modal]);
-  
-  return <DropdownMenuPrimitive.Root ref={ref} modal={modal} {...props} />;
-});
-DropdownMenu.displayName = 'DropdownMenu';
+// Wrapper to prevent body scroll lock - usando componente original devido a incompatibilidade com React 19
+const DropdownMenu = DropdownMenuPrimitive.Root;
 
 const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger
 

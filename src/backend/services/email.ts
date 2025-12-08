@@ -29,7 +29,7 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
   }
 
   try {
-    const msg: sgMail.MailDataRequired = {
+    const msg: any = {
       to: options.to,
       from: {
         email: FROM_EMAIL,

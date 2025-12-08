@@ -38,7 +38,7 @@ export default function ContactPage() {
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 <div>
                   <Label htmlFor="first-name" className="text-zinc-300">
-                    {t.contact?.firstName || "Nome"}
+                    {t.contact.form.firstName}
                   </Label>
                   <Input
                     type="text"
@@ -51,7 +51,7 @@ export default function ContactPage() {
                 </div>
                 <div>
                   <Label htmlFor="last-name" className="text-zinc-300">
-                    {t.contact?.lastName || "Sobrenome"}
+                    {t.contact.form.lastName}
                   </Label>
                   <Input
                     type="text"
@@ -64,7 +64,7 @@ export default function ContactPage() {
                 </div>
                 <div className="sm:col-span-2">
                   <Label htmlFor="email" className="text-zinc-300">
-                    {t.contact?.email || "Email"}
+                    {t.contact.form.email}
                   </Label>
                   <Input
                     type="email"
@@ -77,7 +77,7 @@ export default function ContactPage() {
                 </div>
                 <div className="sm:col-span-2">
                   <Label htmlFor="message" className="text-zinc-300">
-                    {t.contact?.message || "Mensagem"}
+                    {t.contact.form.message}
                   </Label>
                   <Textarea
                     name="message"
@@ -94,7 +94,7 @@ export default function ContactPage() {
                   className="w-full bg-emerald-600 hover:bg-emerald-500 text-white"
                 >
                   <Send className="h-4 w-4 mr-2" />
-                  {t.contact?.submit || "Enviar Mensagem"}
+                  {t.contact.form.send}
                 </Button>
               </div>
             </form>

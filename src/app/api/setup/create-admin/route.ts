@@ -60,7 +60,7 @@ export async function POST(request: Request) {
       password: hashedPassword,
       role: 'admin',
       plan: 'enterprise',
-      emailVerified: true,
+      emailVerified: new Date(), // Deve ser Date, não boolean
       isActive: true,
     });
 
@@ -73,7 +73,7 @@ export async function POST(request: Request) {
         password: await bcrypt.hash('guest-no-login-allowed', 12),
         role: 'user',
         plan: 'free',
-        emailVerified: true,
+        emailVerified: new Date(), // Deve ser Date, não boolean
         isActive: true,
       });
     }

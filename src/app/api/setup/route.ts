@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import { setupDatabase } from '../../../lib/database';
+import connectDB from '@backend/lib/mongodb';
 
 export async function GET() {
   try {
-    await setupDatabase();
+    await connectDB();
     return NextResponse.json({ message: 'Database setup successful' }, { status: 200 });
   } catch (error) {
     console.error('Database setup failed:', error);

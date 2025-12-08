@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import jwt from 'jsonwebtoken';
-import Stripe from 'stripe';
 import { PLANS, PAYMENT_URLS } from '@/lib/config/plans';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2023-10-16',
-});
+// Importação condicional do Stripe
+let Stripe: any = null;
+try {
+  Stripe = require('stripe').default;
+} catch {
+  // Stripe não instalado
+}
 
 const JWT_SECRET = process.env.JWT_SECRET || '';
 
@@ -31,6 +34,13 @@ async function getUserFromRequest(): Promise<DecodedToken | null> {
 }
 
 export async function POST(request: NextRequest) {
+  if (!Stripe) {
+    return NextResponse.json(
+      { error: 'Stripe não está configurado' },
+      { status: 503 }
+    );
+  }
+
   try {
     const userData = await getUserFromRequest();
     if (!userData) {
@@ -39,6 +49,10 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
+
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+      apiVersion: '2023-10-16',
+    });
 
     const body = await request.json();
     const { planId } = body;

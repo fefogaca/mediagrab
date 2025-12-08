@@ -1,5 +1,4 @@
 import NextAuth from 'next-auth';
-import type { NextAuthConfig } from 'next-auth';
 import Google from 'next-auth/providers/google';
 import GitHub from 'next-auth/providers/github';
 import Credentials from 'next-auth/providers/credentials';
@@ -7,7 +6,7 @@ import bcrypt from 'bcryptjs';
 import connectDB from './mongodb';
 import User from '@models/User';
 
-export const authConfig: NextAuthConfig = {
+export const authConfig = {
   providers: [
     // Google OAuth
     Google({
@@ -81,7 +80,7 @@ export const authConfig: NextAuthConfig = {
   ],
 
   session: {
-    strategy: 'jwt',
+    strategy: 'jwt' as const,
     maxAge: 30 * 24 * 60 * 60, // 30 dias
   },
 
@@ -93,7 +92,7 @@ export const authConfig: NextAuthConfig = {
   },
 
   callbacks: {
-    async signIn({ user, account }) {
+    async signIn({ user, account }: { user: any; account: any }) {
       if (account?.provider === 'google' || account?.provider === 'github') {
         try {
           await connectDB();
@@ -134,7 +133,7 @@ export const authConfig: NextAuthConfig = {
       return true;
     },
 
-    async jwt({ token, user, trigger, session }) {
+    async jwt({ token, user, trigger, session }: { token: any; user?: any; trigger?: string; session?: any }) {
       if (user) {
         token.id = user.id;
         token.role = user.role || 'user';
@@ -150,7 +149,7 @@ export const authConfig: NextAuthConfig = {
       return token;
     },
 
-    async session({ session, token }) {
+    async session({ session, token }: { session: any; token: any }) {
       if (token && session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
@@ -162,7 +161,7 @@ export const authConfig: NextAuthConfig = {
   },
 
   events: {
-    async signIn({ user, isNewUser }) {
+    async signIn({ user, isNewUser }: { user: any; isNewUser?: boolean }) {
       if (isNewUser) {
         console.log(`Novo usuário registrado: ${user.email}`);
         // TODO: Enviar email de boas-vindas

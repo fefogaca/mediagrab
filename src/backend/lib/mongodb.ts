@@ -8,6 +8,9 @@ declare global {
   } | undefined;
 }
 
+// Tipo para o retorno do mongoose.connect
+type MongooseConnection = typeof mongoose;
+
 const MONGODB_URI = process.env.MONGODB_URI!;
 
 if (!MONGODB_URI) {
@@ -32,9 +35,10 @@ async function connectDB() {
       bufferCommands: false,
     };
 
-    cached!.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
+    // @ts-expect-error - mongoose.connect retorna Promise<typeof mongoose> que é compatível
+    cached!.promise = mongoose.connect(MONGODB_URI, opts).then((mongooseInstance: MongooseConnection) => {
       console.log('✅ MongoDB connected successfully');
-      return mongoose;
+      return mongooseInstance;
     });
   }
 

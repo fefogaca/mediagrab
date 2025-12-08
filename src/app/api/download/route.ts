@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { openDb } from '@/lib/database';
+import connectDB from '@backend/lib/mongodb';
+import ApiKey from '@backend/models/ApiKey';
 import { validateMediaUrl } from '@/lib/media/providers';
 import { resolveMediaInfo, type ResolvedMediaFormat } from '@/lib/server/mediaResolver';
 import { MediaResolverError } from '@/lib/server/mediaResolverError';
@@ -30,63 +31,81 @@ export async function GET(request: NextRequest) {
   }
 
   // --- API Key Validation & Usage Check ---
-  const db = await openDb();
-  const apiKeyData = await db.get('SELECT * FROM api_keys WHERE key = ?', apiKey);
-
-  if (!apiKeyData) {
-    return NextResponse.json<ApiErrorBody>(
-      {
-        error: {
-          code: 'INVALID_API_KEY',
-          message: 'Esta chave de API não foi encontrada ou está inativa.',
-        },
-      },
-      { status: 401 },
-    );
-  }
-
-  if (apiKeyData.usage_count >= apiKeyData.usage_limit) {
-    return NextResponse.json<ApiErrorBody>(
-      {
-        error: {
-          code: 'USAGE_LIMIT_EXCEEDED',
-          message: 'Você atingiu o limite de requisições da sua chave de API.',
-        },
-      },
-      { status: 429 },
-    );
-  }
-  if (!url) {
-    return NextResponse.json<ApiErrorBody>(
-      {
-        error: {
-          code: 'MISSING_URL',
-          message: 'Inclua a URL do vídeo nos parâmetros da requisição.',
-        },
-      },
-      { status: 400 },
-    );
-  }
-
-  const validation = validateMediaUrl(url);
-  if (!validation.ok) {
-    const status = validation.reason === 'INVALID_URL' ? 400 : 415;
-    return NextResponse.json<ApiErrorBody>(
-      {
-        error: {
-          code: validation.reason,
-          message: validation.message,
-        },
-      },
-      { status },
-    );
-  }
-
-  const normalizedUrl = validation.normalizedUrl;
-
   try {
+    await connectDB();
+    const apiKeyData = await ApiKey.findOne({ key: apiKey, isActive: true });
+
+    if (!apiKeyData) {
+      return NextResponse.json<ApiErrorBody>(
+        {
+          error: {
+            code: 'INVALID_API_KEY',
+            message: 'Esta chave de API não foi encontrada ou está inativa.',
+          },
+        },
+        { status: 401 },
+      );
+    }
+
+    // Verificar se expirou
+    if (apiKeyData.expiresAt && new Date() > apiKeyData.expiresAt) {
+      return NextResponse.json<ApiErrorBody>(
+        {
+          error: {
+            code: 'API_KEY_EXPIRED',
+            message: 'Esta chave de API expirou.',
+          },
+        },
+        { status: 401 },
+      );
+    }
+
+    if (apiKeyData.usageCount >= apiKeyData.usageLimit) {
+      return NextResponse.json<ApiErrorBody>(
+        {
+          error: {
+            code: 'USAGE_LIMIT_EXCEEDED',
+            message: 'Você atingiu o limite de requisições da sua chave de API.',
+          },
+        },
+        { status: 429 },
+      );
+    }
+
+    if (!url) {
+      return NextResponse.json<ApiErrorBody>(
+        {
+          error: {
+            code: 'MISSING_URL',
+            message: 'Inclua a URL do vídeo nos parâmetros da requisição.',
+          },
+        },
+        { status: 400 },
+      );
+    }
+
+    const validation = validateMediaUrl(url);
+    if (!validation.ok) {
+      const status = validation.reason === 'INVALID_URL' ? 400 : 415;
+      return NextResponse.json<ApiErrorBody>(
+        {
+          error: {
+            code: validation.reason,
+            message: validation.message,
+          },
+        },
+        { status },
+      );
+    }
+
+    const normalizedUrl = validation.normalizedUrl;
+
     // Increment usage count before processing the request
-    await db.run('UPDATE api_keys SET usage_count = usage_count + 1 WHERE id = ?', apiKeyData.id);
+    await ApiKey.findByIdAndUpdate(apiKeyData._id, {
+      $inc: { usageCount: 1 },
+      lastUsedAt: new Date(),
+    });
+
     const mediaInfo = await resolveMediaInfo(normalizedUrl);
 
     const processedFormats = mediaInfo.formats
@@ -119,7 +138,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-  console.error('Falha ao preparar download:', error);
+    console.error('Falha ao preparar download:', error);
     return NextResponse.json<ApiErrorBody>(
       {
         error: {

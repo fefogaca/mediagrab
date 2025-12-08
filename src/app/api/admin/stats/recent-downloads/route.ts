@@ -14,7 +14,7 @@ export async function GET() {
     const formattedDownloads = downloads.map(d => ({
       id: d._id.toString(),
       url: d.url,
-      platform: d.platform,
+      platform: d.provider, // Usar provider do modelo
       userId: d.userId?._id?.toString(),
       username: (d.userId as { name?: string })?.name || 'Anônimo',
       createdAt: d.createdAt,

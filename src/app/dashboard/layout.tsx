@@ -29,6 +29,7 @@ import {
   ChevronDown,
   Zap,
   Globe,
+  Home,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LogoSmallContrast } from "@frontend/components/shared/Logo";
@@ -225,6 +226,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <DropdownMenuLabel className="text-zinc-400">{t.admin.myAccount}</DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-zinc-800" />
                 <DropdownMenuItem asChild>
+                  <Link href="/" className="text-zinc-300 focus:bg-zinc-800 focus:text-white cursor-pointer">
+                    <Home className="mr-2 h-4 w-4" />
+                    {language === 'pt' ? 'Página Inicial' : 'Home'}
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
                   <Link href="/dashboard/settings" className="text-zinc-300 focus:bg-zinc-800 focus:text-white cursor-pointer">
                     <Settings className="mr-2 h-4 w-4" />
                     {t.userDashboard.sidebar.settings}
@@ -261,6 +268,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="flex items-center gap-2">
               {/* Language Toggle */}
               <LanguageToggle />
+              
+              {/* Home Button */}
+              <Link href="/">
+                <Button variant="outline" className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 text-sm">
+                  <Home className="h-4 w-4 mr-2" />
+                  {language === 'pt' ? 'Início' : 'Home'}
+                </Button>
+              </Link>
               
               <Link href="/dashboard/subscription">
                 <Button className="bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white text-sm">
