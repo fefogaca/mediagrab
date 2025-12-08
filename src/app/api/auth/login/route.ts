@@ -2,12 +2,7 @@ import { NextResponse } from 'next/server';
 import { openDb } from '@/lib/database';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-
-const JWT_SECRET: string = process.env.JWT_SECRET as string;
-
-if (!JWT_SECRET) {
-  throw new Error('JWT_SECRET is not defined in environment variables');
-}
+import { getJwtSecret } from '@/lib/utils';
 
 export async function POST(request: Request) {
   const { username, password } = await request.json();
@@ -34,7 +29,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: 'Invalid credentials' }, { status: 401 });
     }
 
-    const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, JWT_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, getJwtSecret(), { expiresIn: '1h' });
 
     const response = NextResponse.json({ message: 'Login successful', role: user.role }, { status: 200 });
 

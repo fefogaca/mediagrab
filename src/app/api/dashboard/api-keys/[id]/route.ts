@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { openDb } from '@/lib/database';
 import jwt from 'jsonwebtoken';
-
-const JWT_SECRET: string = process.env.JWT_SECRET as string;
-
-if (!JWT_SECRET) {
-  throw new Error('JWT_SECRET is not defined in environment variables');
-}
+import { getJwtSecret } from '@/lib/utils';
 
 interface DecodedToken {
   id: number;
@@ -16,6 +11,7 @@ interface DecodedToken {
 
 function getUserIdFromRequest(request: Request): number | null {
   try {
+    const jwtSecret = getJwtSecret();
     const token = request.headers.get('authorization')?.split(' ')[1];
     if (!token) {
       // Tentar pegar do cookie
@@ -23,7 +19,7 @@ function getUserIdFromRequest(request: Request): number | null {
       if (cookies) {
         const tokenMatch = cookies.match(/token=([^;]+)/);
         if (tokenMatch) {
-          const decoded = jwt.verify(tokenMatch[1], JWT_SECRET);
+          const decoded = jwt.verify(tokenMatch[1], jwtSecret);
           if (typeof decoded !== 'string' && 'id' in decoded) {
             return (decoded as DecodedToken).id;
           }
@@ -31,7 +27,7 @@ function getUserIdFromRequest(request: Request): number | null {
       }
       return null;
     }
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, jwtSecret);
     if (typeof decoded === 'string' || !('id' in decoded)) {
       return null;
     }

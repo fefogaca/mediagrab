@@ -247,7 +247,242 @@ export async function GET(request: NextRequest) {
 
     const options = getYtDlpOptions(provider.id);
     
-    // Tentar o formato solicitado primeiro
+    // Função auxiliar para tentar um formato específico (sem validação prévia)
+    // Retorna NextResponse se funcionar, null se não funcionar
+    const tryFormat = async (formatToTry: string, timeoutMs: number = 10000): Promise<NextResponse | null> => {
+      try {
+        const nodeStream = ytDlpWrap.execStream([...options, url, '-f', formatToTry, '-o', '-']);
+        
+        // Aguardar para detectar erros iniciais
+        const streamReady = new Promise<boolean>((resolve, reject) => {
+          let hasData = false;
+          let streamError: Error | null = null;
+          let timeoutId: NodeJS.Timeout;
+          let resolved = false;
+          
+          const dataHandler = (chunk: any) => {
+            if (!resolved && chunk && chunk.length > 0) {
+              hasData = true;
+              resolved = true;
+              cleanup();
+              resolve(true);
+            }
+          };
+          
+          const errorHandler = (error: Error) => {
+            if (!resolved) {
+              streamError = error;
+              resolved = true;
+              cleanup();
+              if (isFormatNotAvailableError(error)) {
+                reject(new Error('FORMAT_NOT_AVAILABLE'));
+              } else {
+                reject(error);
+              }
+            }
+          };
+          
+          const cleanup = () => {
+            if (timeoutId) clearTimeout(timeoutId);
+            try {
+              nodeStream.removeListener('data', dataHandler);
+              nodeStream.removeListener('error', errorHandler);
+            } catch (e) {
+              // Ignorar erros ao remover listeners
+            }
+          };
+          
+          nodeStream.on('data', dataHandler);
+          nodeStream.on('error', errorHandler);
+          
+          // Timeout configurável (padrão 10 segundos, mais para formatos de alta qualidade)
+          // Para formatos que combinam vídeo+áudio, pode demorar mais para iniciar
+          timeoutId = setTimeout(() => {
+            if (!resolved) {
+              resolved = true;
+              cleanup();
+              // Se já recebeu dados, considerar sucesso mesmo que o timeout tenha ocorrido
+              if (hasData) {
+                resolve(true);
+              } else if (streamError) {
+                // Se houve erro, rejeitar
+                if (isFormatNotAvailableError(streamError)) {
+                  reject(new Error('FORMAT_NOT_AVAILABLE'));
+                } else {
+                  reject(streamError);
+                }
+              } else {
+                // Sem dados e sem erro explícito - pode ser que ainda esteja iniciando
+                // Para formatos combinados, dar mais uma chance
+                reject(new Error('STREAM_TIMEOUT_NO_DATA'));
+              }
+            }
+          }, timeoutMs);
+        });
+        
+        await streamReady;
+        // Se chegou aqui, o stream está funcionando
+        console.log(`✅ Formato ${formatToTry} funcionando, retornando stream...`);
+        const responseStream = toReadableStream(nodeStream);
+        return buildStreamResponse(responseStream);
+      } catch (streamError) {
+        const errorStr = String(streamError);
+        if (errorStr.includes('FORMAT_NOT_AVAILABLE') || 
+            errorStr.includes('STREAM_TIMEOUT_NO_DATA') || 
+            errorStr.includes('STREAM_TIMEOUT') ||
+            isFormatNotAvailableError(streamError)) {
+          return null; // Formato não disponível, retornar null para tentar próximo
+        }
+        throw streamError; // Outro erro, relançar
+      }
+    };
+    
+    // Se o formato solicitado não for o padrão, tentar usar exatamente o formato solicitado
+    // Se não estiver disponível, buscar a resolução do formato e tentar outros formatos da mesma resolução
+    if (format !== DEFAULT_FORMAT) {
+      console.log(`🎯 Tentando formato solicitado: ${format}`);
+      
+      // Buscar informações do vídeo ANTES de tentar o formato para saber se tem áudio
+      let targetResolution: string | null = null;
+      let targetHeight: number | null = null;
+      let hasAudio = false;
+      let allFormatsOfSameResolution: string[] = [];
+      let videoInfo: any = null;
+      
+      try {
+        videoInfo = await ytDlpWrap.getVideoInfo(url);
+        const requestedFormat = videoInfo.formats.find((f: any) => String(f.format_id) === format);
+        
+        if (requestedFormat) {
+          targetResolution = requestedFormat.resolution || null;
+          hasAudio = requestedFormat.acodec && requestedFormat.acodec !== 'none';
+          console.log(`📐 Formato ${format} tem resolução: ${targetResolution}, tem áudio: ${hasAudio}`);
+          
+          // Extrair altura da resolução (ex: "1920x1080" -> 1080, "1080p" -> 1080)
+          if (targetResolution) {
+            const heightMatch = targetResolution.match(/(\d+)p?$/i) || targetResolution.match(/x(\d+)/);
+            if (heightMatch) {
+              targetHeight = parseInt(heightMatch[1]);
+              console.log(`📏 Altura extraída: ${targetHeight}p`);
+              
+              // Buscar TODOS os formatos que têm a mesma resolução
+              allFormatsOfSameResolution = videoInfo.formats
+                .filter((f: any) => {
+                  const fResolution = f.resolution || '';
+                  const fHeightMatch = fResolution.match(/(\d+)p?$/i) || fResolution.match(/x(\d+)/);
+                  if (fHeightMatch) {
+                    const fHeight = parseInt(fHeightMatch[1]);
+                    return fHeight === targetHeight && String(f.format_id) !== format;
+                  }
+                  return false;
+                })
+                .map((f: any) => String(f.format_id))
+                .filter((id: string) => id && id !== format);
+              
+              console.log(`🔍 Encontrados ${allFormatsOfSameResolution.length} outros formatos com ${targetHeight}p:`, allFormatsOfSameResolution.slice(0, 5));
+            }
+          }
+        }
+      } catch (infoError) {
+        console.log('Não foi possível buscar informações do vídeo:', infoError);
+      }
+      
+      // Se o formato não tem áudio, tentar combinar com áudio primeiro (com timeout maior para alta qualidade)
+      if (!hasAudio && targetHeight !== null) {
+        console.log(`🎵 Formato ${format} não tem áudio, tentando combinar com áudio...`);
+        const videoAudioFormats = [
+          `${format}+bestaudio/best`, // Formato solicitado + melhor áudio
+          `${format}+bestaudio[ext=m4a]/best`, // Formato solicitado + áudio M4A
+          `bestvideo[height=${targetHeight}]+bestaudio/best[height=${targetHeight}]`, // Melhor vídeo dessa altura + áudio
+          `bestvideo[height=${targetHeight}][ext=mp4]+bestaudio[ext=m4a]/best[height=${targetHeight}][ext=mp4]`, // MP4 dessa altura + áudio
+        ];
+        
+        // Usar timeout maior para formatos de alta qualidade (1080p+)
+        const timeout = targetHeight >= 1080 ? 20000 : 10000;
+        
+        for (const comboFormat of videoAudioFormats) {
+          console.log(`🔄 Tentando combinação vídeo+áudio: ${comboFormat}...`);
+          const comboResult = await tryFormat(comboFormat, timeout);
+          if (comboResult) {
+            console.log(`✅ SUCESSO! Combinação ${comboFormat} funcionou! Retornando vídeo em ${targetHeight}p com áudio...`);
+            return comboResult;
+          }
+        }
+      }
+      
+      // Tentar o formato exato solicitado (pode ter áudio ou não)
+      const result = await tryFormat(format);
+      if (result) {
+        console.log(`✅ Formato solicitado ${format} funcionou!`);
+        return result;
+      }
+      
+      console.log(`❌ Formato ${format} não disponível, tentando outros formatos da mesma resolução...`);
+      
+      // Se encontrou a resolução, tentar formatos específicos dessa resolução
+      if (targetHeight !== null) {
+        // Primeiro tentar outros format_ids da mesma resolução que TÊM áudio
+        const formatsWithAudio = allFormatsOfSameResolution.filter((id: string) => {
+          const f = videoInfo?.formats?.find((fmt: any) => String(fmt.format_id) === id);
+          return f && f.acodec && f.acodec !== 'none';
+        });
+        
+        if (formatsWithAudio.length > 0) {
+          console.log(`🎵 Tentando ${formatsWithAudio.length} formatos com áudio da mesma resolução...`);
+          for (const altFormatId of formatsWithAudio) {
+            console.log(`🔄 Tentando format_id com áudio (${altFormatId}) da mesma resolução (${targetHeight}p)...`);
+            const altResult = await tryFormat(altFormatId);
+            if (altResult) {
+              console.log(`✅ SUCESSO! Formato ${altFormatId} funcionou! Retornando vídeo em ${targetHeight}p...`);
+              return altResult;
+            }
+          }
+        }
+        
+        // Tentar outros format_ids da mesma resolução (mesmo sem áudio, pode combinar depois)
+        for (const altFormatId of allFormatsOfSameResolution) {
+          if (formatsWithAudio.includes(altFormatId)) continue; // Já tentamos
+          console.log(`🔄 Tentando outro format_id (${altFormatId}) da mesma resolução (${targetHeight}p)...`);
+          const altResult = await tryFormat(altFormatId);
+          if (altResult) {
+            console.log(`✅ SUCESSO! Formato ${altFormatId} funcionou! Retornando vídeo em ${targetHeight}p...`);
+            return altResult;
+          }
+        }
+        
+        // Se nenhum format_id específico funcionou, tentar seletores do yt-dlp para essa resolução
+        console.log(`🎯 Tentando seletores do yt-dlp para ${targetHeight}p...`);
+        const resolutionFormats = [
+          `bestvideo[height=${targetHeight}]+bestaudio/best[height=${targetHeight}]`, // Vídeo + áudio dessa altura
+          `bestvideo[height=${targetHeight}][ext=mp4]+bestaudio[ext=m4a]/best[height=${targetHeight}][ext=mp4]`, // MP4 dessa altura + áudio
+          `bestvideo[height=${targetHeight}][ext=webm]+bestaudio[ext=webm]/best[height=${targetHeight}][ext=webm]`, // WebM dessa altura + áudio
+          `best[height=${targetHeight}]`, // Exatamente essa altura (pode ter áudio)
+        ];
+        
+        for (const resFormat of resolutionFormats) {
+          console.log(`🔄 Tentando seletor de resolução: ${resFormat}...`);
+          const resResult = await tryFormat(resFormat);
+          if (resResult) {
+            console.log(`✅ SUCESSO! Seletor ${resFormat} funcionou! Retornando vídeo em ${targetHeight}p...`);
+            return resResult;
+          }
+        }
+      }
+      
+      // Se não encontrou resolução ou nenhum formato da mesma resolução funcionou, retornar erro
+      console.error(`❌ ERRO: Não foi possível encontrar nenhum formato funcional para a resolução solicitada (${targetResolution || 'desconhecida'})`);
+      return NextResponse.json<ApiErrorBody>(
+        {
+          error: {
+            code: 'FORMAT_NOT_AVAILABLE',
+            message: `O formato solicitado (${format}) não está disponível para este vídeo. ${targetHeight ? `Tentamos encontrar outros formatos de ${targetHeight}p, mas nenhum funcionou.` : 'Não foi possível determinar a resolução solicitada.'} Por favor, selecione outro formato da lista.`,
+          },
+        },
+        { status: 400 },
+      );
+    }
+    
+    // Tentar o formato solicitado primeiro (para outros provedores ou formato padrão)
     try {
       const nodeStream = ytDlpWrap.execStream([...options, url, '-f', format, '-o', '-']);
       const responseStream = toReadableStream(nodeStream);
@@ -264,11 +499,6 @@ export async function GET(request: NextRequest) {
         stderr: errorStderr || undefined,
       });
       
-      // Para YouTube, sempre tentar fallback se houver qualquer erro
-      if (provider.id === 'youtube') {
-        console.log(`[${provider.id}] Acionando fallback...`);
-        throw new Error('FORMAT_NOT_AVAILABLE');
-      }
       // Se for erro de formato não disponível, lançar para o catch externo tratar
       if (isFormatNotAvailableError(streamError)) {
         throw new Error('FORMAT_NOT_AVAILABLE');
@@ -283,74 +513,25 @@ export async function GET(request: NextRequest) {
     const isFormatNotAvailable = isFormatNotAvailableError(primaryError) || 
                                  String(primaryError).includes('FORMAT_NOT_AVAILABLE');
 
-    // Se o formato específico não está disponível, tentar formato padrão
+    // Se o formato específico não está disponível, retornar erro claro
     if (format !== DEFAULT_FORMAT && isFormatNotAvailable) {
-      try {
-        console.log(`Formato ${format} não disponível, tentando formato padrão...`);
-        const options = getYtDlpOptions(provider.id);
-        const nodeStream = ytDlpWrap.execStream([...options, url, '-f', DEFAULT_FORMAT, '-o', '-']);
-        const responseStream = toReadableStream(nodeStream);
-        return buildStreamResponse(responseStream);
-      } catch (fallbackError) {
-        console.error('Falha no fallback com formato padrão:', fallbackError);
-      }
+      return NextResponse.json<ApiErrorBody>(
+        {
+          error: {
+            code: 'FORMAT_NOT_AVAILABLE',
+            message: `O formato solicitado (${format}) não está disponível para este vídeo. Por favor, selecione outro formato.`,
+          },
+        },
+        { status: 400 },
+      );
     }
 
-    // Para YouTube (incluindo Shorts), tentar múltiplos fallbacks
-    if (provider.id === 'youtube') {
-      try {
-        // Primeiro tentar ytdl-core se ainda não tentou
-        if (source !== 'ytdl-core') {
-          try {
-            console.log('YouTube: Tentando ytdl-core como fallback...');
-            const fallbackStream = ytdl(url, { quality: 'highest' });
-            const responseStream = toReadableStream(fallbackStream);
-            return buildStreamResponse(responseStream);
-          } catch (fallbackError) {
-            console.log('YouTube: ytdl-core falhou, tentando formatos alternativos do yt-dlp...');
-          }
-        }
-
-        // Sempre tentar formatos alternativos do yt-dlp para YouTube
-        console.log('YouTube: Tentando formatos alternativos do yt-dlp...');
-        const options = getYtDlpOptions(provider.id);
-        const fallbackFormats = [
-          'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
-          'bestvideo+bestaudio/best',
-          'best[height<=1080]',
-          'best[height<=720]',
-          'best[height<=480]',
-          'best',
-          'worst'
-        ];
-        
-        for (const fallbackFormat of fallbackFormats) {
-          try {
-            console.log(`YouTube: Tentando formato ${fallbackFormat}...`);
-            const nodeStream = ytDlpWrap.execStream([...options, url, '-f', fallbackFormat, '-o', '-']);
-            const responseStream = toReadableStream(nodeStream);
-            return buildStreamResponse(responseStream);
-          } catch (formatError) {
-            // Verificar se é erro de formato não disponível
-            if (isFormatNotAvailableError(formatError)) {
-              console.log(`YouTube: Formato ${fallbackFormat} não disponível, tentando próximo...`);
-              continue;
-            }
-            // Se for outro erro, pode ser um problema temporário, tentar próximo formato
-            console.log(`YouTube: Formato ${fallbackFormat} falhou com erro diferente, tentando próximo...`);
-            continue;
-          }
-        }
-      } catch (youtubeFallbackError) {
-        console.error('YouTube: Falha no fallback completo:', youtubeFallbackError);
-      }
-    }
-
+    // Se for formato padrão ou outro erro, retornar erro genérico
     return NextResponse.json<ApiErrorBody>(
       {
         error: {
           code: 'STREAM_FAILURE',
-          message: 'Não foi possível iniciar o download agora. O formato solicitado pode não estar disponível. Tente novamente mais tarde.',
+          message: 'Não foi possível iniciar o download agora. Tente novamente mais tarde.',
         },
       },
       { status: 502 },
