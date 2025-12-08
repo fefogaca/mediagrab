@@ -1,0 +1,144 @@
+import React, { useRef, useEffect, useState, useContext } from 'react';
+import { ThemeContext } from '@/app/components/ThemeProvider';
+
+import { chartColors } from './ChartjsConfig';
+import {
+  Chart, BarController, BarElement, LinearScale, TimeScale, Tooltip, Legend, ChartData, ChartOptions,
+} from 'chart.js';
+import 'chartjs-adapter-moment';
+
+// Import utilities
+import { formatValue } from '../utils/Utils';
+
+Chart.register(BarController, BarElement, LinearScale, TimeScale, Tooltip, Legend);
+
+interface BarChart02Props {
+  data: ChartData<'bar'>;
+  width: number;
+  height: number;
+}
+
+const BarChart02 = ({
+  data,
+  width,
+  height
+}: BarChart02Props) => {
+
+  const [chart, setChart] = useState<Chart | null>(null)
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const { currentTheme } = useContext(ThemeContext);
+  const darkMode = currentTheme === 'dark';
+  const { textColor, gridColor, tooltipBodyColor, tooltipBgColor, tooltipBorderColor } = chartColors; 
+
+  useEffect(() => {
+    const ctx = canvas.current;
+    if (!ctx) return;
+
+    const newChart = new Chart(ctx, {
+      type: 'bar',
+      data: data,
+      options: {
+        layout: {
+          padding: {
+            top: 12,
+            bottom: 16,
+            left: 20,
+            right: 20,
+          },
+        },
+        scales: {
+          y: {
+            stacked: true,
+            border: {
+              display: false,
+            },
+            beginAtZero: true,
+            ticks: {
+              maxTicksLimit: 5,
+              callback: (value: string | number) => formatValue(Number(value)),
+              color: darkMode ? textColor.dark : textColor.light,
+            },
+            grid: {
+              color: darkMode ? gridColor.dark : gridColor.light,
+            },
+          },
+          x: {
+            stacked: true,
+            type: 'time',
+            time: {
+              parser: 'MM-DD-YYYY',
+              unit: 'month',
+              displayFormats: {
+                month: 'MMM YY',
+              },
+            },
+            border: {
+              display: false,
+            },
+            grid: {
+              display: false,
+            },
+            ticks: {
+              autoSkipPadding: 48,
+              maxRotation: 0,
+              color: darkMode ? textColor.dark : textColor.light,
+            },
+          },
+        },
+        plugins: {
+          legend: {
+            display: false,
+          },
+          tooltip: {
+            callbacks: {
+              title: () => '', // Disable tooltip title
+              label: (context) => formatValue(context.parsed.y ?? 0),
+            },
+            bodyColor: darkMode ? tooltipBodyColor.dark : tooltipBodyColor.light,
+            backgroundColor: darkMode ? tooltipBgColor.dark : tooltipBgColor.light,
+            borderColor: darkMode ? tooltipBorderColor.dark : tooltipBorderColor.light,
+          },
+        },
+        interaction: {
+          intersect: false,
+          mode: 'nearest',
+        },
+        animation: {
+          duration: 200,
+        },
+        maintainAspectRatio: false,
+        resizeDelay: 200,
+      } as ChartOptions<'bar'>,
+    });
+    setChart(newChart);
+    return () => newChart.destroy();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!chart) return;
+
+    if (darkMode) {
+      chart.options.scales!['x']!.ticks!.color = textColor.dark;
+      chart.options.scales!['y']!.ticks!.color = textColor.dark;
+      chart.options.scales!['y']!.grid!.color = gridColor.dark;
+      chart.options.plugins!.tooltip!.bodyColor = tooltipBodyColor.dark;
+      chart.options.plugins!.tooltip!.backgroundColor = tooltipBgColor.dark;
+      chart.options.plugins!.tooltip!.borderColor = tooltipBorderColor.dark;
+    } else {
+      chart.options.scales!['x']!.ticks!.color = textColor.light;
+      chart.options.scales!['y']!.ticks!.color = textColor.light;
+      chart.options.scales!['y']!.grid!.color = gridColor.light;
+      chart.options.plugins!.tooltip!.bodyColor = tooltipBodyColor.light;
+      chart.options.plugins!.tooltip!.backgroundColor = tooltipBgColor.light;
+      chart.options.plugins!.tooltip!.borderColor = tooltipBorderColor.light;
+    }
+    chart.update('none');
+  }, [currentTheme]);
+
+  return (
+    <canvas ref={canvas} width={width} height={height}></canvas>
+  );
+}
+
+export default BarChart02;
