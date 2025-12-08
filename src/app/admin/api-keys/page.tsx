@@ -625,7 +625,8 @@ export default function AdminApiKeysPage() {
                 </SelectTrigger>
                 <SelectContent className="bg-zinc-900 border-zinc-800">
                   {users.map((user) => {
-                    const userId = user.id || user._id; // Compatibilidade com ambos os formatos
+                    const userId = user.id || user._id || ''; // Compatibilidade com ambos os formatos
+                    if (!userId) return null; // Pular se não tiver ID válido
                     return (
                       <SelectItem 
                         key={userId} 
