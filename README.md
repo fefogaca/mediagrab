@@ -74,8 +74,8 @@ Next.js 16 (App Router, Turbopack)
 
 ### 1. Clonar o repositório
 ```bash
-git clone https://github.com/<seu-usuario>/<seu-repo>.git
-cd <seu-repo>
+git clone https://github.com/fefogaca/mediagrab.git
+cd mediagrab
 ```
 
 ### 2. Instalar dependências Node
