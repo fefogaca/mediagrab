@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import jwt from 'jsonwebtoken';
-import connectDB from '@/backend/lib/mongodb';
+import { connectDB } from '@/backend/lib/database';
 import ApiKey from '@/backend/models/ApiKey';
+import { getJWTSecret } from '@backend/lib/secrets';
 
-const JWT_SECRET = process.env.JWT_SECRET || '';
+const JWT_SECRET = getJWTSecret();;
 
 interface DecodedToken {
   id: string;
@@ -41,13 +42,13 @@ export async function DELETE(
     await connectDB();
     
     // Verificar se a key pertence ao usuário
-    const apiKey = await ApiKey.findOne({ _id: id, userId: userData.id });
+    const apiKey = await ApiKey.findOne({ id: id, userId: userData.id });
     
     if (!apiKey) {
       return NextResponse.json({ message: 'API Key não encontrada' }, { status: 404 });
     }
 
-    await ApiKey.deleteOne({ _id: id });
+    await prisma.apiKey.delete({ where: { id } });
 
     return NextResponse.json({ message: 'API Key excluída com sucesso' }, { status: 200 });
   } catch (error) {
@@ -70,7 +71,7 @@ export async function GET(
 
     await connectDB();
     
-    const apiKey = await ApiKey.findOne({ _id: id, userId: userData.id }).lean();
+    const apiKey = await ApiKey.findOne({ id: id, userId: userData.id });
     
     if (!apiKey) {
       return NextResponse.json({ message: 'API Key não encontrada' }, { status: 404 });
@@ -78,7 +79,7 @@ export async function GET(
 
     return NextResponse.json({ 
       apiKey: {
-        id: apiKey._id.toString(),
+        id: apiKey.id,
         key: apiKey.key,
         created_at: apiKey.createdAt,
         expires_at: apiKey.expiresAt,

@@ -33,6 +33,7 @@ import {
   Mail,
   AlertTriangle,
 } from "lucide-react";
+import { useTranslation } from "@/lib/i18n";
 
 interface ApiKey {
   id: string;
@@ -51,6 +52,7 @@ interface UserPlan {
 }
 
 export default function ApiKeysPage() {
+  const { t } = useTranslation();
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -76,7 +78,7 @@ export default function ApiKeysPage() {
       setApiKeys(data.apiKeys || []);
     } catch (error) {
       console.error("Erro ao buscar API keys:", error);
-      toast.error("Erro ao carregar API keys");
+      toast.error(t.common.error);
     } finally {
       setLoading(false);
     }
@@ -126,36 +128,36 @@ export default function ApiKeysPage() {
         throw new Error(data.message || "Erro ao criar");
       }
 
-      toast.success("API key criada com sucesso!");
+      toast.success(t.apiKeys.created);
       setDialogOpen(false);
       fetchApiKeys();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Erro ao criar API key");
+      toast.error(error instanceof Error ? error.message : t.common.error);
     } finally {
       setCreating(false);
     }
   };
 
   const deleteApiKey = async (keyId: string) => {
-    if (!confirm("Tem certeza que deseja excluir esta API key?")) return;
+    if (!confirm(t.apiKeys.deleteConfirm)) return;
 
     try {
       const response = await fetch(`/api/dashboard/api-keys/${keyId}`, {
         method: "DELETE",
       });
 
-      if (!response.ok) throw new Error("Erro ao excluir");
+      if (!response.ok) throw new Error(t.common.error);
 
-      toast.success("API key excluída com sucesso!");
+      toast.success(t.apiKeys.deleted);
       fetchApiKeys();
     } catch {
-      toast.error("Erro ao excluir API key");
+      toast.error(t.common.error);
     }
   };
 
   const copyKey = (key: string) => {
     navigator.clipboard.writeText(key);
-    toast.success("API key copiada!");
+    toast.success(t.apiKeys.copied);
   };
 
   const toggleKeyVisibility = (keyId: string) => {
@@ -192,36 +194,36 @@ export default function ApiKeysPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Minhas API Keys</h1>
-          <p className="text-zinc-400 mt-1">Gerencie suas chaves de acesso à API</p>
+          <h1 className="text-2xl font-bold text-white">{t.apiKeys.title}</h1>
+          <p className="text-zinc-400 mt-1">{t.apiKeys.subtitle}</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button className="bg-emerald-600 hover:bg-emerald-500 text-white">
               <Plus className="h-4 w-4 mr-2" />
-              Nova API Key
+              {t.apiKeys.create}
             </Button>
           </DialogTrigger>
           <DialogContent className="bg-zinc-900 border-zinc-800">
             <DialogHeader>
-              <DialogTitle className="text-white">Criar Nova API Key</DialogTitle>
+              <DialogTitle className="text-white">{t.apiKeys.createTitle}</DialogTitle>
               <DialogDescription className="text-zinc-400">
-                Uma nova API key será gerada automaticamente. Guarde-a em um local seguro.
+                {t.apiKeys.createDescription}
               </DialogDescription>
             </DialogHeader>
             <div className="py-4">
               <div className="p-4 rounded-lg bg-zinc-800/50 border border-zinc-700">
-                <p className="text-sm text-zinc-400 mb-2">Seu plano: <span className="text-emerald-500 capitalize font-medium">{userPlan.plan}</span></p>
+                <p className="text-sm text-zinc-400 mb-2">{t.dashboard.currentPlan}: <span className="text-emerald-500 capitalize font-medium">{userPlan.plan}</span></p>
                 <ul className="text-sm text-zinc-300 space-y-1">
-                  <li>• Limite de requests: <span className="text-white font-medium">{userPlan.requestLimit === -1 ? 'Ilimitado' : userPlan.requestLimit}</span></li>
-                  <li>• Keys disponíveis: <span className="text-white font-medium">{userPlan.maxKeys === -1 ? 'Ilimitadas' : `${userPlan.maxKeys - apiKeys.length} de ${userPlan.maxKeys}`}</span></li>
-                  <li>• Keys excluídas não podem ser recuperadas</li>
+                  <li>• {t.pricing.features.requests}: <span className="text-white font-medium">{userPlan.requestLimit === -1 ? t.common.unlimited : userPlan.requestLimit}</span></li>
+                  <li>• {t.pricing.features.apiKeys}: <span className="text-white font-medium">{userPlan.maxKeys === -1 ? t.common.unlimited : `${userPlan.maxKeys - apiKeys.length} ${t.dashboard.usageOf} ${userPlan.maxKeys}`}</span></li>
+                  <li>• {t.apiKeys.deleted}</li>
                 </ul>
               </div>
             </div>
             <DialogFooter>
               <Button variant="ghost" onClick={() => setDialogOpen(false)} className="text-zinc-400">
-                Cancelar
+                {t.common.cancel}
               </Button>
               <Button 
                 onClick={createApiKey} 
@@ -231,12 +233,12 @@ export default function ApiKeysPage() {
                 {creating ? (
                   <>
                     <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Criando...
+                    {t.apiKeys.creating}
                   </>
                 ) : (
                   <>
                     <Key className="h-4 w-4 mr-2" />
-                    Criar Key
+                    {t.apiKeys.create}
                   </>
                 )}
               </Button>
@@ -251,10 +253,10 @@ export default function ApiKeysPage() {
           <DialogHeader>
             <DialogTitle className="text-white flex items-center gap-2">
               <Mail className="h-5 w-5 text-amber-500" />
-              Verificação de Email Necessária
+              {t.apiKeys.emailRequired}
             </DialogTitle>
             <DialogDescription className="text-zinc-400">
-              Para criar uma API Key, você precisa verificar seu email primeiro.
+              {t.apiKeys.emailRequiredDesc}
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
@@ -262,9 +264,9 @@ export default function ApiKeysPage() {
               <div className="flex items-start gap-3">
                 <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5" />
                 <div>
-                  <p className="text-sm text-amber-200 font-medium">Verificação pendente</p>
+                  <p className="text-sm text-amber-200 font-medium">{t.apiKeys.emailRequired}</p>
                   <p className="text-sm text-zinc-400 mt-1">
-                    Enviamos um email de verificação para sua conta. Clique no link do email para verificar e poder criar suas API Keys.
+                    {t.apiKeys.emailRequiredDesc}
                   </p>
                 </div>
               </div>
@@ -272,17 +274,17 @@ export default function ApiKeysPage() {
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setEmailVerificationDialogOpen(false)} className="text-zinc-400">
-              Fechar
+              {t.common.close}
             </Button>
             <Button 
               onClick={() => {
-                toast.info("Email de verificação reenviado!");
+                toast.info(t.common.success);
                 // TODO: Implementar reenvio quando SendGrid estiver configurado
               }}
               className="bg-emerald-600 hover:bg-emerald-500"
             >
               <Mail className="h-4 w-4 mr-2" />
-              Reenviar Email
+              {t.common.close}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -296,7 +298,7 @@ export default function ApiKeysPage() {
               <Key className="h-5 w-5 text-emerald-500" />
             </div>
             <div>
-              <p className="text-sm text-zinc-400">Total de Keys</p>
+              <p className="text-sm text-zinc-400">{t.apiKeys.table.name}</p>
               <p className="text-xl font-bold text-white">{apiKeys.length} / {userPlan.maxKeys === -1 ? '∞' : userPlan.maxKeys}</p>
             </div>
           </CardContent>
@@ -307,7 +309,7 @@ export default function ApiKeysPage() {
               <RefreshCw className="h-5 w-5 text-blue-500" />
             </div>
             <div>
-              <p className="text-sm text-zinc-400">Total de Requests</p>
+              <p className="text-sm text-zinc-400">{t.dashboard.stats.requestsUsed}</p>
               <p className="text-xl font-bold text-white">
                 {apiKeys.reduce((sum, key) => sum + key.usage_count, 0)}
               </p>
@@ -320,7 +322,7 @@ export default function ApiKeysPage() {
               <Key className="h-5 w-5 text-amber-500" />
             </div>
             <div>
-              <p className="text-sm text-zinc-400">Limite por Key</p>
+              <p className="text-sm text-zinc-400">{t.dashboard.stats.planLimit}</p>
               <p className="text-xl font-bold text-white">{userPlan.requestLimit === -1 ? '∞' : userPlan.requestLimit} req</p>
             </div>
           </CardContent>
@@ -332,11 +334,11 @@ export default function ApiKeysPage() {
         <Card className="bg-zinc-900/50 border-zinc-800">
           <CardContent className="py-12 text-center">
             <Key className="h-12 w-12 text-zinc-600 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-white mb-2">Nenhuma API Key</h3>
-            <p className="text-zinc-400 mb-4">Crie sua primeira API key para começar a usar a API</p>
+            <h3 className="text-lg font-medium text-white mb-2">{t.apiKeys.noKeys}</h3>
+            <p className="text-zinc-400 mb-4">{t.apiKeys.createDescription}</p>
             <Button onClick={() => setDialogOpen(true)} className="bg-emerald-600 hover:bg-emerald-500">
               <Plus className="h-4 w-4 mr-2" />
-              Criar API Key
+              {t.apiKeys.create}
             </Button>
           </CardContent>
         </Card>
@@ -357,17 +359,17 @@ export default function ApiKeysPage() {
                       <div>
                         <CardTitle className="text-white text-base">API Key #{apiKey.id}</CardTitle>
                         <CardDescription className="text-zinc-400">
-                          Criada em {new Date(apiKey.created_at).toLocaleDateString("pt-BR")}
+                          {t.apiKeys.table.created} {new Date(apiKey.created_at).toLocaleDateString("pt-BR")}
                         </CardDescription>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
                       {usagePercentage >= 100 ? (
-                        <Badge className="bg-red-500/10 text-red-500 border-red-500/30">Esgotada</Badge>
+                        <Badge className="bg-red-500/10 text-red-500 border-red-500/30">{t.apiKeys.status.inactive}</Badge>
                       ) : usagePercentage >= 80 ? (
-                        <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/30">Quase no limite</Badge>
+                        <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/30">{t.apiKeys.status.inactive}</Badge>
                       ) : (
-                        <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30">Ativa</Badge>
+                        <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30">{t.apiKeys.status.active}</Badge>
                       )}
                     </div>
                   </div>
@@ -409,9 +411,9 @@ export default function ApiKeysPage() {
                   {/* Usage Progress */}
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-zinc-400">Uso</span>
+                      <span className="text-zinc-400">{t.apiKeys.table.usage}</span>
                       <span className="text-zinc-300">
-                        {apiKey.usage_count.toLocaleString()} / {apiKey.usage_limit.toLocaleString()} requests
+                        {apiKey.usage_count.toLocaleString()} / {apiKey.usage_limit.toLocaleString()} {t.pricing.features.requests}
                       </span>
                     </div>
                     <Progress value={usagePercentage} className="h-2" />

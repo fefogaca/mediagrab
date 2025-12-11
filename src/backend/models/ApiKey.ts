@@ -1,114 +1,12 @@
-import mongoose, { Schema, Document, Model } from 'mongoose';
+// Wrapper para compatibilidade com código existente
+import prisma from '../lib/database';
+import type { ApiKey as PrismaApiKey, Prisma } from '@prisma/client';
+import { randomBytes } from 'crypto';
 
-export interface IApiKey extends Document {
-  _id: mongoose.Types.ObjectId;
-  key: string;
-  name: string;
-  userId: mongoose.Types.ObjectId;
-  
-  // Limites e uso
-  usageCount: number;
-  usageLimit: number;
-  
-  // Datas
-  createdAt: Date;
-  updatedAt: Date;
-  expiresAt?: Date;
-  lastUsedAt?: Date;
-  
-  // Status
-  isActive: boolean;
-  revokedAt?: Date;
-  revokedReason?: string;
-  
-  // Permissões
-  permissions: string[];
-  allowedOrigins?: string[];
-  
-  // Rate limiting
-  rateLimit: number; // requests per minute
-  rateLimitWindow: number; // in seconds
-}
-
-const ApiKeySchema = new Schema<IApiKey>({
-  key: {
-    type: String,
-    required: true,
-    unique: true,
-    index: true,
-  },
-  name: {
-    type: String,
-    required: [true, 'Nome da API Key é obrigatório'],
-    trim: true,
-  },
-  userId: {
-    type: Schema.Types.ObjectId,
-    ref: 'User',
-    required: true,
-    index: true,
-  },
-  
-  // Limites e uso
-  usageCount: {
-    type: Number,
-    default: 0,
-  },
-  usageLimit: {
-    type: Number,
-    default: 100, // Plano gratuito
-  },
-  
-  // Datas
-  expiresAt: Date,
-  lastUsedAt: Date,
-  
-  // Status
-  isActive: {
-    type: Boolean,
-    default: true,
-  },
-  revokedAt: Date,
-  revokedReason: String,
-  
-  // Permissões
-  permissions: {
-    type: [String],
-    default: ['download:read'],
-  },
-  allowedOrigins: [String],
-  
-  // Rate limiting
-  rateLimit: {
-    type: Number,
-    default: 60, // 60 requests per minute
-  },
-  rateLimitWindow: {
-    type: Number,
-    default: 60, // 60 seconds
-  },
-}, {
-  timestamps: true,
-});
-
-// Índices compostos
-ApiKeySchema.index({ userId: 1, isActive: 1 });
-ApiKeySchema.index({ key: 1, isActive: 1 });
-ApiKeySchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
-
-// Virtual para verificar se expirou
-ApiKeySchema.virtual('isExpired').get(function() {
-  if (!this.expiresAt) return false;
-  return new Date() > this.expiresAt;
-});
-
-// Virtual para verificar limite de uso
-ApiKeySchema.virtual('hasReachedLimit').get(function() {
-  return this.usageCount >= this.usageLimit;
-});
+export type IApiKey = PrismaApiKey;
 
 // Método estático para gerar nova key
-ApiKeySchema.statics.generateKey = function(): string {
+const generateKey = (): string => {
   const prefix = 'mg_';
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   let key = prefix;
@@ -118,7 +16,82 @@ ApiKeySchema.statics.generateKey = function(): string {
   return key;
 };
 
-const ApiKey: Model<IApiKey> = mongoose.models.ApiKey || mongoose.model<IApiKey>('ApiKey', ApiKeySchema);
+export const ApiKey = {
+  findOne: async (query: { key?: string; _id?: string; id?: string; userId?: string; isActive?: boolean }) => {
+    if (query.key) {
+      return await prisma.apiKey.findFirst({ 
+        where: { 
+          key: query.key,
+          ...(query.isActive !== undefined && { isActive: query.isActive })
+        } 
+      });
+    }
+    if (query._id || query.id) {
+      return await prisma.apiKey.findUnique({ where: { id: query._id || query.id } });
+    }
+    if (query.userId) {
+      return await prisma.apiKey.findFirst({ 
+        where: { 
+          userId: query.userId,
+          ...(query.isActive !== undefined && { isActive: query.isActive })
+        } 
+      });
+    }
+    return null;
+  },
+
+  findById: async (id: string) => {
+    return await prisma.apiKey.findUnique({ where: { id } });
+  },
+
+  findByIdAndUpdate: async (id: string, data: Prisma.ApiKeyUpdateInput | { usageCount?: number; lastUsedAt?: Date }) => {
+    return await prisma.apiKey.update({ where: { id }, data: data as Prisma.ApiKeyUpdateInput });
+  },
+
+  create: async (data: Prisma.ApiKeyCreateInput) => {
+    return await prisma.apiKey.create({ data });
+  },
+
+  find: async (query?: Prisma.ApiKeyWhereInput) => {
+    const result = await prisma.apiKey.findMany({ where: query });
+    // Criar um array que também tem métodos chain para compatibilidade
+    const arrayWithMethods = result as any;
+    
+    // Adicionar métodos chain mantendo a funcionalidade de array
+    arrayWithMethods.sort = (sortObj: any) => {
+      const orderBy: Prisma.ApiKeyOrderByWithRelationInput = {};
+      for (const [key, value] of Object.entries(sortObj)) {
+        orderBy[key as keyof Prisma.ApiKeyOrderByWithRelationInput] = value === -1 ? 'desc' : 'asc';
+      }
+      return prisma.apiKey.findMany({ where: query, orderBy });
+    };
+    
+    arrayWithMethods.lean = () => result;
+    
+    return arrayWithMethods;
+  },
+
+  deleteOne: async (query: { _id?: string; id?: string }) => {
+    if (query._id || query.id) {
+      return await prisma.apiKey.delete({ where: { id: query._id || query.id } });
+    }
+    return null;
+  },
+
+  deleteMany: async (query: Prisma.ApiKeyWhereInput) => {
+    return await prisma.apiKey.deleteMany({ where: query });
+  },
+
+  count: async (query?: Prisma.ApiKeyWhereInput) => {
+    return await prisma.apiKey.count({ where: query });
+  },
+  
+  countDocuments: async (query?: Prisma.ApiKeyWhereInput) => {
+    return await prisma.apiKey.count({ where: query });
+  },
+
+  // Static method
+  generateKey,
+};
 
 export default ApiKey;
-

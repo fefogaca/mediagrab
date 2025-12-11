@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/backend/lib/mongodb';
+import { connectDB } from '@/backend/lib/database';
+import prisma from '@/backend/lib/database';
 import User from '@/backend/models/User';
 import Notification from '@/backend/models/Notification';
 
@@ -23,25 +24,30 @@ export async function GET(request: NextRequest) {
     threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
 
     // 1. Buscar usuários com plano expirando em 3 dias
-    const expiringUsers = await User.find({
-      plan: { $ne: 'free' },
-      planExpiresAt: {
-        $gte: now,
-        $lte: threeDaysFromNow,
+    const expiringUsers = await prisma.user.findMany({
+      where: {
+        plan: { not: 'free' },
+        planExpiresAt: {
+          gte: now,
+          lte: threeDaysFromNow,
+        },
       },
     });
 
     // Criar notificações para planos prestes a expirar
     for (const user of expiringUsers) {
-      const existingNotification = await Notification.findOne({
-        targetUserId: user._id,
-        type: 'warning',
-        createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }, // Últimas 24h
+      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const existingNotification = await prisma.notification.findFirst({
+        where: {
+          targetUserId: user.id,
+          type: 'warning',
+          createdAt: { gte: yesterday },
+        },
       });
 
       if (!existingNotification) {
         await Notification.create({
-          targetUserId: user._id,
+          targetUserId: user.id,
           targetAudience: 'specific',
           title: 'Seu plano está prestes a expirar',
           message: `Seu plano ${user.plan} expira em breve. Renove agora para não perder seus recursos.`,
@@ -52,20 +58,25 @@ export async function GET(request: NextRequest) {
     }
 
     // 2. Buscar usuários com plano expirado
-    const expiredUsers = await User.find({
-      plan: { $ne: 'free' },
-      planExpiresAt: { $lt: now },
+    const expiredUsers = await prisma.user.findMany({
+      where: {
+        plan: { not: 'free' },
+        planExpiresAt: { lt: now },
+      },
     });
 
-    // Fazer downgrade para free e notificar
+    // Fazer downgrade para free e notificar usando Prisma diretamente
     for (const user of expiredUsers) {
-      await User.findByIdAndUpdate(user._id, {
-        plan: 'free',
-        usageLimit: 5, // Limite do plano free
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          plan: 'free',
+          usageLimit: 5, // Limite do plano free
+        }
       });
 
       await Notification.create({
-        targetUserId: user._id,
+        targetUserId: user.id,
         targetAudience: 'specific',
         title: 'Seu plano expirou',
         message: `Seu plano ${user.plan} expirou. Você foi movido para o plano Free. Renove para recuperar seus recursos.`,

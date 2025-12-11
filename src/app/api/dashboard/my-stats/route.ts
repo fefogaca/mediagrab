@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
-import connectDB from '@backend/lib/mongodb';
+import { connectDB } from '@backend/lib/database';
 import DownloadLog from '@backend/models/DownloadLog';
 import ApiKey from '@backend/models/ApiKey';
 import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
+import { getJWTSecret } from '@backend/lib/secrets';
 
-const JWT_SECRET: string = process.env.JWT_SECRET as string;
+const JWT_SECRET = getJWTSecret();
 
 interface DecodedToken {
   id: string;
@@ -36,8 +37,8 @@ export async function GET() {
 
     await connectDB();
     
-    const totalDownloads = await DownloadLog.countDocuments({ userId });
-    const totalApiKeys = await ApiKey.countDocuments({ userId });
+    const totalDownloads = await DownloadLog.count({ userId });
+    const totalApiKeys = await ApiKey.count({ userId });
 
     return NextResponse.json({ totalDownloads, totalApiKeys }, { status: 200 });
   } catch (error) {

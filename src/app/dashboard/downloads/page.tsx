@@ -20,6 +20,7 @@ import {
   Music,
   Play,
 } from "lucide-react";
+import { useTranslation } from "@/lib/i18n";
 
 interface DownloadLog {
   id: number;
@@ -28,6 +29,7 @@ interface DownloadLog {
 }
 
 export default function DownloadsPage() {
+  const { t } = useTranslation();
   const [downloads, setDownloads] = useState<DownloadLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -43,7 +45,7 @@ export default function DownloadsPage() {
       setDownloads(data.downloads || []);
     } catch (error) {
       console.error("Erro ao buscar downloads:", error);
-      toast.error("Erro ao carregar downloads");
+      toast.error(t.common.error);
     } finally {
       setLoading(false);
     }
@@ -91,8 +93,8 @@ export default function DownloadsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-white">Meus Downloads</h1>
-        <p className="text-zinc-400 mt-1">Histórico dos seus downloads</p>
+        <h1 className="text-2xl font-bold text-white">{t.dashboard.downloads}</h1>
+        <p className="text-zinc-400 mt-1">{t.dashboard.recentDownloads}</p>
       </div>
 
       {/* Stats */}
@@ -103,7 +105,7 @@ export default function DownloadsPage() {
               <Download className="h-5 w-5 text-emerald-500" />
             </div>
             <div>
-              <p className="text-sm text-zinc-400">Total</p>
+              <p className="text-sm text-zinc-400">{t.dashboard.stats.totalDownloads}</p>
               <p className="text-xl font-bold text-white">{downloads.length}</p>
             </div>
           </CardContent>
@@ -154,15 +156,15 @@ export default function DownloadsPage() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <CardTitle className="text-white">Histórico</CardTitle>
+              <CardTitle className="text-white">{t.dashboard.recentDownloads}</CardTitle>
               <CardDescription className="text-zinc-400">
-                {filteredDownloads.length} download(s)
+                {filteredDownloads.length} {t.dashboard.downloads}
               </CardDescription>
             </div>
             <div className="relative w-full sm:w-64">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
               <Input
-                placeholder="Buscar URL..."
+                placeholder={t.common.search}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-9 bg-zinc-800/50 border-zinc-700 text-white placeholder:text-zinc-500"
@@ -174,8 +176,8 @@ export default function DownloadsPage() {
           {filteredDownloads.length === 0 ? (
             <div className="text-center py-12">
               <Download className="h-12 w-12 text-zinc-600 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-white mb-2">Nenhum download</h3>
-              <p className="text-zinc-400">Seus downloads aparecerão aqui</p>
+              <h3 className="text-lg font-medium text-white mb-2">{t.dashboard.noDownloads}</h3>
+              <p className="text-zinc-400">{t.dashboard.recentDownloads}</p>
             </div>
           ) : (
             <div className="space-y-3">

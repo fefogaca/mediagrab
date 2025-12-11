@@ -20,6 +20,7 @@ import {
   Zap,
   TrendingUp,
 } from "lucide-react";
+import { useTranslation } from "@/lib/i18n";
 
 interface Stats {
   totalKeys: number;
@@ -35,6 +36,7 @@ interface RecentDownload {
 }
 
 export default function DashboardPage() {
+  const { t } = useTranslation();
   const [stats, setStats] = useState<Stats>({
     totalKeys: 0,
     totalDownloads: 0,
@@ -91,8 +93,8 @@ export default function DashboardPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-white">Dashboard</h1>
-        <p className="text-zinc-400 mt-1">Bem-vindo ao seu painel de controle</p>
+        <h1 className="text-2xl font-bold text-white">{t.dashboard.title}</h1>
+        <p className="text-zinc-400 mt-1">{t.dashboard.welcome}</p>
       </div>
 
       {/* Stats Cards */}
@@ -104,10 +106,10 @@ export default function DashboardPage() {
                 <Key className="h-5 w-5 text-emerald-500" />
               </div>
               <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30">
-                Ativas
+                {t.apiKeys.status.active}
               </Badge>
             </div>
-            <p className="text-sm text-zinc-400">API Keys</p>
+            <p className="text-sm text-zinc-400">{t.dashboard.stats.apiKeysActive}</p>
             <p className="text-2xl font-bold text-white mt-1">{stats.totalKeys}</p>
           </CardContent>
         </Card>
@@ -120,7 +122,7 @@ export default function DashboardPage() {
               </div>
               <TrendingUp className="h-4 w-4 text-emerald-500" />
             </div>
-            <p className="text-sm text-zinc-400">Total de Downloads</p>
+            <p className="text-sm text-zinc-400">{t.dashboard.stats.totalDownloads}</p>
             <p className="text-2xl font-bold text-white mt-1">{stats.totalDownloads}</p>
           </CardContent>
         </Card>
@@ -135,7 +137,7 @@ export default function DashboardPage() {
                 {stats.usageCount}/{stats.usageLimit}
               </span>
             </div>
-            <p className="text-sm text-zinc-400">Uso do Plano</p>
+            <p className="text-sm text-zinc-400">{t.dashboard.usage}</p>
             <div className="mt-2">
               <Progress 
                 value={usagePercentage} 
@@ -151,9 +153,9 @@ export default function DashboardPage() {
         {/* Quick Actions */}
         <Card className="bg-zinc-900/50 border-zinc-800">
           <CardHeader>
-            <CardTitle className="text-white">Ações Rápidas</CardTitle>
+            <CardTitle className="text-white">{t.dashboard.quickActions}</CardTitle>
             <CardDescription className="text-zinc-400">
-              Acesse as funcionalidades mais usadas
+              {t.dashboard.overview}
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3">
@@ -164,8 +166,8 @@ export default function DashboardPage() {
                     <Key className="h-5 w-5 text-emerald-500" />
                   </div>
                   <div>
-                    <p className="font-medium text-white">Gerenciar API Keys</p>
-                    <p className="text-xs text-zinc-500">Crie e gerencie suas chaves</p>
+                    <p className="font-medium text-white">{t.dashboard.actions.createApiKey}</p>
+                    <p className="text-xs text-zinc-500">{t.apiKeys.subtitle}</p>
                   </div>
                 </div>
                 <ArrowRight className="h-5 w-5 text-zinc-500 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" />
@@ -178,8 +180,8 @@ export default function DashboardPage() {
                     <Download className="h-5 w-5 text-blue-500" />
                   </div>
                   <div>
-                    <p className="font-medium text-white">Fazer Download</p>
-                    <p className="text-xs text-zinc-500">Baixe vídeos de qualquer plataforma</p>
+                    <p className="font-medium text-white">{t.dashboard.downloads}</p>
+                    <p className="text-xs text-zinc-500">{t.landing.title}</p>
                   </div>
                 </div>
                 <ArrowRight className="h-5 w-5 text-zinc-500 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" />
@@ -192,8 +194,8 @@ export default function DashboardPage() {
                     <Zap className="h-5 w-5 text-emerald-400" />
                   </div>
                   <div>
-                    <p className="font-medium text-white">Fazer Upgrade</p>
-                    <p className="text-xs text-emerald-400/80">Desbloqueie mais recursos</p>
+                    <p className="font-medium text-white">{t.dashboard.actions.upgradePlan}</p>
+                    <p className="text-xs text-emerald-400/80">{t.dashboard.upgrade}</p>
                   </div>
                 </div>
                 <ArrowRight className="h-5 w-5 text-emerald-500 group-hover:translate-x-1 transition-all" />
@@ -206,14 +208,14 @@ export default function DashboardPage() {
         <Card className="bg-zinc-900/50 border-zinc-800">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle className="text-white">Downloads Recentes</CardTitle>
+              <CardTitle className="text-white">{t.dashboard.recentDownloads}</CardTitle>
               <CardDescription className="text-zinc-400">
-                Seus últimos downloads
+                {t.dashboard.downloads}
               </CardDescription>
             </div>
             <Link href="/dashboard/downloads">
               <Button variant="ghost" size="sm" className="text-zinc-400 hover:text-white">
-                Ver todos
+                {t.common.viewAll}
                 <ArrowRight className="h-4 w-4 ml-1" />
               </Button>
             </Link>
@@ -222,10 +224,10 @@ export default function DashboardPage() {
             {recentDownloads.length === 0 ? (
               <div className="text-center py-8">
                 <Download className="h-12 w-12 text-zinc-600 mx-auto mb-4" />
-                <p className="text-zinc-400">Nenhum download ainda</p>
+                <p className="text-zinc-400">{t.dashboard.noDownloads}</p>
                 <Link href="/">
                   <Button className="mt-4 bg-emerald-600 hover:bg-emerald-500">
-                    Fazer Primeiro Download
+                    {t.dashboard.downloads}
                   </Button>
                 </Link>
               </div>
@@ -258,15 +260,15 @@ export default function DashboardPage() {
         <CardContent className="p-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h3 className="text-lg font-semibold text-white">Precisa de mais requests?</h3>
+              <h3 className="text-lg font-semibold text-white">{t.dashboard.actions.upgradePlan}</h3>
               <p className="text-zinc-400 mt-1">
-                Faça upgrade do seu plano para obter mais downloads e funcionalidades
+                {t.dashboard.upgradeDescription}
               </p>
             </div>
             <Link href="/dashboard/subscription">
               <Button className="bg-emerald-600 hover:bg-emerald-500 text-white">
                 <Zap className="h-4 w-4 mr-2" />
-                Ver Planos
+                {t.dashboard.viewPlans}
               </Button>
             </Link>
           </div>

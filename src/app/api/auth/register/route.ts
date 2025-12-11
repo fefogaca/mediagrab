@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-import connectDB from '@backend/lib/mongodb';
-import User from '@models/User';
+import { connectDB } from '@backend/lib/database';
+import prisma from '@backend/lib/database';
 
 export async function POST(request: Request) {
   try {
@@ -22,11 +22,13 @@ export async function POST(request: Request) {
       );
     }
 
-    // Conectar ao MongoDB
+    // Conectar ao banco de dados
     await connectDB();
 
-    // Verificar se usuário já existe
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    // Verificar se usuário já existe usando Prisma diretamente
+    const existingUser = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() }
+    });
     if (existingUser) {
       return NextResponse.json(
         { message: 'Este email já está em uso' },
@@ -37,22 +39,29 @@ export async function POST(request: Request) {
     // Hash da senha
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Criar usuário
-    const user = await User.create({
-      name,
-      email: email.toLowerCase(),
-      password: hashedPassword,
-      role: 'user',
-      plan: 'free',
-      isActive: true,
-      provider: 'credentials',
+    // Criar usuário usando Prisma diretamente
+    const user = await prisma.user.create({
+      data: {
+        name,
+        email: email.toLowerCase(),
+        password: hashedPassword,
+        role: 'user',
+        plan: 'free',
+        isActive: true,
+        provider: 'credentials',
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+      }
     });
 
     return NextResponse.json(
       {
         message: 'Conta criada com sucesso',
         user: {
-          id: user._id.toString(),
+          id: user.id,
           name: user.name,
           email: user.email,
         },

@@ -30,6 +30,7 @@ import {
   Zap,
   Globe,
   Home,
+  Play,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LogoSmallContrast } from "@frontend/components/shared/Logo";
@@ -47,6 +48,7 @@ interface User {
 const getSidebarItems = (t: ReturnType<typeof useTranslation>['t']) => [
   { href: "/dashboard", label: t.userDashboard.sidebar.dashboard, icon: LayoutDashboard },
   { href: "/dashboard/api-keys", label: t.userDashboard.sidebar.apiKeys, icon: Key },
+  { href: "/dashboard/test-area", label: t.userDashboard.sidebar.testArea, icon: Play },
   { href: "/dashboard/downloads", label: t.userDashboard.sidebar.downloads, icon: Download },
   { href: "/dashboard/analytics", label: t.userDashboard.sidebar.analytics, icon: BarChart3 },
   { href: "/dashboard/subscription", label: t.userDashboard.sidebar.subscription, icon: CreditCard },
@@ -122,10 +124,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const handleLogout = async () => {
     try {
       await fetch("/api/auth/logout", { method: "POST" });
-      toast.success(language === 'pt' ? "Logout realizado com sucesso!" : "Logout successful!");
+      toast.success(t.common.success);
       router.push("/");
     } catch {
-      toast.error(language === 'pt' ? "Erro ao fazer logout" : "Error logging out");
+      toast.error(t.common.error);
     }
   };
 
@@ -228,7 +230,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <DropdownMenuItem asChild>
                   <Link href="/" className="text-zinc-300 focus:bg-zinc-800 focus:text-white cursor-pointer">
                     <Home className="mr-2 h-4 w-4" />
-                    {language === 'pt' ? 'Página Inicial' : 'Home'}
+                    {t.common.back}
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
@@ -273,7 +275,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <Link href="/">
                 <Button variant="outline" className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 text-sm">
                   <Home className="h-4 w-4 mr-2" />
-                  {language === 'pt' ? 'Início' : 'Home'}
+                  {t.common.back}
                 </Button>
               </Link>
               

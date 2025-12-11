@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
-import connectDB from '@backend/lib/mongodb';
-import DownloadLog from '@backend/models/DownloadLog';
+import { connectDB } from '@backend/lib/database';
+import prisma from '@backend/lib/database';
 import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
+import { getJWTSecret } from '@backend/lib/secrets';
 
-const JWT_SECRET: string = process.env.JWT_SECRET as string;
+const JWT_SECRET = getJWTSecret();
 
 interface DecodedToken {
   id: string;
@@ -35,10 +36,11 @@ export async function GET() {
 
     await connectDB();
     
-    const downloads = await DownloadLog.find({ userId })
-      .sort({ createdAt: -1 })
-      .limit(20)
-      .lean();
+    const downloads = await prisma.downloadLog.findMany({
+      where: { userId },
+      take: 20,
+      orderBy: { createdAt: 'desc' }
+    });
 
     return NextResponse.json({ downloads }, { status: 200 });
   } catch (error) {

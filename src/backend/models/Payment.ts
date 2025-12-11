@@ -1,128 +1,62 @@
-import mongoose, { Schema, Document, Model } from 'mongoose';
+// Wrapper para compatibilidade com código existente
+import prisma from '../lib/database';
+import type { Payment as PrismaPayment, Prisma } from '@prisma/client';
 
-export interface IPaymentProduct {
-  externalId: string;
-  name: string;
-  quantity: number;
-  price: number; // em centavos
-}
+export type IPayment = PrismaPayment;
 
-export interface IPayment extends Document {
-  _id: mongoose.Types.ObjectId;
-  userId: mongoose.Types.ObjectId;
-  
-  // AbacatePay dados
-  abacatePayBillingId: string;
-  abacatePayUrl?: string;
-  
-  // Detalhes do pagamento
-  amount: number; // em centavos
-  currency: string;
-  method: 'PIX' | 'CREDIT_CARD' | 'BOLETO';
-  
-  // Produtos/Plano
-  products: IPaymentProduct[];
-  planPurchased?: 'developer' | 'startup' | 'enterprise';
-  planDuration?: number; // em meses
-  
-  // Status
-  status: 'pending' | 'paid' | 'failed' | 'refunded' | 'expired';
-  paidAt?: Date;
-  
-  // Cupom
-  couponCode?: string;
-  discountAmount?: number;
-  
-  // Metadados
-  metadata?: Record<string, unknown>;
-  
-  // Timestamps
-  createdAt: Date;
-  updatedAt: Date;
-  expiresAt?: Date;
-}
+export const Payment = {
+  findOne: async (query: { stripeSessionId?: string; stripeSubscriptionId?: string; _id?: string; id?: string; userId?: string; status?: string }) => {
+    if (query.stripeSessionId) {
+      return await prisma.payment.findFirst({ where: { stripeSessionId: query.stripeSessionId } });
+    }
+    if (query.stripeSubscriptionId) {
+      return await prisma.payment.findFirst({ where: { stripeSubscriptionId: query.stripeSubscriptionId } });
+    }
+    if (query._id || query.id) {
+      return await prisma.payment.findUnique({ where: { id: query._id || query.id } });
+    }
+    if (query.userId && query.status) {
+      return await prisma.payment.findFirst({ 
+        where: { userId: query.userId, status: query.status as any } 
+      });
+    }
+    return null;
+  },
 
-const PaymentProductSchema = new Schema<IPaymentProduct>({
-  externalId: { type: String, required: true },
-  name: { type: String, required: true },
-  quantity: { type: Number, required: true, min: 1 },
-  price: { type: Number, required: true, min: 0 },
-}, { _id: false });
+  findById: async (id: string) => {
+    return await prisma.payment.findUnique({ where: { id } });
+  },
 
-const PaymentSchema = new Schema<IPayment>({
-  userId: {
-    type: Schema.Types.ObjectId,
-    ref: 'User',
-    required: true,
-    index: true,
+  findByIdAndUpdate: async (id: string, data: Prisma.PaymentUpdateInput) => {
+    return await prisma.payment.update({ where: { id }, data });
   },
-  
-  // AbacatePay
-  abacatePayBillingId: {
-    type: String,
-    required: true,
-    unique: true,
-    index: true,
-  },
-  abacatePayUrl: String,
-  
-  // Detalhes
-  amount: {
-    type: Number,
-    required: true,
-    min: 0,
-  },
-  currency: {
-    type: String,
-    default: 'BRL',
-  },
-  method: {
-    type: String,
-    enum: ['PIX', 'CREDIT_CARD', 'BOLETO'],
-    required: true,
-  },
-  
-  // Produtos
-  products: [PaymentProductSchema],
-  planPurchased: {
-    type: String,
-    enum: ['developer', 'startup', 'enterprise'],
-  },
-  planDuration: {
-    type: Number,
-    default: 1,
-  },
-  
-  // Status
-  status: {
-    type: String,
-    enum: ['pending', 'paid', 'failed', 'refunded', 'expired'],
-    default: 'pending',
-    index: true,
-  },
-  paidAt: Date,
-  
-  // Cupom
-  couponCode: String,
-  discountAmount: {
-    type: Number,
-    default: 0,
-  },
-  
-  // Metadados
-  metadata: Schema.Types.Mixed,
-  
-  expiresAt: Date,
-}, {
-  timestamps: true,
-});
 
-// Índices
-PaymentSchema.index({ userId: 1, status: 1 });
-PaymentSchema.index({ createdAt: -1 });
-PaymentSchema.index({ status: 1, createdAt: -1 });
+  create: async (data: Prisma.PaymentCreateInput) => {
+    return await prisma.payment.create({ data });
+  },
 
-const Payment: Model<IPayment> = mongoose.models.Payment || mongoose.model<IPayment>('Payment', PaymentSchema);
+  find: async (query?: Prisma.PaymentWhereInput) => {
+    const result = await prisma.payment.findMany({ where: query });
+    return {
+      ...result,
+      sort: (sortObj: any) => {
+        const orderBy: Prisma.PaymentOrderByWithRelationInput = {};
+        for (const [key, value] of Object.entries(sortObj)) {
+          orderBy[key as keyof Prisma.PaymentOrderByWithRelationInput] = value === -1 ? 'desc' : 'asc';
+        }
+        return prisma.payment.findMany({ where: query, orderBy });
+      },
+      lean: () => result,
+    };
+  },
+
+  count: async (query?: Prisma.PaymentWhereInput) => {
+    return await prisma.payment.count({ where: query });
+  },
+
+  aggregate: async (args: Prisma.PaymentAggregateArgs) => {
+    return await prisma.payment.aggregate(args);
+  },
+};
 
 export default Payment;
-

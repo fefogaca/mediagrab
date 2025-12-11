@@ -2,11 +2,12 @@ import NextAuth from 'next-auth';
 import Google from 'next-auth/providers/google';
 import GitHub from 'next-auth/providers/github';
 import Credentials from 'next-auth/providers/credentials';
+import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import bcrypt from 'bcryptjs';
-import connectDB from './mongodb';
-import User from '@models/User';
+import prisma, { connectDB } from './database';
 
 export const authConfig = {
+  adapter: PrismaAdapter(prisma),
   providers: [
     // Google OAuth
     Google({
@@ -42,9 +43,11 @@ export const authConfig = {
 
         await connectDB();
 
-        const user = await User.findOne({ 
-          email: (credentials.email as string).toLowerCase() 
-        }).select('+password +twoFactor');
+        const user = await prisma.user.findUnique({ 
+          where: { 
+            email: (credentials.email as string).toLowerCase() 
+          }
+        });
 
         if (!user || !user.password) {
           throw new Error('Credenciais inválidas');
@@ -64,14 +67,23 @@ export const authConfig = {
           throw new Error('2FA_REQUIRED');
         }
 
+        // Verificar 2FA se habilitado
+        const twoFactor = user.twoFactor as { enabled?: boolean } || {};
+        if (twoFactor.enabled) {
+          throw new Error('2FA_REQUIRED');
+        }
+
         // Atualizar último login
-        await User.findByIdAndUpdate(user._id, { lastLoginAt: new Date() });
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { lastLoginAt: new Date() }
+        });
 
         return {
-          id: user._id.toString(),
+          id: user.id,
           email: user.email,
           name: user.name,
-          image: user.image,
+          image: user.image || undefined,
           role: user.role,
           plan: user.plan,
         };
@@ -98,30 +110,37 @@ export const authConfig = {
           await connectDB();
           
           // Verificar se usuário existe
-          let existingUser = await User.findOne({ email: user.email?.toLowerCase() });
+          let existingUser = await prisma.user.findUnique({ 
+            where: { email: user.email?.toLowerCase() || '' }
+          });
           
           if (!existingUser) {
             // Criar novo usuário
-            existingUser = await User.create({
-              email: user.email?.toLowerCase(),
-              name: user.name,
-              image: user.image,
-              provider: account.provider,
-              providerId: account.providerAccountId,
-              emailVerified: new Date(),
-              role: 'user',
-              plan: 'free',
+            existingUser = await prisma.user.create({
+              data: {
+                email: user.email?.toLowerCase() || '',
+                name: user.name || '',
+                image: user.image,
+                provider: account.provider,
+                providerId: account.providerAccountId,
+                emailVerified: new Date(),
+                role: 'user',
+                plan: 'free',
+              }
             });
           } else {
             // Atualizar informações
-            await User.findByIdAndUpdate(existingUser._id, {
-              lastLoginAt: new Date(),
-              ...(user.image && { image: user.image }),
+            existingUser = await prisma.user.update({
+              where: { id: existingUser.id },
+              data: {
+                lastLoginAt: new Date(),
+                ...(user.image && { image: user.image }),
+              }
             });
           }
           
           // Adicionar dados extras ao objeto user
-          user.id = existingUser._id.toString();
+          user.id = existingUser.id;
           user.role = existingUser.role;
           user.plan = existingUser.plan;
         } catch (error) {

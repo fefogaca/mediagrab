@@ -2,10 +2,11 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import connectDB from '@/backend/lib/mongodb';
-import User from '@/backend/models/User';
+import { connectDB } from '@/backend/lib/database';
+import prisma from '@/backend/lib/database';
+import { getJWTSecret } from '@backend/lib/secrets';
 
-const JWT_SECRET = process.env.JWT_SECRET || '';
+const JWT_SECRET = getJWTSecret();;
 
 interface DecodedToken {
   id: string;
@@ -46,7 +47,10 @@ export async function PUT(request: Request) {
 
     await connectDB();
     
-    const user = await User.findById(userData.id).select('+password');
+    const user = await prisma.user.findUnique({
+      where: { id: userData.id },
+      select: { id: true, password: true }
+    });
     
     if (!user) {
       return NextResponse.json({ message: 'Usuário não encontrado' }, { status: 404 });
@@ -66,8 +70,10 @@ export async function PUT(request: Request) {
     const hashedPassword = await bcrypt.hash(newPassword, 12);
     
     // Atualizar senha
-    user.password = hashedPassword;
-    await user.save();
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { password: hashedPassword }
+    });
 
     return NextResponse.json({ 
       message: 'Senha alterada com sucesso!'

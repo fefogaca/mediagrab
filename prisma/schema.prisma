@@ -1,0 +1,330 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String    @id @default(uuid())
+  email             String    @unique @db.VarChar(255)
+  password          String?   @db.VarChar(255)
+  name              String    @db.VarChar(255)
+  image             String?   @db.Text
+  
+  // Dados pessoais
+  fullName          String    @default("") @db.VarChar(255)
+  taxId             String    @default("") @db.VarChar(50)
+  taxIdType         String    @default("CPF") @db.VarChar(10)
+  phone             String    @default("") @db.VarChar(50)
+  
+  // Address (JSONB para flexibilidade)
+  address           Json?     @default("{}")
+  
+  // Autenticação
+  emailVerified     DateTime? @map("email_verified")
+  provider          String    @default("credentials") @db.VarChar(50)
+  providerId        String?   @map("provider_id") @db.VarChar(255)
+  
+  // 2FA (JSONB)
+  twoFactor         Json      @default("{\"enabled\": false}")
+  
+  // Perfil
+  role              String    @default("user") @db.VarChar(20)
+  plan              String    @default("free") @db.VarChar(20)
+  planExpiresAt     DateTime? @map("plan_expires_at")
+  
+  // Metadados
+  isActive          Boolean   @default(true) @map("is_active")
+  lastLoginAt       DateTime? @map("last_login_at")
+  
+  // Stripe
+  stripeCustomerId String?   @map("stripe_customer_id") @db.VarChar(255)
+  stripeSubscriptionId String? @map("stripe_subscription_id") @db.VarChar(255)
+  
+  // Limites de uso
+  usageLimit        Int?      @map("usage_limit")
+  usageCount        Int       @default(0) @map("usage_count")
+  
+  // Relações
+  apiKeys           ApiKey[]
+  payments          Payment[]
+  downloadLogs      DownloadLog[]
+  accounts          Account[]
+  sessions          Session[]
+  
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  
+  @@index([email])
+  @@index([provider, providerId])
+  @@index([role])
+  @@index([plan])
+  @@map("users")
+}
+
+model ApiKey {
+  id                String    @id @default(uuid())
+  key               String    @unique @db.VarChar(255)
+  name              String    @db.VarChar(255)
+  userId            String    @map("user_id")
+  
+  usageCount        Int       @default(0) @map("usage_count")
+  usageLimit        Int       @default(100) @map("usage_limit")
+  
+  expiresAt         DateTime? @map("expires_at")
+  lastUsedAt        DateTime? @map("last_used_at")
+  
+  isActive          Boolean   @default(true) @map("is_active")
+  revokedAt         DateTime? @map("revoked_at")
+  revokedReason     String?   @map("revoked_reason") @db.Text
+  
+  permissions       String[]  @default(["download:read"])
+  allowedOrigins    String[]  @map("allowed_origins")
+  
+  rateLimit         Int       @default(60) @map("rate_limit")
+  rateLimitWindow   Int       @default(60) @map("rate_limit_window")
+  
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  downloadLogs      DownloadLog[]
+  
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  
+  @@index([userId, isActive])
+  @@index([key, isActive])
+  @@map("api_keys")
+}
+
+model Payment {
+  id                    String    @id @default(uuid())
+  userId                String    @map("user_id")
+  
+  stripeSessionId       String?   @map("stripe_session_id") @db.VarChar(255)
+  stripeSubscriptionId  String?   @map("stripe_subscription_id") @db.VarChar(255)
+  
+  amount                Int
+  currency              String    @default("USD") @db.VarChar(10)
+  method                String    @default("CREDIT_CARD") @db.VarChar(20)
+  
+  products              Json      @default("[]")
+  planPurchased         String?   @map("plan_purchased") @db.VarChar(20)
+  planDuration          Int       @default(1) @map("plan_duration")
+  
+  status                String    @default("pending") @db.VarChar(20)
+  paidAt                DateTime? @map("paid_at")
+  
+  couponCode            String?   @map("coupon_code") @db.VarChar(50)
+  discountAmount        Int       @default(0) @map("discount_amount")
+  
+  metadata              Json?
+  expiresAt             DateTime? @map("expires_at")
+  
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+  
+  @@index([userId, status])
+  @@index([status, createdAt])
+  @@index([stripeSessionId])
+  @@index([stripeSubscriptionId])
+  @@map("payments")
+}
+
+model DownloadLog {
+  id            String    @id @default(uuid())
+  userId        String?   @map("user_id")
+  apiKeyId      String?   @map("api_key_id")
+  
+  url           String    @db.Text
+  provider      String    @db.VarChar(50)
+  title         String?   @db.Text
+  format        String?   @db.VarChar(20)
+  quality       String?   @db.VarChar(20)
+  fileSize      Int?      @map("file_size")
+  duration      Int?
+  
+  status        String    @default("pending") @db.VarChar(20)
+  errorMessage  String?   @map("error_message") @db.Text
+  
+  ipAddress     String?   @map("ip_address") @db.VarChar(50)
+  userAgent     String?   @map("user_agent") @db.Text
+  referer       String?   @db.Text
+  
+  completedAt   DateTime? @map("completed_at")
+  
+  user          User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  apiKey        ApiKey?   @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
+  
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  
+  @@index([userId, createdAt])
+  @@index([apiKeyId, createdAt])
+  @@index([provider, createdAt])
+  @@index([status, createdAt])
+  @@map("download_logs")
+}
+
+model Notification {
+  id              String    @id @default(uuid())
+  
+  title           String    @db.VarChar(200)
+  message         String    @db.VarChar(1000)
+  type            String    @default("info") @db.VarChar(20)
+  
+  targetAudience  String    @default("all") @map("target_audience") @db.VarChar(20)
+  targetUserId    String?   @map("target_user_id")
+  createdBy       String?   @map("created_by")
+  
+  readBy          Json      @default("[]")
+  
+  link            String?   @db.Text
+  icon            String?   @db.VarChar(100)
+  priority        String    @default("normal") @db.VarChar(20)
+  
+  expiresAt       DateTime? @map("expires_at")
+  
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  
+  @@index([targetAudience, createdAt])
+  @@index([targetUserId, createdAt])
+  @@map("notifications")
+}
+
+model Coupon {
+  id                String    @id @default(uuid())
+  
+  code              String    @unique @db.VarChar(50)
+  name              String    @db.VarChar(255)
+  description       String?   @db.Text
+  
+  discountType      String    @map("discount_type") @db.VarChar(20)
+  discountValue     Int       @map("discount_value")
+  
+  maxUses           Int?      @map("max_uses")
+  usedCount         Int       @default(0) @map("used_count")
+  maxUsesPerUser    Int       @default(1) @map("max_uses_per_user")
+  
+  validFrom         DateTime? @map("valid_from")
+  validUntil        DateTime? @map("valid_until")
+  
+  minimumAmount     Int?      @map("minimum_amount")
+  applicablePlans   String[]  @map("applicable_plans")
+  
+  isActive          Boolean   @default(true) @map("is_active")
+  
+  usedBy            Json      @default("[]")
+  
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  
+  @@index([code])
+  @@map("coupons")
+}
+
+model Plan {
+  id                    String    @id @default(uuid())
+  
+  slug                  String    @unique @db.VarChar(50)
+  name                  String    @db.VarChar(255)
+  description           String    @db.Text
+  
+  price                 Int
+  priceYearly           Int?      @map("price_yearly")
+  currency              String    @default("BRL") @db.VarChar(10)
+  
+  apiKeyLimit           Int       @map("api_key_limit")
+  monthlyDownloadLimit  Int       @map("monthly_download_limit")
+  rateLimit             Int       @map("rate_limit")
+  
+  features              Json      @default("[]")
+  
+  isPopular             Boolean   @default(false) @map("is_popular")
+  isActive              Boolean   @default(true) @map("is_active")
+  displayOrder          Int       @default(0) @map("display_order")
+  
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+  
+  @@index([slug])
+  @@map("plans")
+}
+
+// NextAuth required tables
+model Account {
+  id                String  @id @default(uuid())
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id            String   @id @default(uuid())
+  sessionToken  String   @unique @map("session_token")
+  userId        String   @map("user_id")
+  expires       DateTime
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model Settings {
+  id                    String    @id @default(uuid())
+  
+  // Site Settings
+  siteName              String    @default("MediaGrab") @map("site_name") @db.VarChar(255)
+  siteUrl               String    @default("http://localhost:3000") @map("site_url") @db.VarChar(255)
+  supportEmail           String    @default("support@mediagrab.com") @map("support_email") @db.VarChar(255)
+  
+  // Application Settings
+  maintenanceMode        Boolean   @default(false) @map("maintenance_mode")
+  allowRegistration      Boolean   @default(true) @map("allow_registration")
+  emailVerification      Boolean   @default(true) @map("email_verification")
+  twoFactorRequired      Boolean   @default(false) @map("two_factor_required")
+  maxApiKeysPerUser      Int       @default(5) @map("max_api_keys_per_user")
+  defaultDailyLimit      Int       @default(100) @map("default_daily_limit")
+  rateLimitPerMinute     Int       @default(60) @map("rate_limit_per_minute")
+  
+  // OAuth Settings (JSONB para flexibilidade)
+  googleOAuth            Json      @default("{\"enabled\": false, \"clientId\": \"\", \"clientSecret\": \"\"}") @map("google_oauth")
+  githubOAuth            Json      @default("{\"enabled\": false, \"clientId\": \"\", \"clientSecret\": \"\"}") @map("github_oauth")
+  
+  // Email Settings (JSONB)
+  sendGrid               Json      @default("{\"enabled\": false, \"apiKey\": \"\", \"fromEmail\": \"\"}") @map("sendgrid")
+  
+  // Stripe Settings (JSONB)
+  stripe                 Json      @default("{\"enabled\": false, \"secretKey\": \"\", \"publishableKey\": \"\", \"webhookSecret\": \"\", \"developerPriceId\": \"\", \"developerProductId\": \"\", \"startupPriceId\": \"\", \"startupProductId\": \"\", \"enterprisePriceId\": \"\", \"enterpriseProductId\": \"\"}") @map("stripe")
+  
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  @@map("settings")
+}
+

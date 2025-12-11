@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import jwt from 'jsonwebtoken';
-import connectDB from '@/backend/lib/mongodb';
-import User from '@/backend/models/User';
+import { connectDB } from '@/backend/lib/database';
+import prisma from '@/backend/lib/database';
+import { getJWTSecret } from '@backend/lib/secrets';
 
-const JWT_SECRET = process.env.JWT_SECRET || '';
+const JWT_SECRET = getJWTSecret();;
 
 interface DecodedToken {
   id: string;
@@ -49,28 +50,32 @@ export async function PUT(request: Request) {
 
     await connectDB();
     
-    // Verificar se o email já está em uso
-    const existingUser = await User.findOne({ email: newEmail.toLowerCase() });
-    if (existingUser && existingUser._id.toString() !== userData.id) {
+    // Verificar se o email já está em uso usando Prisma diretamente
+    const existingUser = await prisma.user.findUnique({
+      where: { email: newEmail.toLowerCase() }
+    });
+    if (existingUser && existingUser.id !== userData.id) {
       return NextResponse.json({ message: 'Este email já está em uso' }, { status: 400 });
     }
     
-    const user = await User.findByIdAndUpdate(
-      userData.id,
-      { 
+    // Atualizar email usando Prisma diretamente
+    const user = await prisma.user.update({
+      where: { id: userData.id },
+      data: { 
         email: newEmail.toLowerCase(),
-        emailVerified: false // Precisa verificar o novo email
+        emailVerified: null // Precisa verificar o novo email
       },
-      { new: true }
-    );
-
-    if (!user) {
-      return NextResponse.json({ message: 'Usuário não encontrado' }, { status: 404 });
-    }
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+      }
+    });
 
     // Gerar novo token com o email atualizado
     const newToken = jwt.sign(
-      { id: user._id, email: user.email, role: user.role },
+      { id: user.id, email: user.email, role: user.role },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -79,7 +84,7 @@ export async function PUT(request: Request) {
     const response = NextResponse.json({ 
       message: 'Email alterado com sucesso!',
       user: {
-        id: user._id,
+        id: user.id,
         name: user.name,
         email: user.email,
       }

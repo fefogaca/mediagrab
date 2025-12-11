@@ -113,6 +113,7 @@ function QuickActionCard({
 
 // Recent Users Component
 function RecentUsers() {
+  const { t } = useTranslation();
   const { data, isLoading } = useSWR('/api/admin/users?limit=5', fetcher);
   const users = data?.users || [];
 
@@ -130,11 +131,11 @@ function RecentUsers() {
       <CardHeader className="flex flex-row items-center justify-between pb-4">
         <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
           <Users className="h-5 w-5 text-blue-500" />
-          Usuários Recentes
+          {t.admin.dashboard.recentUsers}
         </CardTitle>
         <Link href="/admin/users">
           <Button variant="ghost" size="sm" className="text-zinc-400 hover:text-white">
-            Ver todos
+            {t.common.viewAll}
             <ArrowRight className="h-4 w-4 ml-1" />
           </Button>
         </Link>
@@ -147,7 +148,7 @@ function RecentUsers() {
         ) : users.length === 0 ? (
           <div className="text-center py-8">
             <Users className="h-10 w-10 text-zinc-600 mx-auto mb-2" />
-            <p className="text-zinc-500">Nenhum usuário ainda</p>
+            <p className="text-zinc-500">{t.admin.dashboard.noUsersAvailable}</p>
           </div>
         ) : (
           users.slice(0, 5).map((user: any, idx: number) => (
@@ -167,7 +168,7 @@ function RecentUsers() {
                   )}
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-white">{user.name || 'Usuário'}</p>
+                  <p className="text-sm font-medium text-white">{user.name || t.common.name}</p>
                   <p className="text-xs text-zinc-500">{user.email}</p>
                 </div>
               </div>
@@ -184,6 +185,7 @@ function RecentUsers() {
 
 // Recent Downloads Component
 function RecentDownloads() {
+  const { t } = useTranslation();
   const { data, isLoading } = useSWR('/api/admin/stats/recent-downloads', fetcher);
   const downloads = data?.downloads || [];
 
@@ -222,11 +224,11 @@ function RecentDownloads() {
       <CardHeader className="flex flex-row items-center justify-between pb-4">
         <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
           <Download className="h-5 w-5 text-emerald-500" />
-          Downloads Recentes
+          {t.admin.dashboard.recentDownloads}
         </CardTitle>
         <Link href="/admin/downloads">
           <Button variant="ghost" size="sm" className="text-zinc-400 hover:text-white">
-            Ver todos
+            {t.common.viewAll}
             <ArrowRight className="h-4 w-4 ml-1" />
           </Button>
         </Link>
@@ -239,7 +241,7 @@ function RecentDownloads() {
         ) : downloads.length === 0 ? (
           <div className="text-center py-8">
             <Download className="h-10 w-10 text-zinc-600 mx-auto mb-2" />
-            <p className="text-zinc-500">Nenhum download ainda</p>
+            <p className="text-zinc-500">{t.admin.dashboard.noRecentDownloads}</p>
           </div>
         ) : (
           downloads.slice(0, 5).map((download: any, idx: number) => (
@@ -253,12 +255,12 @@ function RecentDownloads() {
                   <p className="text-sm text-white truncate max-w-[180px]">
                     {download.url?.replace(/https?:\/\/(www\.)?/, '').split('/')[0] || 'URL'}
                   </p>
-                  <p className="text-xs text-zinc-500">{download.username || 'Anônimo'}</p>
+                  <p className="text-xs text-zinc-500">{download.username || t.common.name}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <Badge variant="outline" className={getPlatformColor(download.platform)}>
-                  {download.platform || 'Unknown'}
+                  {download.platform || t.common.name}
                 </Badge>
                 <span className="text-xs text-zinc-500 whitespace-nowrap">
                   {formatTimeAgo(download.createdAt)}
@@ -274,6 +276,7 @@ function RecentDownloads() {
 
 // Platform Stats Component
 function PlatformStats() {
+  const { t } = useTranslation();
   const { data, isLoading } = useSWR('/api/admin/analytics', fetcher);
   const platforms = data?.downloadsByPlatform || [];
 
@@ -293,7 +296,7 @@ function PlatformStats() {
       <CardHeader className="pb-4">
         <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
           <BarChart3 className="h-5 w-5 text-purple-500" />
-          Downloads por Plataforma
+          {t.admin.analytics.stats.downloadsByPlatform}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -304,7 +307,7 @@ function PlatformStats() {
         ) : platforms.length === 0 ? (
           <div className="text-center py-8">
             <BarChart3 className="h-10 w-10 text-zinc-600 mx-auto mb-2" />
-            <p className="text-zinc-500">Sem dados ainda</p>
+            <p className="text-zinc-500">{t.admin.analytics.noData}</p>
           </div>
         ) : (
           platforms.map((platform: any, idx: number) => {
@@ -389,7 +392,7 @@ export default function AdminDashboard() {
           value={formatCurrency(paymentsData?.stats?.totalRevenue || 0)}
           icon={DollarSign}
           iconColor="bg-green-500/10 text-green-500"
-          subtitle="Este mês"
+          subtitle={t.admin.dashboard.revenue}
           loading={loadingPayments}
         />
       </div>
@@ -397,22 +400,22 @@ export default function AdminDashboard() {
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <QuickActionCard
-          title="Gerenciar Usuários"
-          description="Ver e editar contas"
+          title={t.admin.users.title}
+          description={t.admin.users.subtitle}
           href="/admin/users"
           icon={Users}
           iconBg="bg-blue-500/10 text-blue-500"
         />
         <QuickActionCard
-          title="Ver Pagamentos"
-          description="Histórico de transações"
+          title={t.admin.payments.title}
+          description={t.admin.payments.subtitle}
           href="/admin/payments"
           icon={CreditCard}
           iconBg="bg-green-500/10 text-green-500"
         />
         <QuickActionCard
-          title="Analytics"
-          description="Estatísticas do sistema"
+          title={t.admin.analytics.title}
+          description={t.admin.analytics.subtitle}
           href="/admin/analytics"
           icon={Activity}
           iconBg="bg-purple-500/10 text-purple-500"

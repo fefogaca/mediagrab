@@ -34,6 +34,7 @@ import {
   Loader2,
   AlertTriangle,
 } from "lucide-react";
+import { useTranslation } from "@/lib/i18n";
 
 interface UserSettings {
   name: string;
@@ -44,6 +45,7 @@ interface UserSettings {
 }
 
 export default function SettingsPage() {
+  const { t } = useTranslation();
   const [settings, setSettings] = useState<UserSettings>({
     name: "",
     email: "",
@@ -111,9 +113,9 @@ export default function SettingsPage() {
       }
 
       setSettings(prev => ({ ...prev, name }));
-      toast.success("Perfil atualizado com sucesso!");
+      toast.success(t.settings.profile.saved);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Erro ao atualizar perfil");
+      toast.error(error instanceof Error ? error.message : t.common.error);
     } finally {
       setSaving(false);
     }
@@ -121,12 +123,12 @@ export default function SettingsPage() {
 
   const handleChangePassword = async () => {
     if (passwords.new !== passwords.confirm) {
-      toast.error("As senhas não coincidem");
+      toast.error(t.settings.password.confirm);
       return;
     }
 
     if (passwords.new.length < 8) {
-      toast.error("A nova senha deve ter pelo menos 8 caracteres");
+      toast.error(t.admin.users.passwordMinLength);
       return;
     }
 
@@ -146,10 +148,10 @@ export default function SettingsPage() {
         throw new Error(data.message || "Erro ao alterar senha");
       }
 
-      toast.success("Senha alterada com sucesso!");
+      toast.success(t.settings.password.changed);
       setPasswords({ current: "", new: "", confirm: "" });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Erro ao alterar senha");
+      toast.error(error instanceof Error ? error.message : t.common.error);
     } finally {
       setChangingPassword(false);
     }
@@ -203,8 +205,8 @@ export default function SettingsPage() {
   };
 
   const handleDeleteAccount = () => {
-    if (confirm("Tem certeza que deseja excluir sua conta? Esta ação é irreversível.")) {
-      toast.error("Funcionalidade em desenvolvimento");
+    if (confirm(t.settings.danger.deleteWarning)) {
+      toast.error(t.common.error);
     }
   };
 
@@ -225,8 +227,8 @@ export default function SettingsPage() {
     <div className="space-y-6 max-w-3xl">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-white">Configurações</h1>
-        <p className="text-zinc-400 mt-1">Gerencie suas preferências e conta</p>
+        <h1 className="text-2xl font-bold text-white">{t.settings.title}</h1>
+        <p className="text-zinc-400 mt-1">{t.settings.subtitle}</p>
       </div>
 
       {/* Profile Settings */}
@@ -234,10 +236,10 @@ export default function SettingsPage() {
         <CardHeader>
           <CardTitle className="text-white flex items-center gap-2">
             <User className="h-5 w-5 text-emerald-500" />
-            Perfil
+            {t.settings.profile.title}
           </CardTitle>
           <CardDescription className="text-zinc-400">
-            Suas informações pessoais
+            {t.settings.profile.description}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -258,7 +260,7 @@ export default function SettingsPage() {
 
           {/* Name */}
           <div className="space-y-2">
-            <Label className="text-zinc-300">Nome</Label>
+            <Label className="text-zinc-300">{t.settings.profile.name}</Label>
             <Input
               ref={nameRef}
               defaultValue={settings.name}
@@ -269,7 +271,7 @@ export default function SettingsPage() {
 
           {/* Email */}
           <div className="space-y-2">
-            <Label className="text-zinc-300">Email</Label>
+            <Label className="text-zinc-300">{t.settings.profile.email}</Label>
             <div className="flex gap-2">
               <Input
                 type="email"
@@ -283,22 +285,22 @@ export default function SettingsPage() {
                 className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
               >
                 <Mail className="h-4 w-4 mr-2" />
-                Alterar
+                {t.common.edit}
               </Button>
             </div>
-            <p className="text-xs text-zinc-500">Clique em &quot;Alterar&quot; para mudar seu email</p>
+            <p className="text-xs text-zinc-500">{t.settings.profile.email}</p>
           </div>
 
           <Button onClick={handleSaveProfile} disabled={saving} className="bg-emerald-600 hover:bg-emerald-500">
             {saving ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Salvando...
+                {t.common.loading}
               </>
             ) : (
               <>
                 <Save className="h-4 w-4 mr-2" />
-                Salvar Alterações
+                {t.settings.profile.save}
               </>
             )}
           </Button>
@@ -311,20 +313,20 @@ export default function SettingsPage() {
           <DialogHeader>
             <DialogTitle className="text-white flex items-center gap-2">
               <Mail className="h-5 w-5 text-emerald-500" />
-              Alterar Email
+              {t.settings.profile.email}
             </DialogTitle>
             <DialogDescription className="text-zinc-400">
-              Para sua segurança, enviaremos um código de verificação para o novo email.
+              {t.settings.profile.email}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label className="text-zinc-300">Novo Email</Label>
+              <Label className="text-zinc-300">{t.settings.profile.email}</Label>
               <Input
                 type="email"
                 value={newEmail}
                 onChange={(e) => setNewEmail(e.target.value)}
-                placeholder="novo@email.com"
+                placeholder={t.settings.profile.email}
                 disabled={codeSent}
                 className="bg-zinc-800/50 border-zinc-700 text-white"
               />
@@ -332,56 +334,56 @@ export default function SettingsPage() {
             
             {codeSent && (
               <div className="space-y-2">
-                <Label className="text-zinc-300">Código de Verificação</Label>
+                <Label className="text-zinc-300">{t.common.confirm}</Label>
                 <Input
                   value={verificationCode}
                   onChange={(e) => setVerificationCode(e.target.value)}
-                  placeholder="Digite o código recebido"
+                  placeholder={t.common.confirm}
                   className="bg-zinc-800/50 border-zinc-700 text-white"
                 />
                 <p className="text-xs text-amber-500 flex items-center gap-1">
                   <AlertTriangle className="h-3 w-3" />
-                  Código temporário para desenvolvimento: 123456
+                  {t.common.confirm}
                 </p>
               </div>
             )}
           </div>
           <DialogFooter>
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setEmailDialogOpen(false);
-                setNewEmail("");
-                setVerificationCode("");
-                setCodeSent(false);
-              }}
-              className="text-zinc-400"
-            >
-              Cancelar
-            </Button>
-            {!codeSent ? (
               <Button
-                onClick={handleSendEmailVerification}
-                className="bg-emerald-600 hover:bg-emerald-500"
+                variant="ghost"
+                onClick={() => {
+                  setEmailDialogOpen(false);
+                  setNewEmail("");
+                  setVerificationCode("");
+                  setCodeSent(false);
+                }}
+                className="text-zinc-400"
               >
-                Enviar Código
+                {t.common.cancel}
               </Button>
-            ) : (
-              <Button
-                onClick={handleVerifyAndChangeEmail}
-                disabled={verifying}
-                className="bg-emerald-600 hover:bg-emerald-500"
-              >
-                {verifying ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Verificando...
-                  </>
-                ) : (
-                  "Confirmar"
-                )}
-              </Button>
-            )}
+              {!codeSent ? (
+                <Button
+                  onClick={handleSendEmailVerification}
+                  className="bg-emerald-600 hover:bg-emerald-500"
+                >
+                  {t.common.confirm}
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleVerifyAndChangeEmail}
+                  disabled={verifying}
+                  className="bg-emerald-600 hover:bg-emerald-500"
+                >
+                  {verifying ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      {t.common.loading}
+                    </>
+                  ) : (
+                    t.common.confirm
+                  )}
+                </Button>
+              )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -391,10 +393,10 @@ export default function SettingsPage() {
         <CardHeader>
           <CardTitle className="text-white flex items-center gap-2">
             <Lock className="h-5 w-5 text-emerald-500" />
-            Segurança
+            {t.settings.password.title}
           </CardTitle>
           <CardDescription className="text-zinc-400">
-            Senha e autenticação
+            {t.settings.password.description}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -417,9 +419,9 @@ export default function SettingsPage() {
 
           {/* Change Password */}
           <div className="space-y-4">
-            <h4 className="text-sm font-medium text-zinc-300">Alterar Senha</h4>
+            <h4 className="text-sm font-medium text-zinc-300">{t.settings.password.change}</h4>
             <div className="space-y-2">
-              <Label className="text-zinc-400">Senha Atual</Label>
+              <Label className="text-zinc-400">{t.settings.password.current}</Label>
               <Input
                 type="password"
                 value={passwords.current}
@@ -428,7 +430,7 @@ export default function SettingsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-zinc-400">Nova Senha</Label>
+              <Label className="text-zinc-400">{t.settings.password.new}</Label>
               <Input
                 type="password"
                 value={passwords.new}
@@ -437,7 +439,7 @@ export default function SettingsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-zinc-400">Confirmar Nova Senha</Label>
+              <Label className="text-zinc-400">{t.settings.password.confirm}</Label>
               <Input
                 type="password"
                 value={passwords.confirm}
@@ -454,10 +456,10 @@ export default function SettingsPage() {
               {changingPassword ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Alterando...
+                  {t.common.loading}
                 </>
               ) : (
-                "Alterar Senha"
+                t.settings.password.change
               )}
             </Button>
           </div>
@@ -469,17 +471,17 @@ export default function SettingsPage() {
         <CardHeader>
           <CardTitle className="text-white flex items-center gap-2">
             <Bell className="h-5 w-5 text-emerald-500" />
-            Notificações
+            {t.settings.notifications.title}
           </CardTitle>
           <CardDescription className="text-zinc-400">
-            Preferências de comunicação
+            {t.settings.notifications.description}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <Label className="text-zinc-300">Notificações por Email</Label>
-              <p className="text-xs text-zinc-500">Receba atualizações sobre sua conta</p>
+              <Label className="text-zinc-300">{t.settings.notifications.email}</Label>
+              <p className="text-xs text-zinc-500">{t.settings.notifications.emailDesc}</p>
             </div>
             <Switch
               checked={settings.emailNotifications}
@@ -494,17 +496,17 @@ export default function SettingsPage() {
         <CardHeader>
           <CardTitle className="text-red-400 flex items-center gap-2">
             <Shield className="h-5 w-5" />
-            Zona de Perigo
+            {t.settings.danger.title}
           </CardTitle>
           <CardDescription className="text-zinc-400">
-            Ações irreversíveis
+            {t.settings.danger.description}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between p-4 rounded-lg bg-red-500/5 border border-red-500/20">
             <div>
-              <p className="font-medium text-zinc-300">Excluir Conta</p>
-              <p className="text-xs text-zinc-500">Esta ação não pode ser desfeita</p>
+              <p className="font-medium text-zinc-300">{t.settings.danger.deleteAccount}</p>
+              <p className="text-xs text-zinc-500">{t.settings.danger.deleteWarning}</p>
             </div>
             <Button 
               variant="outline" 
@@ -512,7 +514,7 @@ export default function SettingsPage() {
               onClick={handleDeleteAccount}
             >
               <Trash2 className="h-4 w-4 mr-2" />
-              Excluir
+              {t.common.delete}
             </Button>
           </div>
         </CardContent>

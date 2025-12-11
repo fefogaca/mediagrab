@@ -1,7 +1,7 @@
 # ===========================================
 # MediaGrab - Git Ignore Configuration
 # ===========================================
-# Projeto: Next.js 16 + React 19 + TypeScript + MongoDB
+# Projeto: Next.js 16 + React 19 + TypeScript + Supabase/PostgreSQL
 # Última atualização: 2025
 
 # ===========================================
@@ -40,7 +40,7 @@ next-env.d.ts
 .env
 .env.*
 !.env.example
-.env.local
+# .env.local removido - usar apenas .env
 .env.development.local
 .env.test.local
 .env.production.local
@@ -85,6 +85,7 @@ lerna-debug.log*
 # ===========================================
 # BANCO DE DADOS
 # ===========================================
+# PostgreSQL/Supabase
 *.sqlite
 *.sqlite3
 *.db
@@ -92,7 +93,12 @@ lerna-debug.log*
 *.db-wal
 *.sql
 data/
-*.mongo
+# Prisma
+prisma/migrations/*.sql
+!prisma/migrations/migration_lock.toml
+# Prisma
+prisma/migrations/*.sql
+!prisma/migrations/migration_lock.toml
 
 # ===========================================
 # ARQUIVOS PRIVADOS E SENSÍVEIS

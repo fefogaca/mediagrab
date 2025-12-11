@@ -84,9 +84,9 @@ function PaymentReturnContent() {
           setMessage('Verificando status do pagamento...');
         }
       } else {
-        // Sem ID, assumir sucesso se veio do AbacatePay
+        // Sem ID, verificar status via Stripe
         setStatus('pending');
-        setMessage('Verifique o status do seu pagamento no dashboard.');
+        setMessage('Verificando status do pagamento...');
       }
     };
 

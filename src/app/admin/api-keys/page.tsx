@@ -61,20 +61,23 @@ import {
 import { useTranslation } from "@/lib/i18n";
 
 interface ApiKey {
-  _id: string;
+  id: string;
   key: string;
   name: string;
-  userId: {
-    _id: string;
+  userId: string;
+  user?: {
+    id: string;
     name: string;
     email: string;
     plan: string;
+    role?: string;
   };
   isActive: boolean;
   usageCount: number;
   usageLimit: number;
   createdAt: string;
-  lastUsedAt?: string;
+  lastUsedAt?: string | null;
+  expiresAt?: string | null;
 }
 
 interface UserOption {
@@ -237,8 +240,8 @@ export default function AdminApiKeysPage() {
   const filteredKeys = apiKeys.filter(key =>
     key.key.toLowerCase().includes(search.toLowerCase()) ||
     key.name?.toLowerCase().includes(search.toLowerCase()) ||
-    key.userId?.name?.toLowerCase().includes(search.toLowerCase()) ||
-    key.userId?.email?.toLowerCase().includes(search.toLowerCase())
+    key.user?.name?.toLowerCase().includes(search.toLowerCase()) ||
+    key.user?.email?.toLowerCase().includes(search.toLowerCase())
   );
 
   const getUsagePercentage = (usage: number, limit: number) => {
@@ -376,7 +379,7 @@ export default function AdminApiKeysPage() {
               </TableHeader>
               <TableBody>
                 {filteredKeys.length === 0 ? (
-                  <TableRow>
+                  <TableRow key="no-keys">
                     <TableCell colSpan={7} className="text-center text-zinc-500 py-8">
                       {t.admin.apiKeys.noKeys}
                     </TableCell>
@@ -385,7 +388,7 @@ export default function AdminApiKeysPage() {
                   filteredKeys.map((apiKey) => {
                     const usagePercentage = getUsagePercentage(apiKey.usageCount, apiKey.usageLimit);
                     return (
-                      <TableRow key={apiKey._id} className="border-zinc-800 hover:bg-zinc-800/30">
+                      <TableRow key={apiKey.id} className="border-zinc-800 hover:bg-zinc-800/30">
                         <TableCell className="text-white font-medium">
                           {apiKey.name || "Unnamed"}
                         </TableCell>
@@ -406,10 +409,10 @@ export default function AdminApiKeysPage() {
                         </TableCell>
                         <TableCell>
                           <div>
-                            <p className="text-zinc-300">{apiKey.userId?.name || "Unknown"}</p>
-                            <p className="text-xs text-zinc-500">{apiKey.userId?.email}</p>
+                            <p className="text-zinc-300">{apiKey.user?.name || "Unknown"}</p>
+                            <p className="text-xs text-zinc-500">{apiKey.user?.email || ""}</p>
                             <Badge className="mt-1 capitalize" variant="outline">
-                              {apiKey.userId?.plan || "free"}
+                              {apiKey.user?.plan || "free"}
                             </Badge>
                           </div>
                         </TableCell>
@@ -475,14 +478,14 @@ export default function AdminApiKeysPage() {
                               </DropdownMenuItem>
                               <DropdownMenuItem 
                                 className="text-zinc-300 focus:bg-zinc-800 focus:text-white cursor-pointer"
-                                onClick={() => resetUsage(apiKey._id)}
+                                onClick={() => resetUsage(apiKey.id)}
                               >
                                 <RefreshCw className="mr-2 h-4 w-4" />
                                 {t.admin.apiKeys.actions.resetUsage}
                               </DropdownMenuItem>
                               <DropdownMenuItem 
                                 className={`cursor-pointer ${apiKey.isActive ? 'text-amber-400 focus:bg-amber-500/10' : 'text-green-400 focus:bg-green-500/10'}`}
-                                onClick={() => toggleKeyStatus(apiKey._id, apiKey.isActive)}
+                                onClick={() => toggleKeyStatus(apiKey.id, apiKey.isActive)}
                               >
                                 {apiKey.isActive ? (
                                   <>
@@ -498,7 +501,7 @@ export default function AdminApiKeysPage() {
                               </DropdownMenuItem>
                               <DropdownMenuItem 
                                 className="text-red-400 focus:bg-red-500/10 focus:text-red-400 cursor-pointer"
-                                onClick={() => deleteApiKey(apiKey._id)}
+                                onClick={() => deleteApiKey(apiKey.id)}
                               >
                                 <Trash2 className="mr-2 h-4 w-4" />
                                 {t.admin.apiKeys.actions.delete}
@@ -534,18 +537,18 @@ export default function AdminApiKeysPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-zinc-500">{t.admin.apiKeys.details.owner}</p>
-                  <p className="text-white">{selectedKey.userId?.name}</p>
+                  <p className="text-white">{selectedKey.user?.name || "Unknown"}</p>
                 </div>
                 <div>
                   <p className="text-sm text-zinc-500">{t.common.email}</p>
                   <p className="text-white flex items-center gap-1">
                     <Mail className="h-3 w-3" />
-                    {selectedKey.userId?.email}
+                    {selectedKey.user?.email || ""}
                   </p>
                 </div>
                 <div>
                   <p className="text-sm text-zinc-500">{t.admin.apiKeys.details.plan}</p>
-                  <Badge className="capitalize">{selectedKey.userId?.plan}</Badge>
+                  <Badge className="capitalize">{selectedKey.user?.plan || "free"}</Badge>
                 </div>
                 <div>
                   <p className="text-sm text-zinc-500">{t.common.status}</p>

@@ -32,7 +32,8 @@ import { useTranslation } from "@/lib/i18n";
 
 interface Payment {
   id: string;
-  abacatePayBillingId: string;
+  stripeSessionId?: string;
+  stripeSubscriptionId?: string;
   userId: string;
   userName: string;
   userEmail: string;
@@ -90,7 +91,8 @@ export default function PaymentsPage() {
   const filteredPayments = payments.filter(payment =>
     payment.userName?.toLowerCase().includes(search.toLowerCase()) ||
     payment.userEmail?.toLowerCase().includes(search.toLowerCase()) ||
-    payment.abacatePayBillingId?.toLowerCase().includes(search.toLowerCase())
+    payment.stripeSessionId?.toLowerCase().includes(search.toLowerCase()) ||
+    payment.stripeSubscriptionId?.toLowerCase().includes(search.toLowerCase())
   );
 
   const getStatusBadge = (status: string) => {
@@ -264,7 +266,7 @@ export default function PaymentsPage() {
                   <TableRow key={payment.id} className="border-zinc-800 hover:bg-zinc-800/30">
                     <TableCell>
                       <code className="text-sm text-zinc-300 bg-zinc-800 px-2 py-1 rounded font-mono">
-                        {payment.abacatePayBillingId?.substring(0, 12) || payment.id.substring(0, 12)}...
+                        {payment.stripeSessionId?.substring(0, 12) || payment.stripeSubscriptionId?.substring(0, 12) || payment.id.substring(0, 12)}...
                       </code>
                     </TableCell>
                     <TableCell>

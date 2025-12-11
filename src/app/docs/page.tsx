@@ -37,8 +37,10 @@ import {
   Image,
 } from "lucide-react";
 import Link from "next/link";
+import { useTranslation } from "@/lib/i18n";
 
 export default function DocsPage() {
+  const { t } = useTranslation();
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
   const copyCode = (code: string, id: string) => {
@@ -51,19 +53,19 @@ export default function DocsPage() {
     {
       method: "POST",
       path: "/api/download",
-      description: "Inicia um download de mídia",
+      description: t.docs.endpoints.download.description,
       auth: true,
     },
     {
       method: "GET",
       path: "/api/download/:id",
-      description: "Verifica o status de um download",
+      description: t.docs.endpoints.download.description,
       auth: true,
     },
     {
       method: "POST",
       path: "/api/public-download",
-      description: "Download público (rate limited)",
+      description: t.docs.endpoints.download.description,
       auth: false,
     },
   ];
@@ -115,15 +117,14 @@ print(data)`,
           <div className="flex items-center gap-2 mb-4">
             <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
               <Book className="h-3 w-3 mr-1" />
-              Documentação
+              {t.docs.badge}
             </Badge>
           </div>
           <h1 className="text-4xl sm:text-5xl font-bold text-white mb-4">
-            API Reference
+            {t.docs.title}
           </h1>
           <p className="text-xl text-zinc-400 max-w-2xl">
-            Tudo que você precisa para integrar o MediaGrab em sua aplicação. 
-            Documentação completa com exemplos práticos.
+            {t.docs.subtitle}
           </p>
         </div>
       </section>
@@ -137,13 +138,13 @@ print(data)`,
                 <div className="p-3 rounded-xl bg-emerald-500/10 w-fit mb-4">
                   <Key className="h-6 w-6 text-emerald-500" />
                 </div>
-                <h3 className="text-lg font-semibold text-white mb-2">1. Obter API Key</h3>
+                <h3 className="text-lg font-semibold text-white mb-2">1. {t.docs.gettingStarted.steps[0]}</h3>
                 <p className="text-zinc-400 text-sm mb-4">
-                  Crie sua conta e gere uma API Key no dashboard
+                  {t.docs.gettingStarted.description}
                 </p>
                 <Link href="/register">
                   <Button variant="outline" className="w-full border-zinc-700 text-zinc-300 hover:bg-zinc-800">
-                    Criar Conta
+                    {t.nav.register}
                     <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
                 </Link>
@@ -155,9 +156,9 @@ print(data)`,
                 <div className="p-3 rounded-xl bg-blue-500/10 w-fit mb-4">
                   <Terminal className="h-6 w-6 text-blue-500" />
                 </div>
-                <h3 className="text-lg font-semibold text-white mb-2">2. Fazer Requisição</h3>
+                <h3 className="text-lg font-semibold text-white mb-2">2. {t.docs.gettingStarted.steps[2]}</h3>
                 <p className="text-zinc-400 text-sm mb-4">
-                  Use sua API Key para autenticar as requisições
+                  {t.docs.authentication.description}
                 </p>
                 <code className="text-xs text-zinc-400 bg-zinc-800 px-3 py-2 rounded block overflow-x-auto">
                   Authorization: Bearer YOUR_API_KEY
@@ -170,9 +171,9 @@ print(data)`,
                 <div className="p-3 rounded-xl bg-purple-500/10 w-fit mb-4">
                   <Zap className="h-6 w-6 text-purple-500" />
                 </div>
-                <h3 className="text-lg font-semibold text-white mb-2">3. Receber Resultado</h3>
+                <h3 className="text-lg font-semibold text-white mb-2">3. {t.docs.response.title}</h3>
                 <p className="text-zinc-400 text-sm mb-4">
-                  Processe a resposta com os links de download
+                  {t.docs.response.success}
                 </p>
                 <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
                   JSON Response
@@ -186,7 +187,7 @@ print(data)`,
       {/* Endpoints */}
       <section className="py-12 px-4 bg-zinc-900/30">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-2xl font-bold text-white mb-8">Endpoints</h2>
+          <h2 className="text-2xl font-bold text-white mb-8">{t.docs.endpoints.title}</h2>
           
           <div className="space-y-4">
             {endpoints.map((endpoint) => (
@@ -222,7 +223,7 @@ print(data)`,
       {/* Code Examples */}
       <section className="py-12 px-4">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-2xl font-bold text-white mb-8">Exemplos de Código</h2>
+          <h2 className="text-2xl font-bold text-white mb-8">{t.docs.sdks.title}</h2>
           
           <Card className="bg-zinc-900/50 border-zinc-800">
             <Tabs defaultValue="curl" className="w-full">
@@ -268,7 +269,7 @@ print(data)`,
       {/* Response Format */}
       <section className="py-12 px-4 bg-zinc-900/30">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-2xl font-bold text-white mb-8">Formato de Resposta</h2>
+          <h2 className="text-2xl font-bold text-white mb-8">{t.docs.response.title}</h2>
           
           <Card className="bg-zinc-900/50 border-zinc-800">
             <CardContent className="p-6">
@@ -303,7 +304,7 @@ print(data)`,
       {/* Supported Platforms */}
       <section className="py-12 px-4">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-2xl font-bold text-white mb-8">Plataformas Suportadas</h2>
+          <h2 className="text-2xl font-bold text-white mb-8">{t.docs.platforms.title}</h2>
           
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
             {[
@@ -329,7 +330,7 @@ print(data)`,
             ))}
           </div>
           <p className="text-center text-zinc-500 mt-6">
-            E mais de 1000+ outros sites suportados pelo yt-dlp
+            {t.docs.platforms.description}
           </p>
         </div>
       </section>
@@ -339,14 +340,14 @@ print(data)`,
         <div className="max-w-4xl mx-auto text-center">
           <div className="bg-gradient-to-r from-emerald-900/20 to-emerald-800/20 border border-emerald-800/50 rounded-3xl p-12">
             <h2 className="text-3xl font-bold text-white mb-4">
-              Pronto para começar?
+              {t.landing.cta.title}
             </h2>
             <p className="text-zinc-400 mb-8">
-              Crie sua conta e obtenha sua API Key em segundos.
+              {t.landing.cta.description}
             </p>
             <Link href="/register">
               <Button size="lg" className="bg-emerald-600 hover:bg-emerald-500 text-white px-8">
-                Criar Conta Grátis
+                {t.landing.cta.primary}
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             </Link>

@@ -1,11 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@backend/lib/auth";
-import connectDB from "@backend/lib/mongodb";
-import User from "@models/User";
-import Payment from "@models/Payment";
-import abacatePay, { AbacateCustomer } from "@services/abacatepay";
+import { connectDB } from "@backend/lib/database";
+import prisma from "@backend/lib/database";
+import { PLANS, PAYMENT_URLS } from "@/lib/config/plans";
+
+// Importação condicional do Stripe
+let Stripe: any = null;
+try {
+  Stripe = require('stripe').default;
+} catch {
+  // Stripe não instalado
+}
 
 export async function POST(request: NextRequest) {
+  // Verificar se Stripe está configurado
+  const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+  
+  if (!Stripe || !stripeSecretKey) {
+    return NextResponse.json(
+      { 
+        error: "coming_soon",
+        message: "Stripe payment is coming soon" 
+      },
+      { status: 503 }
+    );
+  }
+
   try {
     // Verificar autenticação
     const session = await auth();
@@ -17,7 +37,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { plan, yearly = false } = body;
+    const { plan } = body;
 
     // Validar plano
     if (!["developer", "startup", "enterprise"].includes(plan)) {
@@ -29,8 +49,16 @@ export async function POST(request: NextRequest) {
 
     await connectDB();
 
-    // Buscar usuário
-    const user = await User.findById(session.user.id);
+    // Buscar usuário usando Prisma diretamente
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        id: true,
+        email: true,
+        plan: true,
+        planExpiresAt: true,
+      }
+    });
     if (!user) {
       return NextResponse.json(
         { error: "Usuário não encontrado" },
@@ -46,54 +74,63 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Criar dados do cliente para AbacatePay
-    const customer: AbacateCustomer = {
-      email: user.email,
-      name: user.fullName || user.name,
-      cellphone: user.phone || undefined,
-      taxId: user.taxId || undefined,
-    };
+    const planConfig = PLANS[plan];
+    
+    if (!planConfig.stripe?.priceId) {
+      return NextResponse.json(
+        { 
+          error: "coming_soon",
+          message: "Stripe payment is coming soon" 
+        },
+        { status: 503 }
+      );
+    }
 
-    // URLs de retorno
-    const baseUrl = process.env.NEXT_PUBLIC_WEB_BASE_URL || "http://localhost:3000";
-    const returnUrl = `${baseUrl}/dashboard/subscription`;
-    const completionUrl = `${baseUrl}/dashboard/subscription?success=true`;
+    const stripe = new Stripe(stripeSecretKey, {
+      apiVersion: '2023-10-16',
+    });
 
-    // Criar cobrança no AbacatePay
-    const billing = await abacatePay.createPlanPayment(
-      plan as "developer" | "startup" | "enterprise",
-      customer,
-      returnUrl,
-      completionUrl,
-      yearly
-    );
-
-    // Salvar pagamento no banco
-    const payment = await Payment.create({
-      userId: user._id,
-      abacatePayBillingId: billing.id,
-      abacatePayUrl: billing.url,
-      amount: billing.amount,
-      method: "PIX", // Default, será atualizado pelo webhook se for cartão
-      products: billing.products,
-      planPurchased: plan,
-      planDuration: yearly ? 12 : 1,
-      status: "pending",
-      expiresAt: new Date(Date.now() + 30 * 60 * 1000), // 30 minutos
+    // Criar sessão de checkout do Stripe
+    const checkoutSession = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price: planConfig.stripe.priceId,
+          quantity: 1,
+        },
+      ],
+      mode: 'subscription',
+      success_url: `${PAYMENT_URLS.completionUrl}?plan=${plan}&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: PAYMENT_URLS.cancelUrl,
+      customer_email: user.email,
+      metadata: {
+        userId: session.user.id,
+        planId: plan,
+      },
     });
 
     return NextResponse.json({
       success: true,
-      payment: {
-        id: payment._id.toString(),
-        billingId: billing.id,
-        url: billing.url,
-        amount: billing.amount,
-        status: billing.status,
-      },
+      sessionId: checkoutSession.id,
+      url: checkoutSession.url,
     });
-  } catch (error) {
-    console.error("Erro ao criar pagamento:", error);
+  } catch (error: any) {
+    // Não logar erro se for relacionado a Stripe não configurado
+    if (!error.message?.includes('Invalid API Key') && !error.message?.includes('No API key')) {
+      console.error("Erro ao criar pagamento:", error);
+    }
+    
+    // Se for erro de API key inválida, retornar coming soon
+    if (error.message?.includes('Invalid API Key') || error.message?.includes('No API key')) {
+      return NextResponse.json(
+        { 
+          error: "coming_soon",
+          message: "Stripe payment is coming soon" 
+        },
+        { status: 503 }
+      );
+    }
+    
     return NextResponse.json(
       { error: "Erro ao criar pagamento" },
       { status: 500 }

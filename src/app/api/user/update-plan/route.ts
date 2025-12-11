@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import jwt from 'jsonwebtoken';
-import connectDB from '@/backend/lib/mongodb';
+import { connectDB } from '@/backend/lib/database';
 import User from '@/backend/models/User';
 import { PLANS } from '@/lib/config/plans';
+import { getJWTSecret } from '@backend/lib/secrets';
 
-const JWT_SECRET = process.env.JWT_SECRET || '';
+const JWT_SECRET = getJWTSecret();;
 
 interface DecodedToken {
   id: string;

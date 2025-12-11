@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import connectDB from '@backend/lib/mongodb';
+import { connectDB } from '@backend/lib/database';
 import ApiKey from '@backend/models/ApiKey';
 import { validateMediaUrl } from '@/lib/media/providers';
 import { resolveMediaInfo, type ResolvedMediaFormat } from '@/lib/server/mediaResolver';
@@ -101,8 +101,8 @@ export async function GET(request: NextRequest) {
     const normalizedUrl = validation.normalizedUrl;
 
     // Increment usage count before processing the request
-    await ApiKey.findByIdAndUpdate(apiKeyData._id, {
-      $inc: { usageCount: 1 },
+    await ApiKey.findByIdAndUpdate(apiKeyData.id, {
+      usageCount: apiKeyData.usageCount + 1,
       lastUsedAt: new Date(),
     });
 

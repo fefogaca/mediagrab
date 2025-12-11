@@ -2,11 +2,12 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
-import connectDB from '@/backend/lib/mongodb';
+import { connectDB } from '@/backend/lib/database';
 import User from '@/backend/models/User';
 import ApiKey from '@/backend/models/ApiKey';
+import { getJWTSecret } from '@backend/lib/secrets';
 
-const JWT_SECRET = process.env.JWT_SECRET || '';
+const JWT_SECRET = getJWTSecret();;
 
 interface DecodedToken {
   id: string;
@@ -45,9 +46,7 @@ export async function GET() {
 
     await connectDB();
     
-    const apiKeys = await ApiKey.find({ userId: userData.id })
-      .sort({ createdAt: -1 })
-      .lean();
+    const apiKeys = await ApiKey.find({ userId: userData.id });
 
     return NextResponse.json({ apiKeys }, { status: 200 });
   } catch (error) {
@@ -86,7 +85,7 @@ export async function POST() {
     const limits = PLAN_LIMITS[plan as keyof typeof PLAN_LIMITS] || PLAN_LIMITS.free;
     
     // Contar keys existentes
-    const existingKeysCount = await ApiKey.countDocuments({ userId: user._id, isActive: true });
+    const existingKeysCount = await ApiKey.count({ userId: user.id, isActive: true });
     
     if (limits.maxKeys !== -1 && existingKeysCount >= limits.maxKeys) {
       return NextResponse.json({ 
@@ -98,20 +97,37 @@ export async function POST() {
     const apiKeyValue = `mg_${uuidv4().replace(/-/g, '')}`;
     const keyNumber = existingKeysCount + 1;
     
+    // Determinar usageLimit (não pode ser -1 no Prisma, usar um valor alto para ilimitado)
+    const usageLimit = limits.requestLimit === -1 ? 999999999 : limits.requestLimit;
+    
+    console.log('Criando API Key com dados:', {
+      key: apiKeyValue.substring(0, 10) + '...',
+      name: `API Key ${keyNumber}`,
+      userId: user.id,
+      usageLimit,
+      plan
+    });
+    
     const apiKey = await ApiKey.create({
       key: apiKeyValue,
       name: `API Key ${keyNumber}`,
-      userId: user._id,
-      usageLimit: limits.requestLimit,
+      userId: user.id,
+      usageLimit: usageLimit,
       usageCount: 0,
       isActive: true,
       expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 ano
     });
 
+    if (!apiKey) {
+      throw new Error('Falha ao criar API Key - retorno nulo');
+    }
+
+    console.log('API Key criada com sucesso:', apiKey.id);
+
     return NextResponse.json({ 
       message: 'API Key criada com sucesso!',
       apiKey: {
-        id: apiKey._id,
+        id: apiKey.id,
         key: apiKey.key,
         created_at: apiKey.createdAt,
         expires_at: apiKey.expiresAt,
@@ -121,9 +137,11 @@ export async function POST() {
     }, { status: 201 });
   } catch (error) {
     console.error('Erro ao criar API key:', error);
+    console.error('Stack trace:', (error as Error).stack);
     return NextResponse.json({ 
       message: 'Erro ao criar API key', 
-      error: (error as Error).message 
+      error: (error as Error).message,
+      details: process.env.NODE_ENV === 'development' ? (error as Error).stack : undefined
     }, { status: 500 });
   }
 }

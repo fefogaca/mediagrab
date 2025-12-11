@@ -1,14 +1,11 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import connectDB from '@backend/lib/mongodb';
-import User from '@models/User';
+import { connectDB } from '@backend/lib/database';
+import prisma from '@backend/lib/database';
+import { getJWTSecret } from '@backend/lib/secrets';
 
-const JWT_SECRET: string = process.env.JWT_SECRET as string;
-
-if (!JWT_SECRET) {
-  throw new Error('JWT_SECRET is not defined in environment variables');
-}
+const JWT_SECRET = getJWTSecret();
 
 export async function POST(request: Request) {
   const { email, password } = await request.json();
@@ -22,11 +19,23 @@ export async function POST(request: Request) {
   }
 
   try {
-    // Conectar ao MongoDB
+    // Conectar ao banco de dados
     await connectDB();
     
-    // Buscar usuário por email
-    const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
+    // Buscar usuário por email usando Prisma diretamente
+    const user = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
+      select: {
+        id: true,
+        email: true,
+        password: true,
+        name: true,
+        role: true,
+        plan: true,
+        image: true,
+        isActive: true,
+      }
+    });
 
     if (!user) {
       return NextResponse.json({ message: 'Credenciais inválidas' }, { status: 401 });
@@ -48,13 +57,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: 'Conta desativada. Entre em contato com o suporte.' }, { status: 403 });
     }
 
-    // Atualizar último login
-    await User.findByIdAndUpdate(user._id, { lastLoginAt: new Date() });
+    // Atualizar último login usando Prisma diretamente
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { lastLoginAt: new Date() }
+    });
 
     // Criar token JWT
     const token = jwt.sign(
       { 
-        id: user._id.toString(), 
+        id: user.id, 
         email: user.email, 
         name: user.name,
         role: user.role,
@@ -67,7 +79,7 @@ export async function POST(request: Request) {
     const response = NextResponse.json({ 
       message: 'Login realizado com sucesso', 
       user: {
-        id: user._id.toString(),
+        id: user.id,
         email: user.email,
         name: user.name,
         role: user.role,
@@ -77,9 +89,14 @@ export async function POST(request: Request) {
     }, { status: 200 });
 
     // Definir cookie com token
+    // Verificar se está em HTTPS através de variável de ambiente ou header
+    const isSecure = process.env.NODE_ENV === 'production' && 
+                     (process.env.NEXT_PUBLIC_USE_HTTPS === 'true' || 
+                      request.headers.get('x-forwarded-proto') === 'https');
+
     response.cookies.set('token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV !== 'development',
+      secure: isSecure, // Só usar secure se realmente estiver em HTTPS
       sameSite: 'lax',
       path: '/',
       maxAge: 60 * 60 * 24 * 7, // 7 dias

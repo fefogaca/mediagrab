@@ -53,7 +53,7 @@ interface MediaFormat {
 }
 
 type MediaType = 'video' | 'audio' | null;
-type DialogStep = 'type' | 'quality' | 'download';
+type DialogStep = 'type' | 'download';
 
 export default function Home() {
   const { t } = useTranslation();
@@ -68,7 +68,6 @@ export default function Home() {
   const [formatDialogOpen, setFormatDialogOpen] = useState(false);
   const [dialogStep, setDialogStep] = useState<DialogStep>('type');
   const [selectedMediaType, setSelectedMediaType] = useState<MediaType>(null);
-  const [selectedFormat, setSelectedFormat] = useState<MediaFormat | null>(null);
 
   const handleGetLinks = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,7 +77,6 @@ export default function Home() {
     setVideoTitle("");
     setProviderLabel(null);
     setSelectedMediaType(null);
-    setSelectedFormat(null);
     setDialogStep('type');
 
     // Validar URL
@@ -137,11 +135,7 @@ export default function Home() {
 
   const handleMediaTypeSelect = (type: MediaType) => {
     setSelectedMediaType(type);
-    setDialogStep('quality');
-  };
-
-  const handleFormatSelect = (format: MediaFormat) => {
-    setSelectedFormat(format);
+    // Após selecionar o tipo, ir direto para download (formato é selecionado automaticamente)
     setDialogStep('download');
   };
 
@@ -150,48 +144,38 @@ export default function Home() {
     setDialogStep('type');
   };
 
-  const handleBackToQuality = () => {
-    setSelectedFormat(null);
-    setDialogStep('quality');
-  };
-
   const handleCloseDialog = () => {
     setFormatDialogOpen(false);
     setDialogStep('type');
     setSelectedMediaType(null);
-    setSelectedFormat(null);
   };
 
-  // Organizar formatos por tipo e qualidade
-  const organizedFormats = useMemo(() => {
+  // Selecionar automaticamente o melhor formato baseado no tipo escolhido
+  const selectedFormat = useMemo(() => {
     try {
       if (selectedMediaType === 'video') {
-        // Incluir TODOS os formatos com vídeo (mesmo sem áudio)
-        // O backend vai fazer merge automaticamente quando necessário
+        // Para vídeo: escolher automaticamente 1440p ou 1080p (com áudio)
         const videoFormats = allFormats.filter(format => {
           const hasVideo = format.vcodec !== 'none' && format.vcodec !== 'unknown';
           return hasVideo;
         });
 
-        // Agrupar por resolução numérica (extrair número da resolução)
-        const grouped: { [key: number]: MediaFormat[] } = {};
-        videoFormats.forEach(format => {
-          // Extrair número da resolução (ex: "1080p" -> 1080, "2160p" -> 2160)
-          const resNum = parseInt((format.resolution || '').replace(/\D/g, '')) || 0;
-          
-          // Se já existe um formato com essa resolução, adicionar ao grupo
-          if (!grouped[resNum]) {
-            grouped[resNum] = [];
-          }
-          grouped[resNum].push(format);
-        });
+        if (videoFormats.length === 0) return null;
 
-        // Para cada resolução, escolher o melhor formato
-        // Priorizar: MP4 com áudio > MP4 sem áudio > outros com áudio > outros
-        const uniqueFormats = Object.entries(grouped)
-          .map(([resNum, group]) => {
+        // Extrair resoluções numéricas e ordenar
+        const formatsWithResolution = videoFormats.map(format => {
+          const resNum = parseInt((format.resolution || '').replace(/\D/g, '')) || 0;
+          return { format, resNum };
+        }).sort((a, b) => b.resNum - a.resNum);
+
+        // Priorizar: 1440p > 1080p > maior disponível
+        const targetResolutions = [1440, 1080];
+        for (const targetRes of targetResolutions) {
+          const matching = formatsWithResolution.find(f => f.resNum === targetRes);
+          if (matching) {
             // Priorizar MP4 com áudio
-            const mp4WithAudio = group.find(f => 
+            const mp4WithAudio = videoFormats.find(f => 
+              parseInt((f.resolution || '').replace(/\D/g, '')) === targetRes &&
               f.ext.toLowerCase() === 'mp4' && 
               f.acodec !== 'none' && 
               f.acodec !== 'unknown'
@@ -199,75 +183,59 @@ export default function Home() {
             if (mp4WithAudio) return mp4WithAudio;
             
             // MP4 sem áudio (backend vai fazer merge)
-            const mp4 = group.find(f => f.ext.toLowerCase() === 'mp4');
+            const mp4 = videoFormats.find(f => 
+              parseInt((f.resolution || '').replace(/\D/g, '')) === targetRes &&
+              f.ext.toLowerCase() === 'mp4'
+            );
             if (mp4) return mp4;
             
-            // Outros formatos com áudio
-            const withAudio = group.find(f => 
-              f.acodec !== 'none' && 
-              f.acodec !== 'unknown'
-            );
-            if (withAudio) return withAudio;
-            
-            // Qualquer formato de vídeo (backend vai fazer merge se necessário)
-            return group[0];
-          })
-          .filter(Boolean) // Remove undefined/null
-          .map(format => {
-            // Garantir que o formato tenha acodec marcado (mesmo que seja 'none', o backend vai fazer merge)
-            // Se não tiver áudio, vamos marcar como tendo áudio garantido pelo backend
-            return {
-              ...format,
-              // Se não tem áudio, vamos garantir que o backend vai fazer merge
-              // Mantemos o formato original mas sabemos que terá áudio no final
-            };
-          });
+            return matching.format;
+          }
+        }
 
-        // Ordenar por resolução (maior para menor)
-        return uniqueFormats.sort((a, b) => {
-          const aRes = parseInt((a.resolution || '').replace(/\D/g, '')) || 0;
-          const bRes = parseInt((b.resolution || '').replace(/\D/g, '')) || 0;
-          return bRes - aRes;
-        });
+        // Se não encontrou 1440p ou 1080p, pegar o maior disponível
+        if (formatsWithResolution.length > 0) {
+          const best = formatsWithResolution[0];
+          // Priorizar MP4
+          const mp4 = videoFormats.find(f => 
+            parseInt((f.resolution || '').replace(/\D/g, '')) === best.resNum &&
+            f.ext.toLowerCase() === 'mp4'
+          );
+          return mp4 || best.format;
+        }
+
+        return null;
       } else if (selectedMediaType === 'audio') {
-        // Filtrar apenas áudios (sem vídeo)
+        // Para áudio: sempre escolher MP3 (melhor qualidade disponível)
         const audioFormats = allFormats.filter(format => {
           const hasAudio = format.acodec !== 'none' && format.acodec !== 'unknown';
           const isAudioOnly = format.vcodec === 'none' || format.vcodec === 'unknown' || !format.vcodec;
           return hasAudio && isAudioOnly;
         });
 
-        // Agrupar por qualidade/bitrate
-        const grouped: { [key: string]: MediaFormat[] } = {};
-        audioFormats.forEach(format => {
-          const key = format.quality || format.ext || 'default';
-          if (!grouped[key]) {
-            grouped[key] = [];
-          }
-          grouped[key].push(format);
-        });
+        if (audioFormats.length === 0) return null;
 
-        // Converter para array e ordenar por tamanho (qualidade)
-        return Object.values(grouped)
-          .map(group => {
-            // Priorizar MP3 dentro do grupo
-            const mp3 = group.find(f => f.ext.toLowerCase() === 'mp3');
-            return mp3 || group[0];
-          })
-          .sort((a, b) => {
-            const aSize = a.filesize_approx || 0;
-            const bSize = b.filesize_approx || 0;
-            return bSize - aSize;
-          });
+        // Priorizar MP3
+        const mp3 = audioFormats.find(f => f.ext.toLowerCase() === 'mp3');
+        if (mp3) return mp3;
+
+        // Se não tem MP3, pegar o melhor áudio disponível (maior tamanho = melhor qualidade)
+        return audioFormats.sort((a, b) => {
+          const aSize = a.filesize_approx || 0;
+          const bSize = b.filesize_approx || 0;
+          return bSize - aSize;
+        })[0];
       }
-      return [];
+      return null;
     } catch (error) {
-      console.error('Erro ao organizar formatos:', error);
-      return [];
+      console.error('Erro ao selecionar formato:', error);
+      return null;
     }
   }, [allFormats, selectedMediaType]);
 
-  const getQualityLabel = (format: MediaFormat): string => {
+  const getQualityLabel = (format: MediaFormat | null): string => {
+    if (!format) return 'Carregando...';
+    
     try {
       if (selectedMediaType === 'video') {
         // Extrair número da resolução de forma segura
@@ -282,7 +250,7 @@ export default function Home() {
         
         // Classificar por resolução real
         if (res >= 2160) return '4K Ultra HD';
-        if (res >= 1440) return '2K Quad HD';
+        if (res >= 1440) return '2K Quad HD (1440p)';
         if (res >= 1080) return 'Full HD (1080p)';
         if (res >= 720) return 'HD (720p)';
         if (res >= 480) return 'SD (480p)';
@@ -291,13 +259,12 @@ export default function Home() {
         if (res >= 144) return '144p';
         return `${res}p`;
       } else {
-        // Para áudio, usar qualidade ou bitrate se disponível - SEMPRE retornar string
-        const quality = format.quality || format.resolution || 'Alta Qualidade';
-        return String(quality);
+        // Para áudio, sempre retornar MP3
+        return 'MP3 - Alta Qualidade';
       }
     } catch (error) {
       console.error('Erro em getQualityLabel:', error, format);
-      return selectedMediaType === 'video' ? 'Padrão' : 'Alta Qualidade';
+      return selectedMediaType === 'video' ? 'Padrão' : 'MP3';
     }
   };
 
@@ -600,7 +567,7 @@ export default function Home() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={dialogStep === 'quality' ? handleBackToType : handleBackToQuality}
+                      onClick={handleBackToType}
                       className="text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-full h-8 w-8 -ml-2"
                     >
                       <ChevronLeft className="h-4 w-4" />
@@ -608,16 +575,12 @@ export default function Home() {
                   )}
                   <DialogTitle className="text-2xl font-bold text-white bg-gradient-to-r from-white to-zinc-300 bg-clip-text text-transparent">
                     {dialogStep === 'type' && 'Escolha o formato'}
-                    {dialogStep === 'quality' && 'Selecione a qualidade'}
                     {dialogStep === 'download' && 'Pronto para baixar'}
                   </DialogTitle>
                 </div>
                 <DialogDescription className="text-zinc-400 mt-2 text-sm">
                   {dialogStep === 'type' && 'Escolha se deseja baixar como vídeo ou áudio'}
-                  {dialogStep === 'quality' && videoTitle && (
-                    <span className="block mt-2 text-xs text-zinc-500 line-clamp-2">{videoTitle}</span>
-                  )}
-                  {dialogStep === 'download' && selectedFormat && (
+                  {dialogStep === 'download' && videoTitle && (
                     <span className="block mt-2 text-xs text-zinc-500 line-clamp-2">{videoTitle}</span>
                   )}
                 </DialogDescription>
@@ -626,7 +589,6 @@ export default function Home() {
             {/* Progress Indicator */}
             <div className="flex items-center gap-2 mt-4">
               <div className={`h-1.5 rounded-full flex-1 transition-all ${dialogStep === 'type' ? 'bg-emerald-500' : 'bg-emerald-500/30'}`} />
-              <div className={`h-1.5 rounded-full flex-1 transition-all ${dialogStep === 'quality' ? 'bg-emerald-500' : dialogStep === 'download' ? 'bg-emerald-500/30' : 'bg-zinc-800'}`} />
               <div className={`h-1.5 rounded-full flex-1 transition-all ${dialogStep === 'download' ? 'bg-emerald-500' : 'bg-zinc-800'}`} />
             </div>
           </DialogHeader>
@@ -645,7 +607,7 @@ export default function Home() {
                       <PlayCircle className="h-10 w-10 text-emerald-400 group-hover:text-emerald-300 group-hover:scale-110 transition-all duration-300" />
                     </div>
                     <span className="text-xl font-bold text-white mb-1 block group-hover:text-emerald-400 transition-colors">Vídeo</span>
-                    <span className="text-sm text-zinc-400 group-hover:text-zinc-300 transition-colors">MP4 com áudio</span>
+                    <span className="text-sm text-zinc-400 group-hover:text-zinc-300 transition-colors">1080p/1440p com áudio</span>
                   </div>
                 </button>
                 <button
@@ -665,10 +627,10 @@ export default function Home() {
             </div>
           )}
 
-          {/* Step 2: Quality Selection */}
-          {dialogStep === 'quality' && (
+          {/* Step 2: Download */}
+          {dialogStep === 'download' && (
             <div className="py-6">
-              {organizedFormats.length === 0 ? (
+              {!selectedFormat ? (
                 <div className="text-center py-12">
                   <div className="p-4 rounded-full bg-rose-500/10 w-fit mx-auto mb-4">
                     <AlertCircle className="h-8 w-8 text-rose-400" />
@@ -689,126 +651,69 @@ export default function Home() {
                   </Button>
                 </div>
               ) : (
-                <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
-                  {organizedFormats.map((format, index) => {
-                    try {
-                      const qualityLabel = getQualityLabel(format);
-                      const qualityLabelStr = String(qualityLabel || '');
-                      const isHD = qualityLabelStr.includes('HD') || qualityLabelStr.includes('4K') || qualityLabelStr.includes('2K');
-                      
-                      return (
-                        <button
-                          key={format.format_id}
-                          onClick={() => handleFormatSelect(format)}
-                          className="w-full p-5 rounded-xl border-2 border-zinc-800 hover:border-emerald-500/50 bg-gradient-to-r from-zinc-800/50 to-zinc-900/30 hover:from-emerald-500/10 hover:to-emerald-600/5 transition-all duration-300 text-left group relative overflow-hidden"
-                        >
-                          <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 to-emerald-600/0 group-hover:from-emerald-500/5 group-hover:to-emerald-600/5 transition-all duration-300" />
-                          <div className="relative z-10 flex items-center justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-3 mb-3 flex-wrap">
-                                <Badge className={`${isHD ? 'bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 text-emerald-400 border-emerald-500/50 shadow-lg shadow-emerald-500/10' : 'bg-zinc-700/50 text-zinc-300 border-zinc-600/50'} px-3 py-1 font-semibold`}>
-                                  {qualityLabelStr}
-                                </Badge>
-                                <span className="text-xs text-zinc-500 uppercase font-medium tracking-wider">
-                                  {format.ext}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-4 text-sm text-zinc-400 flex-wrap">
-                                {format.resolution && (
-                                  <span className="flex items-center gap-1">
-                                    <PlayCircle className="h-3 w-3" />
-                                    {format.resolution}
-                                  </span>
-                                )}
-                                {format.quality && format.quality !== format.resolution && (
-                                  <span className="text-zinc-500">• {format.quality}</span>
-                                )}
-                                {formatFileSize(format.filesize_approx) !== "Tamanho indisponível" && (
-                                  <span className="text-zinc-500">• {formatFileSize(format.filesize_approx)}</span>
-                                )}
-                              </div>
-                            </div>
-                            <div className="ml-4 p-2 rounded-lg bg-zinc-800/50 group-hover:bg-emerald-500/20 transition-colors">
-                              <ArrowRight className="h-5 w-5 text-zinc-500 group-hover:text-emerald-400 group-hover:translate-x-1 transition-all" />
-                            </div>
-                          </div>
-                        </button>
-                      );
-                    } catch (error) {
-                      console.error('Erro ao renderizar formato:', error, format);
-                      return null;
-                    }
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Step 3: Download */}
-          {dialogStep === 'download' && selectedFormat && (
-            <div className="py-6">
-              <Card className="bg-gradient-to-br from-zinc-800/80 to-zinc-900/80 border-zinc-700/50 shadow-xl">
-                <CardContent className="p-8">
-                  <div className="space-y-6">
-                    {/* Header */}
-                    <div className="text-center pb-6 border-b border-zinc-700/50">
-                      <Badge className="bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 text-emerald-400 border-emerald-500/50 px-4 py-1.5 mb-4 text-sm font-semibold">
-                        {selectedMediaType === 'video' ? 'Vídeo MP4' : 'Áudio MP3'}
-                      </Badge>
-                      <h3 className="text-2xl font-bold text-white mb-2 bg-gradient-to-r from-white to-zinc-300 bg-clip-text text-transparent">
-                        {getQualityLabel(selectedFormat)}
-                      </h3>
-                      <p className="text-sm text-zinc-400">{videoTitle}</p>
-                    </div>
-
-                    {/* Details */}
-                    <div className="grid grid-cols-2 gap-4">
-                      {selectedFormat.resolution && (
-                        <div className="p-4 rounded-lg bg-zinc-900/50 border border-zinc-800">
-                          <p className="text-xs text-zinc-500 mb-1">Resolução</p>
-                          <p className="text-sm font-semibold text-white">{selectedFormat.resolution}</p>
-                        </div>
-                      )}
-                      {formatFileSize(selectedFormat.filesize_approx) !== "Tamanho indisponível" && (
-                        <div className="p-4 rounded-lg bg-zinc-900/50 border border-zinc-800">
-                          <p className="text-xs text-zinc-500 mb-1">Tamanho</p>
-                          <p className="text-sm font-semibold text-white">{formatFileSize(selectedFormat.filesize_approx)}</p>
-                        </div>
-                      )}
-                      <div className="p-4 rounded-lg bg-zinc-900/50 border border-zinc-800">
-                        <p className="text-xs text-zinc-500 mb-1">Formato</p>
-                        <p className="text-sm font-semibold text-white">{selectedFormat.ext.toUpperCase()}</p>
+                <Card className="bg-gradient-to-br from-zinc-800/80 to-zinc-900/80 border-zinc-700/50 shadow-xl">
+                  <CardContent className="p-8">
+                    <div className="space-y-6">
+                      {/* Header */}
+                      <div className="text-center pb-6 border-b border-zinc-700/50">
+                        <Badge className="bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 text-emerald-400 border-emerald-500/50 px-4 py-1.5 mb-4 text-sm font-semibold">
+                          {selectedMediaType === 'video' ? 'Vídeo MP4' : 'Áudio MP3'}
+                        </Badge>
+                        <h3 className="text-2xl font-bold text-white mb-2 bg-gradient-to-r from-white to-zinc-300 bg-clip-text text-transparent">
+                          {getQualityLabel(selectedFormat)}
+                        </h3>
+                        <p className="text-sm text-zinc-400">{videoTitle}</p>
                       </div>
-                      {selectedFormat.quality && selectedFormat.quality !== selectedFormat.resolution && (
+
+                      {/* Details */}
+                      <div className="grid grid-cols-2 gap-4">
+                        {selectedFormat.resolution && (
+                          <div className="p-4 rounded-lg bg-zinc-900/50 border border-zinc-800">
+                            <p className="text-xs text-zinc-500 mb-1">Resolução</p>
+                            <p className="text-sm font-semibold text-white">{selectedFormat.resolution}</p>
+                          </div>
+                        )}
+                        {formatFileSize(selectedFormat.filesize_approx) !== "Tamanho indisponível" && (
+                          <div className="p-4 rounded-lg bg-zinc-900/50 border border-zinc-800">
+                            <p className="text-xs text-zinc-500 mb-1">Tamanho</p>
+                            <p className="text-sm font-semibold text-white">{formatFileSize(selectedFormat.filesize_approx)}</p>
+                          </div>
+                        )}
                         <div className="p-4 rounded-lg bg-zinc-900/50 border border-zinc-800">
-                          <p className="text-xs text-zinc-500 mb-1">Qualidade</p>
-                          <p className="text-sm font-semibold text-white">{selectedFormat.quality}</p>
+                          <p className="text-xs text-zinc-500 mb-1">Formato</p>
+                          <p className="text-sm font-semibold text-white">{selectedFormat.ext.toUpperCase()}</p>
                         </div>
-                      )}
-                    </div>
-                    
-                    {/* Download Button */}
-                    <div className="pt-4">
-                      <a 
-                        href={selectedFormat.download_url} 
-                        download
-                        className="block"
-                      >
-                        <Button 
-                          size="lg" 
-                          className="w-full bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40 transition-all duration-300 h-12 text-base font-semibold"
+                        {selectedFormat.quality && selectedFormat.quality !== selectedFormat.resolution && (
+                          <div className="p-4 rounded-lg bg-zinc-900/50 border border-zinc-800">
+                            <p className="text-xs text-zinc-500 mb-1">Qualidade</p>
+                            <p className="text-sm font-semibold text-white">{selectedFormat.quality}</p>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Download Button */}
+                      <div className="pt-4">
+                        <a 
+                          href={selectedFormat.download_url} 
+                          download
+                          className="block"
                         >
-                          <Download className="h-5 w-5 mr-2" />
-                          Baixar Agora
-                        </Button>
-                      </a>
-                      <p className="text-xs text-zinc-500 text-center mt-4">
-                        {getSourceLabel(selectedFormat.source)}
-                      </p>
+                          <Button 
+                            size="lg" 
+                            className="w-full bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40 transition-all duration-300 h-12 text-base font-semibold"
+                          >
+                            <Download className="h-5 w-5 mr-2" />
+                            Baixar Agora
+                          </Button>
+                        </a>
+                        <p className="text-xs text-zinc-500 text-center mt-4">
+                          {getSourceLabel(selectedFormat.source)}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           )}
 

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import connectDB from '@backend/lib/mongodb';
+import { connectDB } from '@backend/lib/database';
+import prisma from '@backend/lib/database';
 import User from '@models/User';
 
 export async function GET(
@@ -11,7 +12,21 @@ export async function GET(
     
     await connectDB();
     
-    const user = await User.findById(id).select('-password');
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        plan: true,
+        isActive: true,
+        createdAt: true,
+        lastLoginAt: true,
+        emailVerified: true,
+        image: true,
+      }
+    });
     
     if (!user) {
       return NextResponse.json({ message: 'Usuário não encontrado' }, { status: 404 });
@@ -36,19 +51,32 @@ export async function PUT(
     
     // Remover campos que não devem ser atualizados diretamente
     delete updates.password;
-    delete updates._id;
+    delete updates.id;
     
-    const user = await User.findByIdAndUpdate(
-      id,
-      { $set: updates },
-      { new: true }
-    ).select('-password');
+    const user = await User.findByIdAndUpdate(id, updates);
     
-    if (!user) {
+    // Buscar sem password
+    const userWithoutPassword = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        plan: true,
+        isActive: true,
+        createdAt: true,
+        lastLoginAt: true,
+        emailVerified: true,
+        image: true,
+      }
+    });
+    
+    if (!userWithoutPassword) {
       return NextResponse.json({ message: 'Usuário não encontrado' }, { status: 404 });
     }
 
-    return NextResponse.json({ message: 'Usuário atualizado', user }, { status: 200 });
+    return NextResponse.json({ message: 'Usuário atualizado', user: userWithoutPassword }, { status: 200 });
   } catch (error) {
     console.error('Failed to update user:', error);
     return NextResponse.json({ message: 'Erro ao atualizar usuário', error: (error as Error).message }, { status: 500 });
@@ -78,7 +106,7 @@ export async function DELETE(
       }, { status: 403 });
     }
     
-    await User.findByIdAndDelete(id);
+    await prisma.user.delete({ where: { id } });
 
     return NextResponse.json({ message: 'Usuário excluído com sucesso' }, { status: 200 });
   } catch (error) {

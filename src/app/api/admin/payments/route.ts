@@ -1,23 +1,33 @@
 import { NextResponse } from 'next/server';
-import connectDB from '@backend/lib/mongodb';
-import Payment from '@models/Payment';
+import { connectDB } from '@backend/lib/database';
+import prisma from '@backend/lib/database';
 
 export async function GET() {
   try {
     await connectDB();
     
-    const payments = await Payment.find({})
-      .populate('userId', 'name email')
-      .sort({ createdAt: -1 })
-      .limit(100);
+    const payments = await prisma.payment.findMany({
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 100
+    });
 
     const formattedPayments = payments.map(p => ({
-      id: p._id.toString(),
-      abacatePayBillingId: p.abacatePayBillingId,
-      userId: p.userId?._id?.toString(),
-      userName: (p.userId as { name?: string })?.name || 'Usuário',
-      userEmail: (p.userId as { email?: string })?.email || '',
-      amount: p.amount / 100, // converter de centavos para reais
+      id: p.id,
+      stripeSessionId: p.stripeSessionId,
+      stripeSubscriptionId: p.stripeSubscriptionId,
+      userId: p.userId,
+      userName: p.user?.name || 'Usuário',
+      userEmail: p.user?.email || '',
+      amount: p.amount / 100, // converter de centavos para dólares
       currency: p.currency,
       method: p.method,
       status: p.status,
@@ -27,14 +37,14 @@ export async function GET() {
     }));
 
     // Estatísticas
-    const totalRevenue = await Payment.aggregate([
-      { $match: { status: 'paid' } },
-      { $group: { _id: null, total: { $sum: '$amount' } } }
-    ]);
+    const totalRevenueResult = await prisma.payment.aggregate({
+      where: { status: 'paid' },
+      _sum: { amount: true }
+    });
 
     const stats = {
       totalPayments: payments.length,
-      totalRevenue: (totalRevenue[0]?.total || 0) / 100,
+      totalRevenue: (totalRevenueResult._sum.amount || 0) / 100,
       pendingCount: payments.filter(p => p.status === 'pending').length,
       paidCount: payments.filter(p => p.status === 'paid').length,
     };

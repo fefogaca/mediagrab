@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import jwt from 'jsonwebtoken';
-import mongoose from 'mongoose';
-import connectDB from '@/backend/lib/mongodb';
+import { connectDB } from '@/backend/lib/database';
+import prisma from '@/backend/lib/database';
+import { getJWTSecret } from '@backend/lib/secrets';
 
-const JWT_SECRET = process.env.JWT_SECRET || '';
+const JWT_SECRET = getJWTSecret();
 
 interface DecodedToken {
   id: string;
@@ -36,56 +37,47 @@ export async function GET() {
     // Conectar ao banco
     await connectDB();
 
-    // Verificar status da conexão
-    const isConnected = mongoose.connection.readyState === 1;
-    
-    if (!isConnected) {
-      return NextResponse.json({
-        connected: false,
-        type: 'MongoDB',
-        collections: 0,
-        collectionNames: [],
-      });
-    }
+    // Verificar status da conexão testando uma query simples
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      
+      // Obter contagem de tabelas principais
+      const userCount = await prisma.user.count();
+      const apiKeyCount = await prisma.apiKey.count();
+      const paymentCount = await prisma.payment.count();
+      const downloadLogCount = await prisma.downloadLog.count();
+      
+      const tableNames = ['users', 'api_keys', 'payments', 'download_logs', 'notifications', 'coupons', 'plans', 'accounts', 'sessions', 'verification_tokens'];
 
-    // Obter lista de coleções
-    const db = mongoose.connection.db;
-    if (!db) {
       return NextResponse.json({
         connected: true,
-        type: 'MongoDB',
-        collections: 0,
-        collectionNames: [],
-        message: 'Conexão ativa, mas banco não disponível',
+        type: 'PostgreSQL (Supabase)',
+        tables: tableNames.length,
+        tableNames,
+        stats: {
+          users: userCount,
+          apiKeys: apiKeyCount,
+          payments: paymentCount,
+          downloadLogs: downloadLogCount,
+        },
+      });
+    } catch (dbError) {
+      return NextResponse.json({
+        connected: false,
+        type: 'PostgreSQL (Supabase)',
+        tables: 0,
+        tableNames: [],
+        error: dbError instanceof Error ? dbError.message : 'Erro ao conectar',
       });
     }
-
-    const collections = await db.listCollections().toArray();
-    const collectionNames = collections.map(c => c.name);
-
-    // Obter estatísticas básicas
-    const stats = await db.stats();
-
-    return NextResponse.json({
-      connected: true,
-      type: 'MongoDB',
-      collections: collectionNames.length,
-      collectionNames,
-      stats: {
-        dataSize: stats.dataSize,
-        storageSize: stats.storageSize,
-        indexes: stats.indexes,
-        objects: stats.objects,
-      },
-    });
 
   } catch (error) {
     console.error('Erro ao verificar banco:', error);
     return NextResponse.json({
       connected: false,
-      type: 'MongoDB',
-      collections: 0,
-      collectionNames: [],
+      type: 'PostgreSQL (Supabase)',
+      tables: 0,
+      tableNames: [],
       error: error instanceof Error ? error.message : 'Erro desconhecido',
     });
   }

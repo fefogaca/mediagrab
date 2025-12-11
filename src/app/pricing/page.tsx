@@ -28,109 +28,56 @@ export default function PricingPage() {
   const { t, language } = useTranslation();
   const plans = [
     {
-      name: "Free",
-      description: "Perfeito para testar",
+      name: t.pricing.plans.free.name,
+      description: t.pricing.plans.free.description,
       price: "0",
       icon: Star,
       color: "zinc",
-      features: [
-        "5 requests/mês",
-        "1 API Key",
-        "Qualidade SD (480p)",
-        "Sem marca d'água",
-        "Suporte por email",
-      ],
-      limitations: [
-        "Rate limit: 5 req/min",
-      ],
-      cta: "Começar Grátis",
+      features: t.pricing.plans.free.features,
+      limitations: [],
+      cta: t.pricing.plans.free.cta,
       popular: false,
       href: "/register",
     },
     {
-      name: "Developer",
-      description: "Para desenvolvedores individuais",
-      price: "10,00",
+      name: t.pricing.plans.developer.name,
+      description: t.pricing.plans.developer.description,
+      price: "2.00",
       icon: Zap,
       color: "blue",
-      features: [
-        "1.000 requests/mês",
-        "5 API Keys",
-        "Qualidade HD (1080p)",
-        "Sem marca d'água",
-        "Suporte prioritário",
-        "Rate limit: 60 req/min",
-      ],
+      features: t.pricing.plans.developer.features,
       limitations: [],
-      cta: "Assinar Agora",
+      cta: t.pricing.plans.developer.cta,
       popular: false,
       href: "/register?plan=developer",
     },
     {
-      name: "Startup",
-      description: "Para pequenas empresas",
-      price: "30,00",
+      name: t.pricing.plans.startup.name,
+      description: t.pricing.plans.startup.description,
+      price: "6.00",
       icon: Rocket,
       color: "purple",
-      features: [
-        "10.000 requests/mês",
-        "20 API Keys",
-        "Qualidade 4K",
-        "Sem marca d'água",
-        "Suporte 24/7",
-        "Rate limit: 200 req/min",
-        "Analytics detalhados",
-      ],
+      features: t.pricing.plans.startup.features,
       limitations: [],
-      cta: "Assinar Agora",
+      cta: t.pricing.plans.startup.cta,
       popular: true,
       href: "/register?plan=startup",
     },
     {
-      name: "Enterprise",
-      description: "Para grandes empresas",
-      price: "50,00",
+      name: t.pricing.plans.enterprise.name,
+      description: t.pricing.plans.enterprise.description,
+      price: "10.00",
       icon: Crown,
       color: "amber",
-      features: [
-        "Requests ilimitados",
-        "API Keys ilimitadas",
-        "Qualidade 8K",
-        "Sem marca d'água",
-        "Suporte dedicado",
-        "Rate limit: ilimitado",
-        "Analytics avançados",
-        "SLA garantido (99.9%)",
-      ],
+      features: t.pricing.plans.enterprise.features,
       limitations: [],
-      cta: "Assinar Agora",
+      cta: t.pricing.plans.enterprise.cta,
       popular: false,
       href: "/register?plan=enterprise",
     },
   ];
 
-  const faqs = [
-    {
-      question: "Posso mudar de plano a qualquer momento?",
-      answer: "Sim! Você pode fazer upgrade ou downgrade do seu plano a qualquer momento. As mudanças são aplicadas imediatamente.",
-    },
-    {
-      question: "Como funciona o limite de downloads?",
-      answer: "O limite é resetado todo mês. Downloads bem-sucedidos contam para o limite. Se você exceder, pode fazer upgrade ou aguardar o próximo mês.",
-    },
-    {
-      question: "Quais formas de pagamento são aceitas?",
-      answer: "Aceitamos PIX, cartão de crédito (Visa, Mastercard, Elo) e boleto bancário através do AbacatePay.",
-    },
-    {
-      question: "Tem garantia de reembolso?",
-      answer: "Sim! Oferecemos garantia de 7 dias. Se não ficar satisfeito, devolvemos seu dinheiro sem perguntas.",
-    },
-    {
-      question: "O que acontece se eu exceder o rate limit?",
-      answer: "Suas requisições serão temporariamente bloqueadas até o período de rate limit resetar (geralmente 1 minuto).",
-    },
-  ];
+  const faqs = t.pricing.faq.items;
 
   return (
     <div className="min-h-screen bg-zinc-950">
@@ -219,29 +166,29 @@ export default function PricingPage() {
       <section className="py-20 px-4 bg-zinc-900/30">
         <div className="max-w-5xl mx-auto">
           <h2 className="text-3xl font-bold text-white text-center mb-12">
-            Compare os planos
+            {t.pricing.comparison}
           </h2>
           
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-zinc-800">
-                  <th className="text-left py-4 px-4 text-zinc-400 font-medium">Recurso</th>
-                  <th className="py-4 px-4 text-zinc-300 font-medium">Free</th>
-                  <th className="py-4 px-4 text-zinc-300 font-medium">Developer</th>
-                  <th className="py-4 px-4 text-zinc-300 font-medium">Startup</th>
-                  <th className="py-4 px-4 text-zinc-300 font-medium">Enterprise</th>
+                  <th className="text-left py-4 px-4 text-zinc-400 font-medium">{t.pricing.features.requests}</th>
+                  <th className="py-4 px-4 text-zinc-300 font-medium">{t.pricing.plans.free.name}</th>
+                  <th className="py-4 px-4 text-zinc-300 font-medium">{t.pricing.plans.developer.name}</th>
+                  <th className="py-4 px-4 text-zinc-300 font-medium">{t.pricing.plans.startup.name}</th>
+                  <th className="py-4 px-4 text-zinc-300 font-medium">{t.pricing.plans.enterprise.name}</th>
                 </tr>
               </thead>
               <tbody>
                 {[
-                  { feature: "Requests/mês", values: ["5", "1.000", "10.000", "Ilimitado"] },
-                  { feature: "API Keys", values: ["1", "5", "20", "Ilimitado"] },
-                  { feature: "Qualidade máxima", values: ["480p", "1080p", "4K", "8K"] },
-                  { feature: "Rate limit", values: ["5/min", "60/min", "200/min", "Ilimitado"] },
-                  { feature: "Sem marca d'água", values: [true, true, true, true] },
-                  { feature: "Suporte", values: ["Email", "Prioritário", "24/7", "Dedicado"] },
-                  { feature: "SLA", values: [false, false, false, true] },
+                  { feature: t.pricing.features.requests, values: ["5", "1.000", "10.000", t.common.unlimited || "Ilimitado"] },
+                  { feature: t.pricing.features.apiKeys, values: ["1", "5", "20", t.common.unlimited || "Ilimitado"] },
+                  { feature: t.pricing.features.quality, values: ["480p", "1080p", "4K", "8K"] },
+                  { feature: t.pricing.features.rateLimit, values: ["5/min", "60/min", "200/min", t.common.unlimited || "Ilimitado"] },
+                  { feature: t.pricing.features.noWatermark, values: [true, true, true, true] },
+                  { feature: t.pricing.features.support, values: [t.pricing.plans.free.features[4], t.pricing.plans.developer.features[4], t.pricing.plans.startup.features[4], t.pricing.plans.enterprise.features[4]] },
+                  { feature: t.pricing.features.sla, values: [false, false, false, true] },
                 ].map((row) => (
                   <tr key={row.feature} className="border-b border-zinc-800/50">
                     <td className="py-4 px-4 text-zinc-400">{row.feature}</td>

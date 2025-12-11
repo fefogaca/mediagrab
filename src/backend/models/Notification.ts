@@ -1,113 +1,61 @@
-import mongoose, { Schema, Document, Model } from 'mongoose';
+// Wrapper para compatibilidade com código existente
+import prisma from '../lib/database';
+import type { Notification as PrismaNotification, Prisma } from '@prisma/client';
 
-export interface INotification extends Document {
-  _id: mongoose.Types.ObjectId;
-  
-  // Conteúdo
-  title: string;
-  message: string;
-  type: 'info' | 'warning' | 'success' | 'error';
-  
-  // Alvo
-  targetAudience: 'all' | 'admins' | 'users' | 'specific';
-  targetUserId?: mongoose.Types.ObjectId;
-  
-  // Criador
-  createdBy?: mongoose.Types.ObjectId;
-  
-  // Status de leitura (por usuário)
-  readBy: {
-    userId: mongoose.Types.ObjectId;
-    readAt: Date;
-  }[];
-  
-  // Metadados
-  link?: string;
-  icon?: string;
-  priority: 'low' | 'normal' | 'high';
-  
-  // Timestamps
-  createdAt: Date;
-  updatedAt: Date;
-  expiresAt?: Date;
-}
+export type INotification = PrismaNotification;
 
-const NotificationSchema = new Schema<INotification>({
-  // Conteúdo
-  title: {
-    type: String,
-    required: [true, 'Título é obrigatório'],
-    trim: true,
-    maxlength: 200,
+export const Notification = {
+  findOne: async (query: { _id?: string; id?: string }) => {
+    if (query._id || query.id) {
+      return await prisma.notification.findUnique({ where: { id: query._id || query.id } });
+    }
+    return null;
   },
-  message: {
-    type: String,
-    required: [true, 'Mensagem é obrigatória'],
-    trim: true,
-    maxlength: 1000,
-  },
-  type: {
-    type: String,
-    enum: ['info', 'warning', 'success', 'error'],
-    default: 'info',
-  },
-  
-  // Alvo
-  targetAudience: {
-    type: String,
-    enum: ['all', 'admins', 'users', 'specific'],
-    default: 'all',
-  },
-  targetUserId: {
-    type: Schema.Types.ObjectId,
-    ref: 'User',
-  },
-  
-  // Criador
-  createdBy: {
-    type: Schema.Types.ObjectId,
-    ref: 'User',
-  },
-  
-  // Leitura
-  readBy: [{
-    userId: {
-      type: Schema.Types.ObjectId,
-      ref: 'User',
-      required: true,
-    },
-    readAt: {
-      type: Date,
-      default: Date.now,
-    },
-  }],
-  
-  // Metadados
-  link: String,
-  icon: String,
-  priority: {
-    type: String,
-    enum: ['low', 'normal', 'high'],
-    default: 'normal',
-  },
-  
-  expiresAt: Date,
-}, {
-  timestamps: true,
-});
 
-// Índices
-NotificationSchema.index({ targetAudience: 1, createdAt: -1 });
-NotificationSchema.index({ targetUserId: 1, createdAt: -1 });
-NotificationSchema.index({ createdAt: -1 });
-NotificationSchema.index({ 'readBy.userId': 1 });
+  findById: async (id: string) => {
+    return await prisma.notification.findUnique({ where: { id } });
+  },
 
-// Virtual para verificar se um usuário leu
-NotificationSchema.methods.isReadBy = function(userId: mongoose.Types.ObjectId): boolean {
-  return this.readBy.some((r: { userId: mongoose.Types.ObjectId }) => r.userId.equals(userId));
+  findByIdAndUpdate: async (id: string, data: Prisma.NotificationUpdateInput) => {
+    return await prisma.notification.update({ where: { id }, data });
+  },
+
+  findByIdAndDelete: async (id: string) => {
+    return await prisma.notification.delete({ where: { id } });
+  },
+
+  create: async (data: Prisma.NotificationCreateInput) => {
+    return await prisma.notification.create({ data });
+  },
+
+  find: async (query?: Prisma.NotificationWhereInput, options?: { limit?: number; skip?: number; orderBy?: Prisma.NotificationOrderByWithRelationInput }) => {
+    const result = await prisma.notification.findMany({ 
+      where: query,
+      ...(options?.limit && { take: options.limit }),
+      ...(options?.skip && { skip: options.skip }),
+      ...(options?.orderBy && { orderBy: options.orderBy }),
+    });
+    return {
+      ...result,
+      sort: (sortObj: any) => {
+        const orderBy: Prisma.NotificationOrderByWithRelationInput = {};
+        for (const [key, value] of Object.entries(sortObj)) {
+          orderBy[key as keyof Prisma.NotificationOrderByWithRelationInput] = value === -1 ? 'desc' : 'asc';
+        }
+        return prisma.notification.findMany({ 
+          where: query,
+          orderBy,
+          ...(options?.limit && { take: options.limit }),
+          ...(options?.skip && { skip: options.skip }),
+        });
+      },
+      lean: () => result,
+    };
+  },
+
+  count: async (query?: Prisma.NotificationWhereInput) => {
+    return await prisma.notification.count({ where: query });
+  },
 };
 
-const Notification: Model<INotification> = mongoose.models.Notification || mongoose.model<INotification>('Notification', NotificationSchema);
-
 export default Notification;
-

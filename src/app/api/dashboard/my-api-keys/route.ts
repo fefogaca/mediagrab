@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import jwt from 'jsonwebtoken';
-import connectDB from '@/backend/lib/mongodb';
+import { connectDB } from '@/backend/lib/database';
 import ApiKey from '@/backend/models/ApiKey';
+import { getJWTSecret } from '@backend/lib/secrets';
 
-const JWT_SECRET = process.env.JWT_SECRET || '';
+const JWT_SECRET = getJWTSecret();;
 
 interface DecodedToken {
   id: string;
@@ -35,13 +36,11 @@ export async function GET() {
 
     await connectDB();
     
-    const apiKeys = await ApiKey.find({ userId: userData.id })
-      .sort({ createdAt: -1 })
-      .lean();
+    const apiKeys = await ApiKey.find({ userId: userData.id });
 
     // Transformar para formato esperado pelo frontend
-    const formattedKeys = apiKeys.map(key => ({
-      id: key._id.toString(),
+    const formattedKeys = apiKeys.map((key: any) => ({
+      id: key.id,
       key: key.key,
       created_at: key.createdAt,
       expires_at: key.expiresAt,

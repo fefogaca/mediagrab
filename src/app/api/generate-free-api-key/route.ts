@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import connectDB from '@backend/lib/mongodb';
-import User from '@backend/models/User';
+import { connectDB } from '@backend/lib/database';
+import prisma from '@backend/lib/database';
 import ApiKey from '@backend/models/ApiKey';
 import crypto from 'crypto';
 
@@ -8,17 +8,21 @@ export async function POST() {
   try {
     await connectDB();
 
-    // Find the guest user to associate the key with
-    let guestUser = await User.findOne({ email: 'guest@mediagrab.com' });
+    // Find the guest user to associate the key with using Prisma diretamente
+    let guestUser = await prisma.user.findUnique({
+      where: { email: 'guest@mediagrab.com' }
+    });
     
     if (!guestUser) {
-      // Create guest user if not exists
-      guestUser = await User.create({
-        name: 'Guest User',
-        email: 'guest@mediagrab.com',
-        password: crypto.randomBytes(32).toString('hex'),
-        role: 'user',
-        plan: 'free',
+      // Create guest user if not exists using Prisma diretamente
+      guestUser = await prisma.user.create({
+        data: {
+          name: 'Guest User',
+          email: 'guest@mediagrab.com',
+          password: crypto.randomBytes(32).toString('hex'),
+          role: 'user',
+          plan: 'free',
+        }
       });
     }
 
@@ -33,7 +37,7 @@ export async function POST() {
     await ApiKey.create({
       key: apiKey,
       name: 'Free Trial Key',
-      userId: guestUser._id,
+      userId: guestUser.id,
       usageLimit: 5,
       expiresAt,
       isActive: true,

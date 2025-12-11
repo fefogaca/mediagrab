@@ -45,8 +45,8 @@ interface Settings {
 interface DbStatus {
   connected: boolean;
   type: string;
-  collections: number;
-  collectionNames: string[];
+  tables: number;
+  tableNames: string[];
 }
 
 export default function SettingsPage() {
@@ -66,9 +66,9 @@ export default function SettingsPage() {
 
   const [dbStatus, setDbStatus] = useState<DbStatus>({
     connected: false,
-    type: "MongoDB",
-    collections: 0,
-    collectionNames: [],
+    type: "PostgreSQL",
+    tables: 0,
+    tableNames: [],
   });
 
   const [loading, setLoading] = useState(true);
@@ -103,9 +103,9 @@ export default function SettingsPage() {
       const data = await response.json();
       setDbStatus({
         connected: data.connected,
-        type: data.type || "MongoDB",
-        collections: data.collections || 0,
-        collectionNames: data.collectionNames || [],
+        type: data.type || "PostgreSQL",
+        tables: data.tables || 0,
+        tableNames: data.tableNames || [],
       });
       if (data.connected) {
         toast.success("Conexão com o banco verificada!");
@@ -116,9 +116,9 @@ export default function SettingsPage() {
       console.error("Erro ao verificar banco:", error);
       setDbStatus({
         connected: false,
-        type: "MongoDB",
-        collections: 0,
-        collectionNames: [],
+        type: "PostgreSQL",
+        tables: 0,
+        tableNames: [],
       });
       toast.error("Erro ao verificar conexão");
     } finally {
@@ -394,20 +394,20 @@ export default function SettingsPage() {
             </div>
             <div className="flex items-center justify-between p-3 rounded-lg bg-zinc-800/50">
               <div>
-                <p className="text-sm text-zinc-300">{t.admin.settings.database.collections}</p>
+                <p className="text-sm text-zinc-300">{t.admin.settings.database.collections || 'Tabelas'}</p>
                 <p className="text-xs text-zinc-500">
-                  {dbStatus.collections} {t.admin.settings.database.collections}
+                  {dbStatus.tables} {t.admin.settings.database.collections || 'Tabelas'}
                 </p>
               </div>
               <Badge variant="outline" className="border-zinc-600 text-zinc-400">
-                {dbStatus.collections}
+                {dbStatus.tables}
               </Badge>
             </div>
-            {dbStatus.collectionNames.length > 0 && (
+            {dbStatus.tableNames.length > 0 && (
               <div className="p-3 rounded-lg bg-zinc-800/50">
-                <p className="text-sm text-zinc-300 mb-2">{t.admin.settings.database.collectionNames}:</p>
+                <p className="text-sm text-zinc-300 mb-2">{t.admin.settings.database.collectionNames || 'Tabelas'}:</p>
                 <div className="flex flex-wrap gap-1">
-                  {dbStatus.collectionNames.map((name) => (
+                  {dbStatus.tableNames.map((name) => (
                     <Badge key={name} variant="outline" className="text-xs border-zinc-700 text-zinc-400">
                       {name}
                     </Badge>

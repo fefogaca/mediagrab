@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
-import connectDB from '@backend/lib/mongodb';
-import User from '@models/User';
+import { connectDB } from '@backend/lib/database';
+import prisma from '@backend/lib/database';
 import { cookies } from 'next/headers';
+import { getJWTSecret } from '@backend/lib/secrets';
 
-const JWT_SECRET: string = process.env.JWT_SECRET as string;
+const JWT_SECRET = getJWTSecret();
 
 export async function GET() {
   try {
@@ -18,11 +19,25 @@ export async function GET() {
     // Verificar token
     const decoded = jwt.verify(token, JWT_SECRET) as { id: string };
     
-    // Conectar ao MongoDB
+    // Conectar ao banco de dados
     await connectDB();
     
-    // Buscar usuário
-    const user = await User.findById(decoded.id);
+    // Buscar usuário usando Prisma diretamente
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        fullName: true,
+        role: true,
+        plan: true,
+        planExpiresAt: true,
+        image: true,
+        twoFactor: true,
+        createdAt: true,
+      }
+    });
 
     if (!user) {
       return NextResponse.json({ message: 'Usuário não encontrado' }, { status: 404 });
@@ -30,7 +45,7 @@ export async function GET() {
 
     return NextResponse.json({
       user: {
-        id: user._id.toString(),
+        id: user.id,
         email: user.email,
         name: user.name,
         fullName: user.fullName,

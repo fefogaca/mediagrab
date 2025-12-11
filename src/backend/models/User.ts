@@ -1,184 +1,121 @@
-import mongoose, { Schema, Document, Model } from 'mongoose';
+// Wrapper para compatibilidade com código existente
+// Agora usando Prisma ao invés de Mongoose
+import prisma from '../lib/database';
+import type { User as PrismaUser, Prisma } from '@prisma/client';
 
-// Interface para endereço
-export interface IAddress {
-  street: string;
-  number: string;
-  complement?: string;
-  neighborhood: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  country: string;
-}
+export type IUser = PrismaUser;
 
-// Interface para 2FA
-export interface ITwoFactor {
-  enabled: boolean;
-  secret?: string;
-  backupCodes?: string[];
-  verifiedAt?: Date;
-}
+// Helper functions para manter compatibilidade
+export const User = {
+  // Find operations
 
-// Interface principal do usuário
-export interface IUser extends Document {
-  _id: mongoose.Types.ObjectId;
-  email: string;
-  password?: string;
-  name: string;
-  image?: string;
-  
-  // Dados pessoais para AbacatePay
-  fullName: string;
-  taxId: string; // CPF (Brasil) ou NIF (Portugal)
-  taxIdType: 'CPF' | 'NIF' | 'OTHER';
-  phone: string;
-  address: IAddress;
-  
-  // Autenticação
-  emailVerified?: Date;
-  provider?: string; // google, github, credentials, etc.
-  providerId?: string;
-  
-  // 2FA
-  twoFactor: ITwoFactor;
-  
-  // Perfil e permissões
-  role: 'admin' | 'user' | 'guest';
-  plan: 'free' | 'developer' | 'startup' | 'enterprise';
-  planExpiresAt?: Date;
-  
-  // Metadados
-  isActive: boolean;
-  lastLoginAt?: Date;
-  createdAt: Date;
-  updatedAt: Date;
-  
-  // AbacatePay Customer ID
-  abacatePayCustomerId?: string;
-}
+  findById: async (id: string) => {
+    const result = await prisma.user.findUnique({ where: { id } });
+    if (!result) return null;
+    return {
+      ...result,
+      select: (selectObj: any) => {
+        return prisma.user.findUnique({ where: { id }, select: selectObj });
+      },
+    };
+  },
 
-const AddressSchema = new Schema<IAddress>({
-  street: { type: String, default: '' },
-  number: { type: String, default: '' },
-  complement: { type: String },
-  neighborhood: { type: String, default: '' },
-  city: { type: String, default: '' },
-  state: { type: String, default: '' },
-  zipCode: { type: String, default: '' },
-  country: { type: String, default: 'Brasil' },
-}, { _id: false });
+  findByIdAndUpdate: async (id: string, data: Prisma.UserUpdateInput) => {
+    return await prisma.user.update({ where: { id }, data });
+  },
 
-const TwoFactorSchema = new Schema<ITwoFactor>({
-  enabled: { type: Boolean, default: false },
-  secret: { type: String },
-  backupCodes: [{ type: String }],
-  verifiedAt: { type: Date },
-}, { _id: false });
+  create: async (data: Prisma.UserCreateInput) => {
+    return await prisma.user.create({ data });
+  },
 
-const UserSchema = new Schema<IUser>({
-  email: {
-    type: String,
-    required: [true, 'Email é obrigatório'],
-    unique: true,
-    lowercase: true,
-    trim: true,
-    match: [/^\S+@\S+\.\S+$/, 'Email inválido'],
-  },
-  password: {
-    type: String,
-    minlength: [8, 'A senha deve ter pelo menos 8 caracteres'],
-  },
-  name: {
-    type: String,
-    required: [true, 'Nome é obrigatório'],
-    trim: true,
-  },
-  image: String,
-  
-  // Dados pessoais
-  fullName: {
-    type: String,
-    trim: true,
-    default: '',
-  },
-  taxId: {
-    type: String,
-    trim: true,
-    default: '',
-  },
-  taxIdType: {
-    type: String,
-    enum: ['CPF', 'NIF', 'OTHER'],
-    default: 'CPF',
-  },
-  phone: {
-    type: String,
-    trim: true,
-    default: '',
-  },
-  address: {
-    type: AddressSchema,
-    default: () => ({}),
+  find: async (query?: Prisma.UserWhereInput) => {
+    const result = await prisma.user.findMany({ where: query });
+    // Adicionar métodos chain para compatibilidade
+    return {
+      ...result,
+      select: (selectObj: any) => {
+        return prisma.user.findMany({ 
+          where: query,
+          select: selectObj 
+        });
+      },
+      sort: (sortObj: any) => {
+        const orderBy: Prisma.UserOrderByWithRelationInput = {};
+        for (const [key, value] of Object.entries(sortObj)) {
+          orderBy[key as keyof Prisma.UserOrderByWithRelationInput] = value === -1 ? 'desc' : 'asc';
+        }
+        return prisma.user.findMany({ where: query, orderBy });
+      },
+      lean: () => result,
+    };
   },
   
-  // Autenticação
-  emailVerified: Date,
-  provider: {
-    type: String,
-    default: 'credentials',
+  findOne: async (query: { email?: string; _id?: string; id?: string; role?: string }) => {
+    // Se for busca por email ou id, usar findUnique
+    if (query.email) {
+      const result = await prisma.user.findUnique({ 
+        where: { email: query.email }
+      });
+      if (!result) return null;
+      return {
+        ...result,
+        select: (selectObj: any) => {
+          return prisma.user.findUnique({ 
+            where: { email: query.email! },
+            select: selectObj 
+          });
+        },
+      };
+    }
+    
+    if (query._id || query.id) {
+      const result = await prisma.user.findUnique({ 
+        where: { id: query._id || query.id || '' }
+      });
+      if (!result) return null;
+      return {
+        ...result,
+        select: (selectObj: any) => {
+          return prisma.user.findUnique({ 
+            where: { id: query._id || query.id || '' },
+            select: selectObj 
+          });
+        },
+      };
+    }
+    
+    // Se for busca por role ou outros campos, usar findFirst
+    if (query.role) {
+      const result = await prisma.user.findFirst({ 
+        where: { role: query.role }
+      });
+      if (!result) return null;
+      return {
+        ...result,
+        select: (selectObj: any) => {
+          return prisma.user.findFirst({ 
+            where: { role: query.role! },
+            select: selectObj 
+          });
+        },
+      };
+    }
+    
+    return null;
   },
-  providerId: String,
-  
-  // 2FA
-  twoFactor: {
-    type: TwoFactorSchema,
-    default: () => ({ enabled: false }),
-  },
-  
-  // Perfil e permissões
-  role: {
-    type: String,
-    enum: ['admin', 'user', 'guest'],
-    default: 'user',
-  },
-  plan: {
-    type: String,
-    enum: ['free', 'developer', 'startup', 'enterprise'],
-    default: 'free',
-  },
-  planExpiresAt: Date,
-  
-  // Metadados
-  isActive: {
-    type: Boolean,
-    default: true,
-  },
-  lastLoginAt: Date,
-  
-  // AbacatePay
-  abacatePayCustomerId: String,
-}, {
-  timestamps: true,
-});
 
-// Índices
-UserSchema.index({ email: 1 });
-UserSchema.index({ provider: 1, providerId: 1 });
-UserSchema.index({ role: 1 });
-UserSchema.index({ plan: 1 });
-UserSchema.index({ createdAt: -1 });
+  count: async (query?: Prisma.UserWhereInput) => {
+    return await prisma.user.count({ where: query });
+  },
+  
+  countDocuments: async (query?: Prisma.UserWhereInput) => {
+    return await prisma.user.count({ where: query });
+  },
 
-// Método para ocultar campos sensíveis
-UserSchema.methods.toJSON = function() {
-  const user = this.toObject();
-  delete user.password;
-  delete user.twoFactor?.secret;
-  delete user.twoFactor?.backupCodes;
-  return user;
+  // Aggregation
+  aggregate: async (args: Prisma.UserAggregateArgs) => {
+    return await prisma.user.aggregate(args);
+  },
 };
 
-const User: Model<IUser> = mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
-
 export default User;
-

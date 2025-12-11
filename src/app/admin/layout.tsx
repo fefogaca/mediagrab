@@ -32,6 +32,7 @@ import {
   Shield,
   Globe,
   ArrowLeft,
+  Play,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LogoSmallContrast } from '@frontend/components/shared/Logo';
@@ -50,6 +51,7 @@ const getAdminSidebarItems = (t: any) => [
   { href: '/admin', label: t.admin.sidebar.dashboard, icon: LayoutDashboard },
   { href: '/admin/users', label: t.admin.sidebar.users, icon: Users },
   { href: '/admin/api-keys', label: t.admin.sidebar.apiKeys, icon: Key },
+  { href: '/admin/test-area', label: t.admin.sidebar.testArea, icon: Play },
   { href: '/admin/downloads', label: t.admin.sidebar.downloads, icon: Download },
   { href: '/admin/payments', label: t.admin.sidebar.payments, icon: CreditCard },
   { href: '/admin/analytics', label: t.admin.sidebar.analytics, icon: BarChart3 },
@@ -128,10 +130,10 @@ export default function AdminLayout({
   const handleLogout = async () => {
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
-      toast.success(language === 'pt' ? 'Logout realizado com sucesso!' : 'Logout successful!');
+      toast.success(t.common.success);
       router.push('/');
     } catch {
-      toast.error(language === 'pt' ? 'Erro ao fazer logout' : 'Error logging out');
+      toast.error(t.common.error);
     }
   };
 
@@ -140,7 +142,7 @@ export default function AdminLayout({
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-emerald-500" />
-          <p className="text-zinc-400">{language === 'pt' ? 'Carregando...' : 'Loading...'}</p>
+          <p className="text-zinc-400">{t.common.loading}</p>
         </div>
       </div>
     );
@@ -185,10 +187,10 @@ export default function AdminLayout({
           {/* Admin Badge */}
           <div className="px-4 py-3 border-b border-zinc-800">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-zinc-400">Painel</span>
+              <span className="text-sm text-zinc-400">{t.admin.dashboard.title}</span>
               <Badge className="bg-red-500/10 text-red-400 border-red-500/30">
                 <Shield className="h-3 w-3 mr-1" />
-                Admin
+                {t.admin.administrator}
               </Badge>
             </div>
           </div>
@@ -243,7 +245,7 @@ export default function AdminLayout({
                 <DropdownMenuItem asChild>
                   <Link href="/" className="text-zinc-300 focus:bg-zinc-800 focus:text-white cursor-pointer">
                     <ArrowLeft className="mr-2 h-4 w-4" />
-                    {language === 'pt' ? 'Página Inicial' : 'Home'}
+                    {t.common.back}
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
@@ -288,7 +290,7 @@ export default function AdminLayout({
               <Link href="/">
                 <Button variant="outline" className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 text-sm">
                   <ArrowLeft className="h-4 w-4 mr-2" />
-                  {language === 'pt' ? 'Página Inicial' : 'Home'}
+                  {t.common.back}
                 </Button>
               </Link>
             </div>

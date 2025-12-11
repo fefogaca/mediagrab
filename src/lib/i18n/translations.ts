@@ -88,12 +88,19 @@ export const translations = {
       title: 'Escolha o plano ideal para você',
       subtitle: 'Planos flexíveis que crescem com seu negócio. Comece grátis e escale quando precisar.',
       popular: 'Mais Popular',
+      mostPopular: 'Mais Popular',
       month: '/mês',
       free: 'Grátis',
       startFree: 'Começar Grátis',
       subscribe: 'Assinar Agora',
       contactSales: 'Falar com Vendas',
       comparison: 'Compare os planos',
+      currentPlan: 'Plano Atual',
+      choosePlan: 'Escolher Plano',
+      alreadyOnPlan: 'Você já está neste plano',
+      cannotDowngrade: 'Não é possível fazer downgrade para o plano Free',
+      comingSoon: 'Pagamento em breve',
+      comingSoonDescription: 'O sistema de pagamento está sendo configurado e estará disponível em breve.',
       features: {
         requests: 'requests/mês',
         apiKeys: 'API Keys',
@@ -173,7 +180,7 @@ export const translations = {
           },
           {
             question: 'Quais formas de pagamento são aceitas?',
-            answer: 'Para brasileiros: PIX via AbacatePay. Para estrangeiros: Cartão de crédito via Stripe.',
+            answer: 'Aceitamos cartão de crédito (Visa, Mastercard, American Express) via Stripe.',
           },
           {
             question: 'Tem garantia de reembolso?',
@@ -225,9 +232,9 @@ export const translations = {
         title: 'Começando',
         description: 'Configure sua conta e faça sua primeira requisição',
         steps: [
-          'Crie uma conta gratuita',
+          'Obter API Key',
           'Gere sua API Key no dashboard',
-          'Faça sua primeira requisição',
+          'Fazer Requisição',
         ],
       },
       authentication: {
@@ -253,7 +260,7 @@ export const translations = {
       },
       platforms: {
         title: 'Plataformas Suportadas',
-        description: 'Lista de plataformas compatíveis',
+        description: 'E mais de 1000+ outros sites suportados pelo yt-dlp',
       },
       rateLimit: {
         title: 'Rate Limiting',
@@ -335,12 +342,15 @@ export const translations = {
         apiKeysActive: 'API Keys Ativas',
         requestsUsed: 'Requisições Usadas',
         planLimit: 'Limite do Plano',
+        successRate: 'Taxa de Sucesso',
       },
       actions: {
-        createApiKey: 'Criar API Key',
+        createApiKey: 'Gerenciar API Keys',
         viewDocs: 'Ver Documentação',
-        upgradePlan: 'Fazer Upgrade',
+        upgradePlan: 'Precisa de mais requests?',
       },
+      upgradeDescription: 'Faça upgrade do seu plano para obter mais downloads e funcionalidades',
+      viewPlans: 'Ver Planos',
     },
     // API Keys
     apiKeys: {
@@ -411,6 +421,41 @@ export const translations = {
         deleteWarning: 'Esta ação é irreversível e excluirá todos os seus dados.',
       },
     },
+    // Test Area
+    testArea: {
+      title: 'Área de Teste',
+      subtitle: 'Teste sua API e veja as respostas em tempo real',
+      testRequest: 'Testar Requisição',
+      description: 'Cole uma URL e teste a resposta da API',
+      urlLabel: 'URL do Vídeo',
+      urlPlaceholder: 'https://www.youtube.com/watch?v=...',
+      testButton: 'Testar API',
+      testing: 'Testando...',
+      response: 'Resposta da API',
+      error: 'Erro',
+      fullResponse: 'Resposta Completa',
+      success: 'Requisição realizada com sucesso!',
+      apiKeyActive: 'API Key ativa detectada',
+      noApiKey: 'Nenhuma API Key encontrada. Crie uma API Key primeiro.',
+      errors: {
+        urlRequired: 'Por favor, insira uma URL',
+        apiKeyRequired: 'Você precisa de uma API Key para testar',
+        requestFailed: 'Falha ao realizar requisição',
+      },
+      info: {
+        title: 'Dicas',
+        tip1: 'Este teste não consome suas requisições da API',
+        tip2: 'A resposta será exibida em formato JSON',
+        tip3: 'Você pode copiar a resposta clicando no botão de copiar',
+      },
+      requestStructure: {
+        title: 'Estrutura da Requisição',
+        baseUrl: 'URL Base',
+        endpoint: 'Endpoint',
+        parameters: 'Parâmetros',
+        fullUrl: 'URL Completa',
+      },
+    },
     // Footer
     footer: {
       description: 'A API mais poderosa para download de mídia de qualquer plataforma.',
@@ -419,37 +464,54 @@ export const translations = {
       support: 'Suporte',
       terms: 'Termos de Uso',
       privacy: 'Privacidade',
-      apiReference: 'API Reference',
+      apiReference: 'Referência da API',
       copyright: '© 2025 MediaGrab. Todos os direitos reservados.',
     },
     // Terms Page
     terms: {
       title: 'Termos de Uso',
       lastUpdated: 'Última atualização',
+      intro: 'Por favor, leia estes Termos de Serviço ("Termos", "Termos de Serviço") cuidadosamente antes de usar a API MediaGrab (o "Serviço") operada pelo MediaGrab ("nós", "nosso" ou "nosso").',
       sections: {
         acceptance: {
           title: '1. Aceitação dos Termos',
-          content: 'Ao acessar e usar o MediaGrab, você concorda em cumprir estes termos de uso.',
+          content: 'Ao acessar e usar o MediaGrab, você concorda em cumprir estes termos de uso. Se você discordar de qualquer parte dos termos, não poderá acessar o Serviço. Estes Termos e Condições estabelecem os direitos e obrigações de todos os usuários em relação ao uso do Serviço.',
         },
         service: {
           title: '2. Descrição do Serviço',
-          content: 'O MediaGrab oferece uma API para download de mídia de diversas plataformas.',
+          content: 'O Serviço fornece uma interface de programação de aplicativos (API) que permite aos usuários acessar programaticamente informações e links de download de mídia de várias plataformas de terceiros. A funcionalidade e disponibilidade do Serviço são fornecidas "como estão" e "conforme disponível".',
+        },
+        disclaimer: {
+          title: '3. Isenção de Afiliação',
+          content: 'MediaGrab é um serviço independente e não é afiliado, associado, autorizado, endossado por, ou de forma alguma oficialmente conectado com qualquer uma das plataformas de terceiros das quais a mídia pode ser acessada (por exemplo, YouTube, TikTok, etc.), ou qualquer uma de suas subsidiárias ou afiliadas. Todos os nomes de produtos e empresas são marcas comerciais™ ou marcas registradas® de seus respectivos proprietários. O uso deles não implica qualquer afiliação ou endosso por eles.',
         },
         usage: {
-          title: '3. Uso Aceitável',
-          content: 'Você concorda em usar nosso serviço apenas para fins legais e de acordo com as leis aplicáveis.',
+          title: '4. Responsabilidades do Usuário',
+          content: 'Você é o único responsável pelo seu uso do Serviço. Você concorda em não usar o Serviço para qualquer finalidade ilegal ou proibida por estes Termos. Você é responsável por garantir que seu uso do Serviço e qualquer conteúdo que você baixe esteja em conformidade com todas as leis aplicáveis, incluindo, mas não se limitando a leis de direitos autorais e propriedade intelectual. Não somos responsáveis pelo conteúdo que você acessa ou baixa através do Serviço.',
         },
         account: {
-          title: '4. Conta de Usuário',
-          content: 'Você é responsável por manter a segurança de sua conta e senha.',
+          title: '5. Contas de Usuário',
+          content: 'Quando você cria uma conta conosco, deve fornecer informações precisas, completas e atualizadas a todo momento. O não cumprimento constitui violação dos Termos, o que pode resultar no encerramento imediato de sua conta em nosso Serviço. Você é responsável por proteger a senha que usa para acessar o Serviço e por quaisquer atividades ou ações sob sua senha.',
         },
         payment: {
-          title: '5. Pagamentos',
+          title: '6. Pagamentos',
           content: 'Os pagamentos são processados de forma segura através de nossos parceiros.',
         },
         termination: {
-          title: '6. Rescisão',
-          content: 'Reservamos o direito de suspender ou encerrar contas que violem estes termos.',
+          title: '7. Rescisão',
+          content: 'Podemos encerrar ou suspender seu acesso ao nosso Serviço imediatamente, sem aviso prévio ou responsabilidade, por qualquer motivo, incluindo, sem limitação, se você violar estes Termos.',
+        },
+        liability: {
+          title: '8. Limitação de Responsabilidade',
+          content: 'Em nenhuma circunstância o MediaGrab, nem seus diretores, funcionários, parceiros, agentes, fornecedores ou afiliados, serão responsáveis por quaisquer danos indiretos, incidentais, especiais, consequenciais ou punitivos, incluindo, sem limitação, perda de lucros, dados, uso, boa vontade ou outras perdas intangíveis, resultantes do seu acesso ou uso ou incapacidade de acessar ou usar o Serviço.',
+        },
+        changes: {
+          title: '9. Alterações nestes Termos',
+          content: 'Reservamo-nos o direito, a nosso exclusivo critério, de modificar ou substituir estes Termos a qualquer momento. Forneceremos pelo menos 30 dias de aviso antes de quaisquer novos termos entrarem em vigor. O que constitui uma mudança material será determinado a nosso exclusivo critério.',
+        },
+        contact: {
+          title: '10. Entre em Contato',
+          content: 'Se você tiver alguma dúvida sobre estes Termos, por favor entre em contato conosco.',
         },
       },
     },
@@ -457,22 +519,46 @@ export const translations = {
     privacy: {
       title: 'Política de Privacidade',
       lastUpdated: 'Última atualização',
+      intro: 'Esta Política de Privacidade descreve Nossas políticas e procedimentos sobre a coleta, uso e divulgação de Suas informações quando Você usa o Serviço e informa sobre Seus direitos de privacidade e como a lei protege Você.',
       sections: {
+        interpretation: {
+          title: '1. Interpretação e Definições',
+          content: 'Para os fins desta Política de Privacidade, termos como "Você", "Nós", "Serviço" e "Dados Pessoais" carregam significados específicos conforme definidos aqui e em nossos Termos de Serviço.',
+        },
         collection: {
-          title: '1. Coleta de Dados',
-          content: 'Coletamos informações necessárias para fornecer nossos serviços.',
+          title: '2. Coleta e Uso de Seus Dados Pessoais',
+          subtitle: 'Tipos de Dados Coletados',
+          personalDataTitle: 'Dados Pessoais',
+          personalDataContent: 'Ao usar Nosso Serviço, podemos pedir que Você nos forneça certas informações pessoalmente identificáveis que podem ser usadas para entrar em contato ou identificá-Lo. Isso pode incluir, mas não se limita a:',
+          personalDataList: ['Endereço de email', 'Nome e sobrenome', 'Dados de uso'],
+          usageDataTitle: 'Dados de Uso',
+          usageDataContent: 'Os Dados de Uso são coletados automaticamente ao usar o Serviço. Isso pode incluir informações como o endereço IP do seu dispositivo, tipo de navegador, versão do navegador, as páginas do nosso Serviço que Você visita, a hora e data da sua visita, requisições de API feitas e outros dados de diagnóstico.',
         },
         usage: {
-          title: '2. Uso dos Dados',
-          content: 'Seus dados são usados exclusivamente para melhorar nossos serviços.',
+          title: '3. Uso de Seus Dados Pessoais',
+          content: 'A Empresa pode usar Dados Pessoais para os seguintes fins:',
+          list: [
+            'Para fornecer e manter nosso Serviço, incluindo monitorar o uso do nosso Serviço e processar requisições de API.',
+            'Para gerenciar Sua Conta: para gerenciar Seu registro como usuário do Serviço.',
+            'Para entrar em contato com Você: Para entrar em contato com Você por email sobre atualizações ou comunicações informativas relacionadas às funcionalidades, produtos ou serviços contratados.',
+            'Para fins de segurança: para prevenir fraudes, fazer cumprir nossas políticas e proteger nossa propriedade intelectual.',
+          ],
         },
         sharing: {
-          title: '3. Compartilhamento',
-          content: 'Não vendemos seus dados pessoais a terceiros.',
+          title: '4. Divulgação de Seus Dados Pessoais',
+          content: 'Não vendemos ou alugamos seus dados pessoais a terceiros. Podemos compartilhar suas informações nas seguintes situações: com provedores de serviços para monitorar e analisar o uso do nosso Serviço, ou para cumprir uma obrigação legal.',
         },
         security: {
-          title: '4. Segurança',
-          content: 'Implementamos medidas de segurança para proteger suas informações.',
+          title: '5. Segurança de Seus Dados Pessoais',
+          content: 'A segurança de Seus Dados Pessoais é importante para Nós, mas lembre-se de que nenhum método de transmissão pela Internet ou método de armazenamento eletrônico é 100% seguro. Embora nos esforcemos para usar meios comercialmente aceitáveis para proteger Seus Dados Pessoais, não podemos garantir sua segurança absoluta.',
+        },
+        changes: {
+          title: '6. Alterações nesta Política de Privacidade',
+          content: 'Podemos atualizar Nossa Política de Privacidade de tempos em tempos. Notificaremos Você sobre quaisquer alterações publicando a nova Política de Privacidade nesta página e atualizando a data de "Última atualização".',
+        },
+        contact: {
+          title: '7. Entre em Contato',
+          content: 'Se você tiver alguma dúvida sobre esta Política de Privacidade, por favor entre em contato conosco.',
         },
         cookies: {
           title: '5. Cookies',
@@ -557,6 +643,8 @@ export const translations = {
       filter: 'Filtrar',
       sort: 'Ordenar',
       actions: 'Ações',
+      name: 'Nome',
+      unlimited: 'Ilimitado',
       status: 'Status',
       date: 'Data',
       name: 'Nome',
@@ -564,6 +652,16 @@ export const translations = {
       password: 'Senha',
       required: 'Obrigatório',
       optional: 'Opcional',
+      days: {
+        mon: 'Seg',
+        tue: 'Ter',
+        wed: 'Qua',
+        thu: 'Qui',
+        fri: 'Sex',
+        sat: 'Sáb',
+        sun: 'Dom',
+      },
+      unlimited: 'Ilimitado',
     },
     // Admin Panel
     admin: {
@@ -571,6 +669,7 @@ export const translations = {
         dashboard: 'Dashboard',
         users: 'Usuários',
         apiKeys: 'API Keys',
+        testArea: 'Área de Teste',
         payments: 'Pagamentos',
         analytics: 'Analytics',
         downloads: 'Downloads',
@@ -594,6 +693,7 @@ export const translations = {
         noUsersAvailable: 'Nenhum usuário disponível',
         chartComingSoon: 'Gráfico será implementado em breve',
       },
+      administrator: 'Admin',
       users: {
         title: 'Gerenciar Usuários',
         subtitle: 'Visualize e gerencie todos os usuários da plataforma',
@@ -898,6 +998,7 @@ export const translations = {
       sidebar: {
         dashboard: 'Dashboard',
         apiKeys: 'Minhas API Keys',
+        testArea: 'Área de Teste',
         downloads: 'Downloads',
         analytics: 'Analytics',
         subscription: 'Assinatura',
@@ -994,12 +1095,19 @@ export const translations = {
       title: 'Choose the ideal plan for you',
       subtitle: 'Flexible plans that grow with your business. Start free and scale when needed.',
       popular: 'Most Popular',
+      mostPopular: 'Most Popular',
       month: '/month',
       free: 'Free',
       startFree: 'Start Free',
       subscribe: 'Subscribe Now',
       contactSales: 'Contact Sales',
       comparison: 'Compare plans',
+      currentPlan: 'Current Plan',
+      choosePlan: 'Choose Plan',
+      alreadyOnPlan: 'You are already on this plan',
+      cannotDowngrade: 'Cannot downgrade to Free plan',
+      comingSoon: 'Payment coming soon',
+      comingSoonDescription: 'The payment system is being configured and will be available soon.',
       features: {
         requests: 'requests/month',
         apiKeys: 'API Keys',
@@ -1131,9 +1239,9 @@ export const translations = {
         title: 'Getting Started',
         description: 'Set up your account and make your first request',
         steps: [
-          'Create a free account',
+          'Get API Key',
           'Generate your API Key in the dashboard',
-          'Make your first request',
+          'Make Request',
         ],
       },
       authentication: {
@@ -1159,7 +1267,7 @@ export const translations = {
       },
       platforms: {
         title: 'Supported Platforms',
-        description: 'List of compatible platforms',
+        description: 'And 1000+ other sites supported by yt-dlp',
       },
       rateLimit: {
         title: 'Rate Limiting',
@@ -1241,12 +1349,15 @@ export const translations = {
         apiKeysActive: 'Active API Keys',
         requestsUsed: 'Requests Used',
         planLimit: 'Plan Limit',
+        successRate: 'Success Rate',
       },
       actions: {
-        createApiKey: 'Create API Key',
+        createApiKey: 'Manage API Keys',
         viewDocs: 'View Documentation',
-        upgradePlan: 'Upgrade Plan',
+        upgradePlan: 'Need more requests?',
       },
+      upgradeDescription: 'Upgrade your plan to get more downloads and features',
+      viewPlans: 'View Plans',
     },
     // API Keys
     apiKeys: {
@@ -1317,6 +1428,41 @@ export const translations = {
         deleteWarning: 'This action is irreversible and will delete all your data.',
       },
     },
+    // Test Area
+    testArea: {
+      title: 'Test Area',
+      subtitle: 'Test your API and see responses in real-time',
+      testRequest: 'Test Request',
+      description: 'Paste a URL and test the API response',
+      urlLabel: 'Video URL',
+      urlPlaceholder: 'https://www.youtube.com/watch?v=...',
+      testButton: 'Test API',
+      testing: 'Testing...',
+      response: 'API Response',
+      error: 'Error',
+      fullResponse: 'Full Response',
+      success: 'Request completed successfully!',
+      apiKeyActive: 'Active API Key detected',
+      noApiKey: 'No API Key found. Please create an API Key first.',
+      errors: {
+        urlRequired: 'Please enter a URL',
+        apiKeyRequired: 'You need an API Key to test',
+        requestFailed: 'Failed to make request',
+      },
+      info: {
+        title: 'Tips',
+        tip1: 'This test does not consume your API requests',
+        tip2: 'The response will be displayed in JSON format',
+        tip3: 'You can copy the response by clicking the copy button',
+      },
+      requestStructure: {
+        title: 'Request Structure',
+        baseUrl: 'Base URL',
+        endpoint: 'Endpoint',
+        parameters: 'Parameters',
+        fullUrl: 'Full URL',
+      },
+    },
     // Footer
     footer: {
       description: 'The most powerful API for media download from any platform.',
@@ -1332,30 +1478,47 @@ export const translations = {
     terms: {
       title: 'Terms of Use',
       lastUpdated: 'Last updated',
+      intro: 'Please read these Terms of Service ("Terms", "Terms of Service") carefully before using the MediaGrab API (the "Service") operated by MediaGrab ("us", "we", or "our").',
       sections: {
         acceptance: {
           title: '1. Acceptance of Terms',
-          content: 'By accessing and using MediaGrab, you agree to comply with these terms of use.',
+          content: 'By accessing and using MediaGrab, you agree to comply with these terms of use. If you disagree with any part of the terms, you may not access the Service. These Terms and Conditions set out the rights and obligations of all users regarding the use of the Service.',
         },
         service: {
           title: '2. Service Description',
-          content: 'MediaGrab provides an API for downloading media from various platforms.',
+          content: 'The Service provides an application programming interface (API) that allows users to programmatically access information and download links for media from various third-party platforms. The functionality and availability of the Service are provided on an "as is" and "as available" basis.',
+        },
+        disclaimer: {
+          title: '3. Disclaimer of Affiliation',
+          content: 'MediaGrab is an independent service and is not affiliated, associated, authorized, endorsed by, or in any way officially connected with any of the third-party platforms from which media can be accessed (e.g., YouTube, TikTok, etc.), or any of their subsidiaries or affiliates. All product and company names are trademarks™ or registered® trademarks of their respective holders. Use of them does not imply any affiliation with or endorsement by them.',
         },
         usage: {
-          title: '3. Acceptable Use',
-          content: 'You agree to use our service only for lawful purposes and in accordance with applicable laws.',
+          title: '4. User Responsibilities',
+          content: 'You are solely responsible for your use of the Service. You agree not to use the Service for any purpose that is illegal or prohibited by these Terms. You are responsible for ensuring that your use of the Service and any content you download complies with all applicable laws, including but not limited to copyright and intellectual property laws. We are not responsible for the content you access or download through the Service.',
         },
         account: {
-          title: '4. User Account',
-          content: 'You are responsible for maintaining the security of your account and password.',
+          title: '5. User Accounts',
+          content: 'When you create an account with us, you must provide information that is accurate, complete, and current at all times. Failure to do so constitutes a breach of the Terms, which may result in immediate termination of your account on our Service. You are responsible for safeguarding the password that you use to access the Service and for any activities or actions under your password.',
         },
         payment: {
-          title: '5. Payments',
+          title: '6. Payments',
           content: 'Payments are processed securely through our partners.',
         },
         termination: {
-          title: '6. Termination',
-          content: 'We reserve the right to suspend or terminate accounts that violate these terms.',
+          title: '7. Termination',
+          content: 'We may terminate or suspend your access to our Service immediately, without prior notice or liability, for any reason whatsoever, including, without limitation, if you breach these Terms.',
+        },
+        liability: {
+          title: '8. Limitation of Liability',
+          content: 'In no event shall MediaGrab, nor its directors, employees, partners, agents, suppliers, or affiliates, be liable for any indirect, incidental, special, consequential or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses, resulting from your access to or use of or inability to access or use the Service.',
+        },
+        changes: {
+          title: '9. Changes to These Terms',
+          content: 'We reserve the right, at our sole discretion, to modify or replace these Terms at any time. We will provide at least 30 days\' notice prior to any new terms taking effect. What constitutes a material change will be determined at our sole discretion.',
+        },
+        contact: {
+          title: '10. Contact Us',
+          content: 'If you have any questions about these Terms, please',
         },
       },
     },
@@ -1363,22 +1526,46 @@ export const translations = {
     privacy: {
       title: 'Privacy Policy',
       lastUpdated: 'Last updated',
+      intro: 'This Privacy Policy describes Our policies and procedures on the collection, use, and disclosure of Your information when You use the Service and tells You about Your privacy rights and how the law protects You.',
       sections: {
+        interpretation: {
+          title: '1. Interpretation and Definitions',
+          content: 'For the purposes of this Privacy Policy, terms such as "You", "We", "Service", and "Personal Data" carry specific meanings as defined herein and in our Terms of Service.',
+        },
         collection: {
-          title: '1. Data Collection',
-          content: 'We collect information necessary to provide our services.',
+          title: '2. Collecting and Using Your Personal Data',
+          subtitle: 'Types of Data Collected',
+          personalDataTitle: 'Personal Data',
+          personalDataContent: 'While using Our Service, We may ask You to provide Us with certain personally identifiable information that can be used to contact or identify You. This may include, but is not limited to:',
+          personalDataList: ['Email address', 'First name and last name', 'Usage Data'],
+          usageDataTitle: 'Usage Data',
+          usageDataContent: 'Usage Data is collected automatically when using the Service. This may include information such as Your device\'s IP address, browser type, browser version, the pages of our Service that You visit, the time and date of Your visit, API requests made, and other diagnostic data.',
         },
         usage: {
-          title: '2. Data Usage',
-          content: 'Your data is used exclusively to improve our services.',
+          title: '3. Use of Your Personal Data',
+          content: 'The Company may use Personal Data for the following purposes:',
+          list: [
+            'To provide and maintain our Service, including to monitor the usage of our Service and process API requests.',
+            'To manage Your Account: to manage Your registration as a user of the Service.',
+            'To contact You: To contact You by email regarding updates or informative communications related to the functionalities, products, or contracted services.',
+            'For security purposes: to prevent fraud, enforce our policies, and protect our intellectual property.',
+          ],
         },
         sharing: {
-          title: '3. Sharing',
-          content: 'We do not sell your personal data to third parties.',
+          title: '4. Disclosure of Your Personal Data',
+          content: 'We do not sell or rent your personal data to third parties. We may share your information in the following situations: with service providers to monitor and analyze the use of our Service, or to comply with a legal obligation.',
         },
         security: {
-          title: '4. Security',
-          content: 'We implement security measures to protect your information.',
+          title: '5. Security of Your Personal Data',
+          content: 'The security of Your Personal Data is important to Us, but remember that no method of transmission over the Internet or method of electronic storage is 100% secure. While We strive to use commercially acceptable means to protect Your Personal Data, We cannot guarantee its absolute security.',
+        },
+        changes: {
+          title: '6. Changes to this Privacy Policy',
+          content: 'We may update Our Privacy Policy from time to time. We will notify You of any changes by posting the new Privacy Policy on this page and updating the "Last updated" date.',
+        },
+        contact: {
+          title: '7. Contact Us',
+          content: 'If you have any questions about this Privacy Policy, please',
         },
         cookies: {
           title: '5. Cookies',
@@ -1463,6 +1650,8 @@ export const translations = {
       filter: 'Filter',
       sort: 'Sort',
       actions: 'Actions',
+      name: 'Name',
+      unlimited: 'Unlimited',
       status: 'Status',
       date: 'Date',
       name: 'Name',
@@ -1470,6 +1659,16 @@ export const translations = {
       password: 'Password',
       required: 'Required',
       optional: 'Optional',
+      days: {
+        mon: 'Mon',
+        tue: 'Tue',
+        wed: 'Wed',
+        thu: 'Thu',
+        fri: 'Fri',
+        sat: 'Sat',
+        sun: 'Sun',
+      },
+      unlimited: 'Unlimited',
     },
     // Admin Panel
     admin: {
@@ -1477,6 +1676,7 @@ export const translations = {
         dashboard: 'Dashboard',
         users: 'Users',
         apiKeys: 'API Keys',
+        testArea: 'Test Area',
         payments: 'Payments',
         analytics: 'Analytics',
         downloads: 'Downloads',
@@ -1500,6 +1700,7 @@ export const translations = {
         noUsersAvailable: 'No users available',
         chartComingSoon: 'Chart will be implemented soon',
       },
+      administrator: 'Admin',
       users: {
         title: 'Manage Users',
         subtitle: 'View and manage all platform users',
@@ -1804,6 +2005,7 @@ export const translations = {
       sidebar: {
         dashboard: 'Dashboard',
         apiKeys: 'My API Keys',
+        testArea: 'Test Area',
         downloads: 'Downloads',
         analytics: 'Analytics',
         subscription: 'Subscription',

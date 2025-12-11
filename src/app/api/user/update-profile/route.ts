@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import jwt from 'jsonwebtoken';
-import connectDB from '@/backend/lib/mongodb';
-import User from '@/backend/models/User';
+import { connectDB } from '@/backend/lib/database';
+import prisma from '@/backend/lib/database';
+import { getJWTSecret } from '@backend/lib/secrets';
 
-const JWT_SECRET = process.env.JWT_SECRET || '';
+const JWT_SECRET = getJWTSecret();;
 
 interface DecodedToken {
   id: string;
@@ -41,20 +42,21 @@ export async function PUT(request: Request) {
 
     await connectDB();
     
-    const user = await User.findByIdAndUpdate(
-      userData.id,
-      { name: name.trim() },
-      { new: true }
-    );
-
-    if (!user) {
-      return NextResponse.json({ message: 'Usuário não encontrado' }, { status: 404 });
-    }
+    // Atualizar usando Prisma diretamente para garantir que funciona corretamente
+    const user = await prisma.user.update({
+      where: { id: userData.id },
+      data: { name: name.trim() },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+      }
+    });
 
     return NextResponse.json({ 
       message: 'Perfil atualizado com sucesso!',
       user: {
-        id: user._id,
+        id: user.id,
         name: user.name,
         email: user.email,
       }

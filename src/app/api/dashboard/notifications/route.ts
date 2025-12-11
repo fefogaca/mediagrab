@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
-import connectDB from '@backend/lib/mongodb';
-import Notification from '@backend/models/Notification';
+import { connectDB } from '@backend/lib/database';
+import prisma from '@backend/lib/database';
 import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
+import { getJWTSecret } from '@backend/lib/secrets';
 
-const JWT_SECRET: string = process.env.JWT_SECRET as string;
+const JWT_SECRET = getJWTSecret();
 
 interface DecodedToken {
   id: string;
@@ -36,15 +37,16 @@ export async function GET() {
     await connectDB();
     
     // Buscar notificações do usuário (all ou específicas para ele)
-    const notifications = await Notification.find({
-      $or: [
-        { targetAudience: 'all' },
-        { targetAudience: 'user', targetUserId: userId }
-      ]
-    })
-    .sort({ createdAt: -1 })
-    .limit(50)
-    .lean();
+    const notifications = await prisma.notification.findMany({
+      where: {
+        OR: [
+          { targetAudience: 'all' },
+          { targetAudience: 'user', targetUserId: userId }
+        ]
+      },
+      take: 50,
+      orderBy: { createdAt: 'desc' }
+    });
 
     return NextResponse.json({ notifications }, { status: 200 });
   } catch (error) {

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import connectDB from '@backend/lib/mongodb';
+import { connectDB } from '@backend/lib/database';
+import prisma from '@backend/lib/database';
 import ApiKey from '@backend/models/ApiKey';
-import mongoose from 'mongoose';
 import User from '@models/User';
 
 export async function GET() {
@@ -9,10 +9,20 @@ export async function GET() {
     await connectDB();
     
     // Buscar API keys com informações do usuário
-    const apiKeys = await ApiKey.find()
-      .populate('userId', 'name email plan role')
-      .sort({ createdAt: -1 })
-      .lean();
+    const apiKeys = await prisma.apiKey.findMany({
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            plan: true,
+            role: true,
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
     
     return NextResponse.json({ apiKeys }, { status: 200 });
   } catch (error) {
@@ -34,11 +44,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: 'Key name is required' }, { status: 400 });
     }
 
-    // Validar se userId é um ObjectId válido
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      return NextResponse.json({ message: 'Invalid user ID format' }, { status: 400 });
-    }
-
     await connectDB();
     
     // Verificar se o usuário existe
@@ -55,19 +60,34 @@ export async function POST(request: Request) {
     const apiKey = await ApiKey.create({
       key,
       name: name.trim(),
-      userId: new mongoose.Types.ObjectId(userId),
+      user: {
+        connect: { id: userId }
+      },
       usageLimit: finalUsageLimit,
       isActive: true,
       usageCount: 0,
     });
 
-    // Popular o userId para retornar dados completos
-    await apiKey.populate('userId', 'name email plan role');
+    // Buscar dados completos com user
+    const apiKeyWithUser = await prisma.apiKey.findUnique({
+      where: { id: apiKey.id },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            plan: true,
+            role: true,
+          }
+        }
+      }
+    });
 
     return NextResponse.json({ 
       message: 'API key created successfully', 
       apiKey: {
-        _id: apiKey._id,
+        id: apiKey.id,
         key: apiKey.key,
         name: apiKey.name,
         userId: apiKey.userId,
@@ -75,26 +95,11 @@ export async function POST(request: Request) {
         usageCount: apiKey.usageCount,
         isActive: apiKey.isActive,
         createdAt: apiKey.createdAt,
+        user: apiKeyWithUser?.user,
       }
     }, { status: 201 });
   } catch (error) {
     console.error('Failed to create API key:', error);
-    
-    // Tratar erros específicos do MongoDB
-    if (error instanceof mongoose.Error.ValidationError) {
-      return NextResponse.json({ 
-        message: 'Validation error', 
-        error: Object.values(error.errors).map(e => e.message).join(', ')
-      }, { status: 400 });
-    }
-
-    if (error instanceof mongoose.Error.CastError) {
-      return NextResponse.json({ 
-        message: 'Invalid data format', 
-        error: error.message 
-      }, { status: 400 });
-    }
-
     return NextResponse.json({ 
       message: 'Failed to create API key', 
       error: (error as Error).message 

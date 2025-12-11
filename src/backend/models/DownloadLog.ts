@@ -1,90 +1,65 @@
-import mongoose, { Schema, Document, Model } from 'mongoose';
+// Wrapper para compatibilidade com código existente
+import prisma from '../lib/database';
+import type { DownloadLog as PrismaDownloadLog, Prisma } from '@prisma/client';
 
-export interface IDownloadLog extends Document {
-  _id: mongoose.Types.ObjectId;
-  userId?: mongoose.Types.ObjectId;
-  apiKeyId?: mongoose.Types.ObjectId;
-  
-  // Informações do download
-  url: string;
-  provider: string;
-  title?: string;
-  format?: string;
-  quality?: string;
-  fileSize?: number;
-  duration?: number;
-  
-  // Status
-  status: 'pending' | 'success' | 'failed';
-  errorMessage?: string;
-  
-  // Metadados da requisição
-  ipAddress?: string;
-  userAgent?: string;
-  referer?: string;
-  
-  // Timestamps
-  createdAt: Date;
-  completedAt?: Date;
-}
+export type IDownloadLog = PrismaDownloadLog;
 
-const DownloadLogSchema = new Schema<IDownloadLog>({
-  userId: {
-    type: Schema.Types.ObjectId,
-    ref: 'User',
-    index: true,
+export const DownloadLog = {
+  findOne: async (query: { _id?: string; id?: string }) => {
+    if (query._id || query.id) {
+      return await prisma.downloadLog.findUnique({ where: { id: query._id || query.id } });
+    }
+    return null;
   },
-  apiKeyId: {
-    type: Schema.Types.ObjectId,
-    ref: 'ApiKey',
-    index: true,
-  },
-  
-  // Informações do download
-  url: {
-    type: String,
-    required: true,
-  },
-  provider: {
-    type: String,
-    required: true,
-    index: true,
-  },
-  title: String,
-  format: String,
-  quality: String,
-  fileSize: Number,
-  duration: Number,
-  
-  // Status
-  status: {
-    type: String,
-    enum: ['pending', 'success', 'failed'],
-    default: 'pending',
-    index: true,
-  },
-  errorMessage: String,
-  
-  // Metadados
-  ipAddress: String,
-  userAgent: String,
-  referer: String,
-  
-  completedAt: Date,
-}, {
-  timestamps: true,
-});
 
-// Índices para queries comuns
-DownloadLogSchema.index({ createdAt: -1 });
-DownloadLogSchema.index({ userId: 1, createdAt: -1 });
-DownloadLogSchema.index({ provider: 1, createdAt: -1 });
-DownloadLogSchema.index({ status: 1, createdAt: -1 });
+  findById: async (id: string) => {
+    return await prisma.downloadLog.findUnique({ where: { id } });
+  },
 
-// TTL index para limpar logs antigos (opcional - 90 dias)
-// DownloadLogSchema.index({ createdAt: 1 }, { expireAfterSeconds: 7776000 });
+  findByIdAndUpdate: async (id: string, data: Prisma.DownloadLogUpdateInput) => {
+    return await prisma.downloadLog.update({ where: { id }, data });
+  },
 
-const DownloadLog: Model<IDownloadLog> = mongoose.models.DownloadLog || mongoose.model<IDownloadLog>('DownloadLog', DownloadLogSchema);
+  create: async (data: Prisma.DownloadLogCreateInput) => {
+    return await prisma.downloadLog.create({ data });
+  },
+
+  find: async (query?: Prisma.DownloadLogWhereInput, options?: { limit?: number; skip?: number; orderBy?: Prisma.DownloadLogOrderByWithRelationInput }) => {
+    const result = await prisma.downloadLog.findMany({ 
+      where: query,
+      ...(options?.limit && { take: options.limit }),
+      ...(options?.skip && { skip: options.skip }),
+      ...(options?.orderBy && { orderBy: options.orderBy }),
+    });
+    return {
+      ...result,
+      sort: (sortObj: any) => {
+        const orderBy: Prisma.DownloadLogOrderByWithRelationInput = {};
+        for (const [key, value] of Object.entries(sortObj)) {
+          orderBy[key as keyof Prisma.DownloadLogOrderByWithRelationInput] = value === -1 ? 'desc' : 'asc';
+        }
+        return prisma.downloadLog.findMany({ 
+          where: query,
+          orderBy,
+          ...(options?.limit && { take: options.limit }),
+          ...(options?.skip && { skip: options.skip }),
+        });
+      },
+      lean: () => result,
+    };
+  },
+  
+  countDocuments: async (query?: Prisma.DownloadLogWhereInput) => {
+    return await prisma.downloadLog.count({ where: query });
+  },
+
+  count: async (query?: Prisma.DownloadLogWhereInput) => {
+    return await prisma.downloadLog.count({ where: query });
+  },
+
+  aggregate: async (args: Prisma.DownloadLogAggregateArgs) => {
+    return await prisma.downloadLog.aggregate(args);
+  },
+};
 
 export default DownloadLog;
-

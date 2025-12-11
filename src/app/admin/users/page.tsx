@@ -379,7 +379,7 @@ export default function UsersPage() {
             </TableHeader>
             <TableBody>
               {filteredUsers.length === 0 ? (
-                <TableRow>
+                <TableRow key="no-users">
                   <TableCell colSpan={5} className="text-center text-zinc-500 py-8">
                     {t.admin.users.table.noUsersFound}
                   </TableCell>

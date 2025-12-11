@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import connectDB from '@backend/lib/mongodb';
+import { connectDB } from '@backend/lib/database';
+import prisma from '@backend/lib/database';
 import ApiKey from '@backend/models/ApiKey';
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -7,7 +8,19 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
   try {
     await connectDB();
-    const apiKey = await ApiKey.findById(id).populate('userId', 'name email plan');
+    const apiKey = await prisma.apiKey.findUnique({
+      where: { id },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            plan: true,
+          }
+        }
+      }
+    });
 
     if (!apiKey) {
       return NextResponse.json({ message: 'API key not found' }, { status: 404 });
@@ -27,11 +40,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   try {
     await connectDB();
     
-    const apiKey = await ApiKey.findByIdAndUpdate(
-      id,
-      { $set: updates },
-      { new: true }
-    );
+    const apiKey = await ApiKey.findByIdAndUpdate(id, updates);
 
     if (!apiKey) {
       return NextResponse.json({ message: 'API key not found' }, { status: 404 });
@@ -49,7 +58,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
 
   try {
     await connectDB();
-    const result = await ApiKey.findByIdAndDelete(id);
+    const result = await prisma.apiKey.delete({ where: { id } });
 
     if (!result) {
       return NextResponse.json({ message: 'API key not found' }, { status: 404 });

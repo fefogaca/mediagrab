@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useRef, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@frontend/components/ui/button";
 import { Input } from "@frontend/components/ui/input";
@@ -27,8 +27,10 @@ import { Loader2, Mail, Lock, Github, Chrome, Globe, Shield, User, Key, Sparkles
 import { LogoSmallDark } from "@frontend/components/shared/Logo";
 import { useTranslation } from "@/lib/i18n";
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl");
   const { t, language, setLanguage } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -141,12 +143,12 @@ export default function LoginPage() {
 
       toast.success(language === 'pt' ? "Login realizado com sucesso!" : "Login successful!");
       
-      // Redirecionar baseado no role
-      if (data.user?.role === "admin") {
-        router.push("/admin");
-      } else {
-        router.push("/dashboard");
-      }
+      // Aguardar um pouco para garantir que o cookie foi salvo
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Redirecionar baseado no callbackUrl ou role
+      const redirectPath = callbackUrl || (data.user?.role === "admin" ? "/admin" : "/dashboard");
+      router.push(redirectPath);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t.login.errors.invalid);
     } finally {
@@ -408,5 +410,20 @@ export default function LoginPage() {
         </CardFooter>
       </Card>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
+          <p className="text-zinc-400">Carregando...</p>
+        </div>
+      </div>
+    }>
+      <LoginPageContent />
+    </Suspense>
   );
 }

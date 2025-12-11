@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import jwt from 'jsonwebtoken';
-import connectDB from '@/backend/lib/mongodb';
-import User from '@/backend/models/User';
-import Payment from '@/backend/models/Payment';
+import { connectDB } from '@/backend/lib/database';
+import prisma from '@/backend/lib/database';
 import { PLANS } from '@/lib/config/plans';
+import { getJWTSecret } from '@backend/lib/secrets';
 
-const JWT_SECRET = process.env.JWT_SECRET || '';
+const JWT_SECRET = getJWTSecret();;
 
 interface DecodedToken {
   id: string;
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { plan, billingId, sessionId } = body;
+    const { plan, sessionId } = body;
 
     if (!plan || !PLANS[plan]) {
       return NextResponse.json(
@@ -48,10 +48,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!sessionId) {
+      return NextResponse.json(
+        { error: 'Session ID é obrigatório' },
+        { status: 400 }
+      );
+    }
+
     await connectDB();
 
-    // Buscar usuário
-    const user = await User.findById(userData.id);
+    // Buscar usuário usando Prisma diretamente
+    const user = await prisma.user.findUnique({
+      where: { id: userData.id },
+      select: {
+        id: true,
+        email: true,
+        plan: true,
+        planExpiresAt: true,
+      }
+    });
     if (!user) {
       return NextResponse.json(
         { error: 'Usuário não encontrado' },
@@ -61,47 +76,25 @@ export async function POST(request: NextRequest) {
 
     const planConfig = PLANS[plan];
 
-    // Atualizar plano do usuário
-    const planExpiresAt = new Date();
-    planExpiresAt.setMonth(planExpiresAt.getMonth() + 1); // Plano válido por 1 mês
-
-    await User.findByIdAndUpdate(userData.id, {
-      plan: plan,
-      planExpiresAt,
-      usageLimit: planConfig.limits.requests === -1 ? 999999 : planConfig.limits.requests,
-      usageCount: 0, // Resetar uso ao fazer upgrade
+    // Verificar se o pagamento já foi processado pelo webhook usando Prisma diretamente
+    const existingPayment = await prisma.payment.findFirst({
+      where: { stripeSessionId: sessionId }
     });
+    if (existingPayment && existingPayment.status === 'paid') {
+      return NextResponse.json({
+        success: true,
+        message: 'Plano já foi ativado!',
+        plan: planConfig.name,
+        expiresAt: user.planExpiresAt,
+      });
+    }
 
-    // Registrar pagamento
-    await Payment.create({
-      userId: userData.id,
-      abacatePayBillingId: billingId || sessionId || `stripe_${Date.now()}`,
-      abacatePayUrl: billingId ? undefined : undefined, // URL do AbacatePay se disponível
-      amount: Math.round(planConfig.price.brl * 100), // Converter para centavos
-      currency: 'BRL',
-      method: 'CREDIT_CARD', // Método padrão, pode ser ajustado conforme necessário
-      products: [{
-        externalId: plan,
-        name: planConfig.name,
-        quantity: 1,
-        price: Math.round(planConfig.price.brl * 100), // Em centavos
-      }],
-      planPurchased: plan as 'developer' | 'startup' | 'enterprise',
-      planDuration: 1, // 1 mês
-      status: 'paid',
-      paidAt: new Date(),
-      metadata: {
-        planName: planConfig.name,
-        expiresAt: planExpiresAt,
-        provider: billingId ? 'abacatepay' : 'stripe',
-      },
-    });
-
+    // Se não foi processado ainda, o webhook vai processar em breve
+    // Por enquanto, apenas retornar sucesso
     return NextResponse.json({
       success: true,
-      message: 'Plano ativado com sucesso!',
+      message: 'Pagamento em processamento. Seu plano será ativado em breve.',
       plan: planConfig.name,
-      expiresAt: planExpiresAt,
     });
 
   } catch (error) {

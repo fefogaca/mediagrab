@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import connectDB from '@backend/lib/mongodb';
+import { connectDB } from '@backend/lib/database';
+import prisma from '@backend/lib/database';
 import User from '@backend/models/User';
 import bcrypt from 'bcryptjs';
 
@@ -32,9 +33,11 @@ export async function POST(request: Request) {
 
     await connectDB();
 
-    // Verificar se já existe um admin (segurança)
-    const existingAdmin = await User.findOne({ role: 'admin' });
-    if (existingAdmin) {
+    // Verificar se já existe um admin (segurança) usando Prisma diretamente
+    const adminCount = await prisma.user.count({
+      where: { role: 'admin' }
+    });
+    if (adminCount > 0) {
       return NextResponse.json(
         { error: 'Já existe um administrador configurado. Use o login normal.' },
         { status: 403 }
@@ -82,7 +85,7 @@ export async function POST(request: Request) {
       success: true,
       message: 'Administrador criado com sucesso!',
       admin: {
-        id: admin._id,
+        id: admin.id,
         name: admin.name,
         email: admin.email,
         role: admin.role,

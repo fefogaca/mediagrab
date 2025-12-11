@@ -1,18 +1,28 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-import connectDB from '@backend/lib/mongodb';
-import User from '@models/User';
+import { connectDB } from '@backend/lib/database';
+import prisma from '@backend/lib/database';
 
 export async function GET() {
   try {
     await connectDB();
     
-    const users = await User.find({})
-      .select('_id email name role plan isActive createdAt lastLoginAt')
-      .sort({ createdAt: -1 });
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        plan: true,
+        isActive: true,
+        createdAt: true,
+        lastLoginAt: true,
+      },
+      orderBy: { createdAt: 'desc' }
+    });
 
     const formattedUsers = users.map(user => ({
-      id: user._id.toString(),
+      id: user.id,
       email: user.email,
       name: user.name,
       username: user.name, // compatibilidade
@@ -45,27 +55,31 @@ export async function POST(request: Request) {
     await connectDB();
 
     // Verificar se usuário já existe
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    const existingUser = await prisma.user.findUnique({ 
+      where: { email: email.toLowerCase() } 
+    });
     if (existingUser) {
       return NextResponse.json({ message: 'Este email já está em uso' }, { status: 409 });
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    const user = await User.create({
-      name,
-      email: email.toLowerCase(),
-      password: hashedPassword,
-      role: role || 'user',
-      plan: plan || 'free',
-      isActive: true,
-      provider: 'credentials',
+    const user = await prisma.user.create({
+      data: {
+        name,
+        email: email.toLowerCase(),
+        password: hashedPassword,
+        role: role || 'user',
+        plan: plan || 'free',
+        isActive: true,
+        provider: 'credentials',
+      }
     });
 
     return NextResponse.json({ 
       message: 'Usuário criado com sucesso', 
       user: {
-        id: user._id.toString(),
+        id: user.id,
         name: user.name,
         email: user.email,
         role: user.role,

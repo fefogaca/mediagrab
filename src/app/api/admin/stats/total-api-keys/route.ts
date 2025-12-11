@@ -1,25 +1,30 @@
 import { NextResponse } from 'next/server';
-import connectDB from '@backend/lib/mongodb';
-import ApiKey from '@models/ApiKey';
+import { connectDB } from '@backend/lib/database';
+import prisma from '@backend/lib/database';
 
 export async function GET() {
   try {
     await connectDB();
     
-    const total = await ApiKey.countDocuments();
-    const active = await ApiKey.countDocuments({ isActive: true });
-    const expired = await ApiKey.countDocuments({ 
-      $or: [
-        { isActive: false },
-        { expiresAt: { $lt: new Date() } }
-      ]
+    const total = await prisma.apiKey.count();
+    const active = await prisma.apiKey.count({ where: { isActive: true } });
+    const now = new Date();
+    const expired = await prisma.apiKey.count({ 
+      where: {
+        OR: [
+          { isActive: false },
+          { expiresAt: { lt: now } }
+        ]
+      }
     });
 
-    // Total de requests
-    const usageStats = await ApiKey.aggregate([
-      { $group: { _id: null, totalUsage: { $sum: '$usageCount' } } }
-    ]);
-    const totalRequests = usageStats[0]?.totalUsage || 0;
+    // Total de requests usando aggregate do Prisma
+    const usageStats = await prisma.apiKey.aggregate({
+      _sum: {
+        usageCount: true
+      }
+    });
+    const totalRequests = usageStats._sum.usageCount || 0;
 
     return NextResponse.json({ 
       total,

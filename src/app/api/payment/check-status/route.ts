@@ -1,76 +1,82 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { connectDB } from '@backend/lib/database';
+import Payment from '@models/Payment';
 
-const ABACATEPAY_API_URL = 'https://api.abacatepay.com/v1';
-const ABACATEPAY_API_KEY = process.env.ABACATEPAY_API_KEY || '';
+// Importação condicional do Stripe
+let Stripe: any = null;
+try {
+  Stripe = require('stripe').default;
+} catch {
+  // Stripe não instalado
+}
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
-  const billingId = searchParams.get('billing_id');
+  const sessionId = searchParams.get('session_id');
 
-  if (!billingId) {
+  if (!sessionId) {
     return NextResponse.json(
-      { error: 'billing_id é obrigatório' },
+      { error: 'session_id é obrigatório' },
       { status: 400 }
     );
   }
 
   try {
-    // Verificar status do pagamento no AbacatePay
-    const response = await fetch(`${ABACATEPAY_API_URL}/pixQrCode/check?id=${billingId}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${ABACATEPAY_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    await connectDB();
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error('Erro AbacatePay:', errorData);
-      return NextResponse.json(
-        { 
-          status: 'PENDING',
-          message: 'Aguardando confirmação do pagamento'
+    // Verificar no banco de dados primeiro
+    const payment = await Payment.findOne({ stripeSessionId: sessionId });
+    if (payment) {
+      return NextResponse.json({
+        status: payment.status.toUpperCase(),
+        plan: payment.planPurchased || null,
+        expiresAt: payment.expiresAt,
+        message: payment.status === 'paid' 
+          ? 'Pagamento confirmado!' 
+          : payment.status === 'pending'
+          ? 'Aguardando pagamento'
+          : payment.status === 'failed'
+          ? 'Pagamento falhou'
+          : 'Status desconhecido'
+      });
+    }
+
+    // Se não encontrou no banco, verificar no Stripe
+    const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+    if (Stripe && stripeSecretKey) {
+      try {
+        const stripe = new Stripe(stripeSecretKey, {
+          apiVersion: '2023-10-16',
+        });
+
+        const session = await stripe.checkout.sessions.retrieve(sessionId);
+        
+        return NextResponse.json({
+          status: session.payment_status === 'paid' ? 'PAID' : 'PENDING',
+          plan: session.metadata?.planId || null,
+          message: session.payment_status === 'paid' 
+            ? 'Pagamento confirmado!' 
+            : 'Aguardando pagamento'
+        });
+      } catch (error: any) {
+        // Se for erro de API key, não logar
+        if (!error.message?.includes('Invalid API Key') && !error.message?.includes('No API key')) {
+          console.error('Erro ao verificar sessão Stripe:', error);
         }
-      );
-    }
-
-    const data = await response.json();
-    
-    // Mapear status do AbacatePay
-    let status = 'PENDING';
-    if (data.data?.status) {
-      status = data.data.status.toUpperCase();
-    }
-
-    // Se PAID, identificar o plano baseado no valor ou metadata
-    let plan = null;
-    if (status === 'PAID') {
-      // Tentar identificar o plano pelo billingId
-      if (billingId.includes('mj4gYGKxSUJhWAxUrdWs5BGJ')) {
-        plan = 'developer';
-      } else if (billingId.includes('SSsaFnMcCC4YEJsr4cqrwBMC')) {
-        plan = 'startup';
-      } else if (billingId.includes('tz0LjSeAC3YKpukqNUg3utDe')) {
-        plan = 'enterprise';
       }
     }
 
     return NextResponse.json({
-      status,
-      plan,
-      expiresAt: data.data?.expiresAt,
-      message: status === 'PAID' 
-        ? 'Pagamento confirmado!' 
-        : status === 'PENDING'
-        ? 'Aguardando pagamento'
-        : status === 'EXPIRED'
-        ? 'Pagamento expirado'
-        : 'Status desconhecido'
+      status: 'PENDING',
+      message: 'Verificando status do pagamento...'
     });
 
-  } catch (error) {
-    console.error('Erro ao verificar status:', error);
+  } catch (error: any) {
+    // Não logar erro se for relacionado a Stripe não configurado
+    if (!error.message?.includes('Invalid API Key') && !error.message?.includes('No API key')) {
+      console.error('Erro ao verificar status:', error);
+    }
+    
     return NextResponse.json(
       { 
         status: 'PENDING',

@@ -1,35 +1,47 @@
 import { NextResponse } from 'next/server';
-import connectDB from '@backend/lib/mongodb';
-import DownloadLog from '@models/DownloadLog';
+import { connectDB } from '@backend/lib/database';
+import prisma from '@backend/lib/database';
 
 export async function GET() {
   try {
     await connectDB();
     
-    const total = await DownloadLog.countDocuments();
+    const total = await prisma.downloadLog.count();
     
     // Downloads hoje
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
-    const today = await DownloadLog.countDocuments({
-      createdAt: { $gte: startOfToday }
+    const today = await prisma.downloadLog.count({
+      where: {
+        createdAt: { gte: startOfToday }
+      }
     });
 
     // Downloads nos últimos 7 dias
-    const last7Days = await DownloadLog.countDocuments({
-      createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const last7Days = await prisma.downloadLog.count({
+      where: {
+        createdAt: { gte: sevenDaysAgo }
+      }
     });
 
-    // Downloads por plataforma
-    const byPlatform = await DownloadLog.aggregate([
-      {
-        $group: {
-          _id: '$platform',
-          count: { $sum: 1 }
-        }
+    // Downloads por plataforma usando groupBy do Prisma
+    const byPlatformRaw = await prisma.downloadLog.groupBy({
+      by: ['provider'],
+      _count: {
+        id: true
       },
-      { $sort: { count: -1 } }
-    ]);
+      orderBy: {
+        _count: {
+          id: 'desc'
+        }
+      }
+    });
+
+    const byPlatform = byPlatformRaw.map(item => ({
+      _id: item.provider,
+      count: item._count.id
+    }));
 
     return NextResponse.json({ 
       total,

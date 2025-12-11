@@ -1,16 +1,19 @@
 import { NextResponse } from 'next/server';
-import connectDB from '@backend/lib/mongodb';
-import User from '@models/User';
+import { connectDB } from '@backend/lib/database';
+import prisma from '@backend/lib/database';
 
 export async function GET() {
   try {
     await connectDB();
     
-    const total = await User.countDocuments();
-    const admins = await User.countDocuments({ role: 'admin' });
-    const users = await User.countDocuments({ role: 'user' });
-    const activeToday = await User.countDocuments({
-      lastLoginAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }
+    const total = await prisma.user.count();
+    const admins = await prisma.user.count({ where: { role: 'admin' } });
+    const users = await prisma.user.count({ where: { role: 'user' } });
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const activeToday = await prisma.user.count({
+      where: {
+        lastLoginAt: { gte: yesterday }
+      }
     });
 
     return NextResponse.json({ 

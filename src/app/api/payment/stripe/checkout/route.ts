@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import jwt from 'jsonwebtoken';
 import { PLANS, PAYMENT_URLS } from '@/lib/config/plans';
+import { getJWTSecret } from '@backend/lib/secrets';
 
 // Importação condicional do Stripe
 let Stripe: any = null;
@@ -11,7 +12,7 @@ try {
   // Stripe não instalado
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || '';
+const JWT_SECRET = getJWTSecret();;
 
 interface DecodedToken {
   id: string;
@@ -34,9 +35,15 @@ async function getUserFromRequest(): Promise<DecodedToken | null> {
 }
 
 export async function POST(request: NextRequest) {
-  if (!Stripe) {
+  // Verificar se Stripe está configurado
+  const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+  
+  if (!Stripe || !stripeSecretKey) {
     return NextResponse.json(
-      { error: 'Stripe não está configurado' },
+      { 
+        error: "coming_soon",
+        message: "Stripe payment is coming soon" 
+      },
       { status: 503 }
     );
   }
@@ -50,7 +57,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+    const stripe = new Stripe(stripeSecretKey, {
       apiVersion: '2023-10-16',
     });
 
@@ -68,8 +75,11 @@ export async function POST(request: NextRequest) {
     
     if (!plan.stripe?.priceId) {
       return NextResponse.json(
-        { error: 'Stripe not configured for this plan' },
-        { status: 400 }
+        { 
+          error: "coming_soon",
+          message: "Stripe payment is coming soon" 
+        },
+        { status: 503 }
       );
     }
 
@@ -107,8 +117,23 @@ export async function POST(request: NextRequest) {
       url: session.url,
     });
 
-  } catch (error) {
-    console.error('Stripe checkout error:', error);
+  } catch (error: any) {
+    // Não logar erro se for relacionado a Stripe não configurado
+    if (!error.message?.includes('Invalid API Key') && !error.message?.includes('No API key')) {
+      console.error('Stripe checkout error:', error);
+    }
+    
+    // Se for erro de API key inválida, retornar coming soon
+    if (error.message?.includes('Invalid API Key') || error.message?.includes('No API key')) {
+      return NextResponse.json(
+        { 
+          error: "coming_soon",
+          message: "Stripe payment is coming soon" 
+        },
+        { status: 503 }
+      );
+    }
+    
     return NextResponse.json(
       { error: 'Failed to create checkout session' },
       { status: 500 }

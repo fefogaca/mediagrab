@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import connectDB from '@backend/lib/mongodb';
+import { connectDB } from '@backend/lib/database';
 import ApiKey from '@backend/models/ApiKey';
 
 export async function GET() {

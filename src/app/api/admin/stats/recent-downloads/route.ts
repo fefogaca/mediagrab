@@ -1,24 +1,33 @@
 import { NextResponse } from 'next/server';
-import connectDB from '@backend/lib/mongodb';
-import DownloadLog from '@models/DownloadLog';
+import { connectDB } from '@backend/lib/database';
+import prisma from '@backend/lib/database';
 
 export async function GET() {
   try {
     await connectDB();
     
-    const downloads = await DownloadLog.find({})
-      .populate('userId', 'name email')
-      .sort({ createdAt: -1 })
-      .limit(50);
+    const downloads = await prisma.downloadLog.findMany({
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50
+    });
 
     const formattedDownloads = downloads.map(d => ({
-      id: d._id.toString(),
+      id: d.id,
       url: d.url,
-      platform: d.provider, // Usar provider do modelo
-      userId: d.userId?._id?.toString(),
-      username: (d.userId as { name?: string })?.name || 'Anônimo',
+      platform: d.provider,
+      userId: d.userId,
+      username: d.user?.name || 'Anônimo',
       createdAt: d.createdAt,
-      downloaded_at: d.createdAt, // compatibilidade
+      downloaded_at: d.createdAt,
     }));
 
     return NextResponse.json({ downloads: formattedDownloads }, { status: 200 });

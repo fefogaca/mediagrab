@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
-import connectDB from '@backend/lib/mongodb';
-import DownloadLog from '@backend/models/DownloadLog';
+import { connectDB } from '@backend/lib/database';
+import prisma from '@backend/lib/database';
 import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
+import { getJWTSecret } from '@backend/lib/secrets';
 
-const JWT_SECRET: string = process.env.JWT_SECRET as string;
+const JWT_SECRET = getJWTSecret();
 
 interface DecodedToken {
   id: string;
@@ -39,21 +40,22 @@ export async function GET() {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     
-    const downloads = await DownloadLog.aggregate([
-      {
-        $match: {
-          userId: userId,
-          createdAt: { $gte: thirtyDaysAgo }
-        }
+    const allDownloads = await prisma.downloadLog.findMany({
+      where: {
+        userId: userId,
+        createdAt: { gte: thirtyDaysAgo }
       },
-      {
-        $group: {
-          _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
-          count: { $sum: 1 }
-        }
-      },
-      { $sort: { _id: 1 } }
-    ]);
+      select: {
+        createdAt: true
+      }
+    });
+
+    // Agrupar por data manualmente
+    const downloadsByDate: Record<string, number> = {};
+    allDownloads.forEach(download => {
+      const dateStr = download.createdAt.toISOString().split('T')[0];
+      downloadsByDate[dateStr] = (downloadsByDate[dateStr] || 0) + 1;
+    });
 
     const labels: string[] = [];
     const values: number[] = [];
@@ -65,9 +67,7 @@ export async function GET() {
       date.setDate(date.getDate() - i);
       const dateStr = date.toISOString().split('T')[0];
       labels.push(date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }));
-      
-      const download = downloads.find((d: { _id: string }) => d._id === dateStr);
-      values.push(download ? download.count : 0);
+      values.push(downloadsByDate[dateStr] || 0);
     }
 
     return NextResponse.json({ labels, values }, { status: 200 });

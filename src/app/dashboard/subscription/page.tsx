@@ -20,6 +20,7 @@ import {
   Rocket,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 
 interface Plan {
   id: string;
@@ -37,82 +38,54 @@ interface Plan {
   paymentLink?: string;
 }
 
-const plans: Plan[] = [
-  {
-    id: "free",
-    name: "Free",
-    description: "Perfeito para testar",
-    price: 0,
-    features: [
-      "5 requests/mês",
-      "1 API Key",
-      "Sem marca d'água",
-      "Downloads em SD (480p)",
-      "Suporte por email",
-    ],
-    limits: { requests: 5, apiKeys: 1 },
-    icon: Star,
-    color: "zinc",
-  },
-  {
-    id: "developer",
-    name: "Developer",
-    description: "Para desenvolvedores",
-    price: 10.00,
-    features: [
-      "1.000 requests/mês",
-      "5 API Keys",
-      "Sem marca d'água",
-      "Downloads em HD (1080p)",
-      "Suporte prioritário",
-    ],
-    limits: { requests: 1000, apiKeys: 5 },
-    icon: Zap,
-    color: "blue",
-    paymentLink: "https://www.abacatepay.com/pay/bill_mj4gYGKxSUJhWAxUrdWs5BGJ",
-  },
-  {
-    id: "startup",
-    name: "Startup",
-    description: "Para equipes",
-    price: 30.00,
-    features: [
-      "10.000 requests/mês",
-      "20 API Keys",
-      "Sem marca d'água",
-      "Downloads em 4K",
-      "Suporte 24/7",
-      "Analytics detalhados",
-    ],
-    limits: { requests: 10000, apiKeys: 20 },
-    icon: Rocket,
-    popular: true,
-    color: "purple",
-    paymentLink: "https://www.abacatepay.com/pay/bill_SSsaFnMcCC4YEJsr4cqrwBMC",
-  },
-  {
-    id: "enterprise",
-    name: "Enterprise",
-    description: "Para empresas",
-    price: 50.00,
-    features: [
-      "Requests ilimitados",
-      "API Keys ilimitadas",
-      "Sem marca d'água",
-      "Downloads em 8K",
-      "Suporte dedicado",
-      "SLA garantido (99.9%)",
-    ],
-    limits: { requests: -1, apiKeys: -1 },
-    icon: Crown,
-    color: "amber",
-    paymentLink: "https://www.abacatepay.com/pay/bill_tz0LjSeAC3YKpukqNUg3utDe",
-  },
-];
-
 export default function SubscriptionPage() {
+  const { t } = useTranslation();
   const [currentPlan, setCurrentPlan] = useState("free");
   const [loading, setLoading] = useState(true);
+  
+  const plans: Plan[] = [
+    {
+      id: "free",
+      name: t.pricing.plans.free.name,
+      description: t.pricing.plans.free.description,
+      price: 0,
+      features: t.pricing.plans.free.features,
+      limits: { requests: 5, apiKeys: 1 },
+      icon: Star,
+      color: "zinc",
+    },
+    {
+      id: "developer",
+      name: t.pricing.plans.developer.name,
+      description: t.pricing.plans.developer.description,
+      price: 2.00,
+      features: t.pricing.plans.developer.features,
+      limits: { requests: 1000, apiKeys: 5 },
+      icon: Zap,
+      color: "blue",
+    },
+    {
+      id: "startup",
+      name: t.pricing.plans.startup.name,
+      description: t.pricing.plans.startup.description,
+      price: 6.00,
+      features: t.pricing.plans.startup.features,
+      limits: { requests: 10000, apiKeys: 20 },
+      icon: Rocket,
+      popular: true,
+      color: "purple",
+    },
+    {
+      id: "enterprise",
+      name: t.pricing.plans.enterprise.name,
+      description: t.pricing.plans.enterprise.description,
+      price: 10.00,
+      features: t.pricing.plans.enterprise.features,
+      limits: { requests: -1, apiKeys: -1 },
+      icon: Crown,
+      color: "amber",
+    },
+  ];
 
   useEffect(() => {
     fetchCurrentPlan();
@@ -132,12 +105,12 @@ export default function SubscriptionPage() {
 
   const handleUpgrade = async (planId: string) => {
     if (planId === currentPlan) {
-      toast.info("Você já está neste plano");
+      toast.info(t.pricing.alreadyOnPlan);
       return;
     }
 
     if (planId === "free") {
-      toast.info("Não é possível fazer downgrade para o plano Free");
+      toast.info(t.pricing.cannotDowngrade);
       return;
     }
 
@@ -147,12 +120,37 @@ export default function SubscriptionPage() {
       return;
     }
 
-    if (plan.paymentLink) {
+    try {
       toast.info("Redirecionando para pagamento...");
-      // Abrir link de pagamento do AbacatePay
-      window.open(plan.paymentLink, '_blank');
-    } else {
-      toast.error("Link de pagamento não disponível");
+      
+      // Criar sessão de checkout no Stripe
+      const response = await fetch('/api/payments/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ plan: planId }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.url) {
+        // Redirecionar para checkout do Stripe
+        window.location.href = data.url;
+      } else {
+        // Verificar se é erro de "coming soon"
+        if (data.error === 'coming_soon' || data.message?.includes('coming soon')) {
+          toast.info(t.pricing.comingSoon, {
+            description: t.pricing.comingSoonDescription,
+            duration: 5000,
+          });
+        } else {
+          toast.error(data.error || t.common.error);
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao processar pagamento:", error);
+      toast.error(t.common.error);
     }
   };
 
@@ -199,16 +197,16 @@ export default function SubscriptionPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="text-center max-w-2xl mx-auto">
-        <h1 className="text-2xl font-bold text-white">Escolha seu Plano</h1>
+        <h1 className="text-2xl font-bold text-white">{t.pricing.title}</h1>
         <p className="text-zinc-400 mt-2">
-          Faça upgrade para desbloquear mais recursos e aumentar seus limites
+          {t.pricing.subtitle}
         </p>
       </div>
 
       {/* Current Plan Badge */}
       <div className="flex justify-center">
         <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30 px-4 py-1">
-          Plano atual: {plans.find(p => p.id === currentPlan)?.name || "Free"}
+          {t.dashboard.currentPlan}: {plans.find(p => p.id === currentPlan)?.name || "Free"}
         </Badge>
       </div>
 
@@ -230,7 +228,7 @@ export default function SubscriptionPage() {
               {plan.popular && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                   <Badge className="bg-purple-600 text-white border-0">
-                    Mais Popular
+                    {t.pricing.mostPopular}
                   </Badge>
                 </div>
               )}
@@ -246,10 +244,10 @@ export default function SubscriptionPage() {
               <CardContent className="text-center flex-1 flex flex-col">
                 <div className="mb-6">
                   <span className="text-4xl font-bold text-white">
-                    {plan.price === 0 ? "Grátis" : `R$${plan.price.toFixed(2).replace(".", ",")}`}
+                    {plan.price === 0 ? t.pricing.free : `$${plan.price.toFixed(2)}`}
                   </span>
                   {plan.price > 0 && (
-                    <span className="text-zinc-400 text-sm">/mês</span>
+                    <span className="text-zinc-400 text-sm">/{t.pricing.month}</span>
                   )}
                 </div>
                 <ul className="space-y-3 text-left mb-6">
@@ -269,7 +267,7 @@ export default function SubscriptionPage() {
                   onClick={() => handleUpgrade(plan.id)}
                   disabled={isCurrentPlan}
                 >
-                  {isCurrentPlan ? "Plano Atual" : "Escolher Plano"}
+                  {isCurrentPlan ? t.pricing.currentPlan : t.pricing.choosePlan}
                 </Button>
               </CardFooter>
             </Card>
@@ -280,27 +278,17 @@ export default function SubscriptionPage() {
       {/* FAQ */}
       <Card className="bg-zinc-900/50 border-zinc-800">
         <CardHeader>
-          <CardTitle className="text-white">Perguntas Frequentes</CardTitle>
+          <CardTitle className="text-white">{t.pricing.faq.title}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <h4 className="font-medium text-white mb-1">Como funciona o upgrade?</h4>
-            <p className="text-sm text-zinc-400">
-              Ao fazer upgrade, seu plano é ativado imediatamente e os novos limites são aplicados.
-            </p>
-          </div>
-          <div>
-            <h4 className="font-medium text-white mb-1">Posso fazer downgrade?</h4>
-            <p className="text-sm text-zinc-400">
-              Sim, você pode fazer downgrade ao final do período de faturamento.
-            </p>
-          </div>
-          <div>
-            <h4 className="font-medium text-white mb-1">Quais formas de pagamento?</h4>
-            <p className="text-sm text-zinc-400">
-              Aceitamos PIX, cartão de crédito e boleto bancário via AbacatePay.
-            </p>
-          </div>
+          {t.pricing.faq.items.map((item, index) => (
+            <div key={index}>
+              <h4 className="font-medium text-white mb-1">{item.question}</h4>
+              <p className="text-sm text-zinc-400">
+                {item.answer}
+              </p>
+            </div>
+          ))}
         </CardContent>
       </Card>
     </div>

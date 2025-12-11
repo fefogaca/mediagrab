@@ -16,8 +16,10 @@ import {
   Key,
   Activity,
 } from "lucide-react";
+import { useTranslation } from "@/lib/i18n";
 
 export default function AnalyticsPage() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     totalDownloads: 0,
@@ -46,13 +48,13 @@ export default function AnalyticsPage() {
   };
 
   const weeklyData = [
-    { day: "Seg", value: Math.floor(Math.random() * 50) + 10 },
-    { day: "Ter", value: Math.floor(Math.random() * 50) + 10 },
-    { day: "Qua", value: Math.floor(Math.random() * 50) + 10 },
-    { day: "Qui", value: Math.floor(Math.random() * 50) + 10 },
-    { day: "Sex", value: Math.floor(Math.random() * 50) + 10 },
-    { day: "Sáb", value: Math.floor(Math.random() * 50) + 10 },
-    { day: "Dom", value: Math.floor(Math.random() * 50) + 10 },
+    { day: t.common.days?.mon || "Seg", value: Math.floor(Math.random() * 50) + 10 },
+    { day: t.common.days?.tue || "Ter", value: Math.floor(Math.random() * 50) + 10 },
+    { day: t.common.days?.wed || "Qua", value: Math.floor(Math.random() * 50) + 10 },
+    { day: t.common.days?.thu || "Qui", value: Math.floor(Math.random() * 50) + 10 },
+    { day: t.common.days?.fri || "Sex", value: Math.floor(Math.random() * 50) + 10 },
+    { day: t.common.days?.sat || "Sáb", value: Math.floor(Math.random() * 50) + 10 },
+    { day: t.common.days?.sun || "Dom", value: Math.floor(Math.random() * 50) + 10 },
   ];
 
   const maxValue = Math.max(...weeklyData.map(d => d.value));
@@ -81,8 +83,8 @@ export default function AnalyticsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-white">Analytics</h1>
-        <p className="text-zinc-400 mt-1">Estatísticas de uso da sua conta</p>
+        <h1 className="text-2xl font-bold text-white">{t.dashboard.analytics}</h1>
+        <p className="text-zinc-400 mt-1">{t.dashboard.overview}</p>
       </div>
 
       {/* Stats */}
@@ -94,7 +96,7 @@ export default function AnalyticsPage() {
                 <Download className="h-5 w-5 text-emerald-500" />
               </div>
               <div>
-                <p className="text-sm text-zinc-400">Total Downloads</p>
+                <p className="text-sm text-zinc-400">{t.dashboard.stats.totalDownloads}</p>
                 <p className="text-2xl font-bold text-white">{stats.totalDownloads}</p>
               </div>
             </div>
@@ -107,7 +109,7 @@ export default function AnalyticsPage() {
                 <Activity className="h-5 w-5 text-blue-500" />
               </div>
               <div>
-                <p className="text-sm text-zinc-400">Total Requests</p>
+                <p className="text-sm text-zinc-400">{t.dashboard.stats.requestsUsed}</p>
                 <p className="text-2xl font-bold text-white">{stats.totalRequests}</p>
               </div>
             </div>
@@ -120,7 +122,7 @@ export default function AnalyticsPage() {
                 <TrendingUp className="h-5 w-5 text-amber-500" />
               </div>
               <div>
-                <p className="text-sm text-zinc-400">Taxa de Sucesso</p>
+                <p className="text-sm text-zinc-400">{t.dashboard.stats.successRate}</p>
                 <p className="text-2xl font-bold text-white">{stats.successRate}%</p>
               </div>
             </div>
@@ -135,10 +137,10 @@ export default function AnalyticsPage() {
           <CardHeader>
             <CardTitle className="text-white flex items-center gap-2">
               <BarChart3 className="h-5 w-5 text-emerald-500" />
-              Uso Semanal
+              {t.dashboard.analytics || 'Analytics'}
             </CardTitle>
             <CardDescription className="text-zinc-400">
-              Downloads nos últimos 7 dias
+              {t.dashboard.recentDownloads}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -167,10 +169,10 @@ export default function AnalyticsPage() {
           <CardHeader>
             <CardTitle className="text-white flex items-center gap-2">
               <Key className="h-5 w-5 text-emerald-500" />
-              Plataformas
+              {t.docs.platforms.title}
             </CardTitle>
             <CardDescription className="text-zinc-400">
-              Distribuição por origem
+              {t.docs.platforms.description}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -200,11 +202,9 @@ export default function AnalyticsPage() {
               <BarChart3 className="h-6 w-6 text-emerald-500" />
             </div>
             <div>
-              <h3 className="font-medium text-white mb-1">Sobre os Analytics</h3>
+              <h3 className="font-medium text-white mb-1">{t.dashboard.analytics}</h3>
               <p className="text-sm text-zinc-400">
-                Os dados de analytics são atualizados em tempo real. As estatísticas mostram 
-                seu uso da API nos últimos 30 dias e ajudam você a entender melhor seus padrões 
-                de consumo.
+                {t.dashboard.overview}
               </p>
             </div>
           </div>

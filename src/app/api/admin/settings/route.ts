@@ -1,23 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import jwt from 'jsonwebtoken';
-import connectDB from '@/backend/lib/mongodb';
+import { connectDB } from '@/backend/lib/database';
+import { getJWTSecret } from '@/backend/lib/secrets';
+import Settings from '@/backend/models/Settings';
 
-const JWT_SECRET = process.env.JWT_SECRET || '';
-
-// Em produção, isso seria armazenado no banco de dados
-let globalSettings = {
-  siteName: "MediaGrab",
-  siteUrl: process.env.NEXT_PUBLIC_APP_URL || "https://mediagrab.com",
-  supportEmail: "support@mediagrab.com",
-  maintenanceMode: false,
-  allowRegistration: true,
-  emailVerification: true,
-  twoFactorRequired: false,
-  maxApiKeysPerUser: 5,
-  defaultDailyLimit: 100,
-  rateLimitPerMinute: 60,
-};
+const JWT_SECRET = getJWTSecret();
 
 interface DecodedToken {
   id: string;
@@ -30,11 +18,24 @@ async function verifyAdmin(): Promise<boolean> {
     const cookieStore = await cookies();
     const token = cookieStore.get('token')?.value;
     
-    if (!token) return false;
+    if (!token) {
+      console.log('❌ Nenhum token encontrado');
+      return false;
+    }
     
-    const decoded = jwt.verify(token, JWT_SECRET) as DecodedToken;
-    return decoded.role === 'admin';
-  } catch {
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET) as DecodedToken;
+      const isAdmin = decoded.role === 'admin';
+      if (!isAdmin) {
+        console.log('❌ Usuário não é admin. Role:', decoded.role);
+      }
+      return isAdmin;
+    } catch (jwtError: any) {
+      console.error('❌ Erro ao verificar JWT:', jwtError?.message);
+      return false;
+    }
+  } catch (error: any) {
+    console.error('❌ Erro em verifyAdmin:', error?.message);
     return false;
   }
 }
@@ -45,7 +46,47 @@ export async function GET() {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
 
-  return NextResponse.json({ settings: globalSettings });
+  try {
+    await connectDB();
+    const settings = await Settings.getSettings();
+    
+    // Formatar resposta para compatibilidade com frontend
+    // Converter JSONB para objetos JavaScript
+    const formattedSettings = {
+      siteName: settings.siteName,
+      siteUrl: settings.siteUrl,
+      supportEmail: settings.supportEmail,
+      maintenanceMode: settings.maintenanceMode,
+      allowRegistration: settings.allowRegistration,
+      emailVerification: settings.emailVerification,
+      twoFactorRequired: settings.twoFactorRequired,
+      maxApiKeysPerUser: settings.maxApiKeysPerUser,
+      defaultDailyLimit: settings.defaultDailyLimit,
+      rateLimitPerMinute: settings.rateLimitPerMinute,
+      googleOAuth: typeof settings.googleOAuth === 'string' 
+        ? JSON.parse(settings.googleOAuth) 
+        : settings.googleOAuth,
+      githubOAuth: typeof settings.githubOAuth === 'string'
+        ? JSON.parse(settings.githubOAuth)
+        : settings.githubOAuth,
+      sendGrid: typeof settings.sendGrid === 'string'
+        ? JSON.parse(settings.sendGrid)
+        : settings.sendGrid,
+      stripe: typeof settings.stripe === 'string'
+        ? JSON.parse(settings.stripe)
+        : settings.stripe,
+    };
+
+    return NextResponse.json({ settings: formattedSettings });
+  } catch (error: any) {
+    console.error('Erro ao buscar configurações:', error);
+    console.error('Stack:', error?.stack);
+    return NextResponse.json({ 
+      error: 'Erro ao buscar configurações',
+      message: error?.message || 'Erro desconhecido',
+      details: process.env.NODE_ENV === 'development' ? error?.stack : undefined
+    }, { status: 500 });
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -55,21 +96,49 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    await connectDB();
     const body = await request.json();
     
-    // Atualizar configurações
-    globalSettings = {
-      ...globalSettings,
-      ...body,
-    };
+    // Atualizar configurações no banco de dados
+    const updatedSettings = await Settings.updateSettings({
+      siteName: body.siteName,
+      siteUrl: body.siteUrl,
+      supportEmail: body.supportEmail,
+      maintenanceMode: body.maintenanceMode,
+      allowRegistration: body.allowRegistration,
+      emailVerification: body.emailVerification,
+      twoFactorRequired: body.twoFactorRequired,
+      maxApiKeysPerUser: body.maxApiKeysPerUser,
+      defaultDailyLimit: body.defaultDailyLimit,
+      rateLimitPerMinute: body.rateLimitPerMinute,
+      googleOAuth: body.googleOAuth,
+      githubOAuth: body.githubOAuth,
+      sendGrid: body.sendGrid,
+      stripe: body.stripe,
+    });
 
-    // Em produção, salvar no banco de dados
-    // await Settings.findOneAndUpdate({}, globalSettings, { upsert: true });
+    // Formatar resposta
+    const formattedSettings = {
+      siteName: updatedSettings.siteName,
+      siteUrl: updatedSettings.siteUrl,
+      supportEmail: updatedSettings.supportEmail,
+      maintenanceMode: updatedSettings.maintenanceMode,
+      allowRegistration: updatedSettings.allowRegistration,
+      emailVerification: updatedSettings.emailVerification,
+      twoFactorRequired: updatedSettings.twoFactorRequired,
+      maxApiKeysPerUser: updatedSettings.maxApiKeysPerUser,
+      defaultDailyLimit: updatedSettings.defaultDailyLimit,
+      rateLimitPerMinute: updatedSettings.rateLimitPerMinute,
+      googleOAuth: updatedSettings.googleOAuth as any,
+      githubOAuth: updatedSettings.githubOAuth as any,
+      sendGrid: updatedSettings.sendGrid as any,
+      stripe: updatedSettings.stripe as any,
+    };
 
     return NextResponse.json({ 
       success: true,
       message: 'Configurações salvas',
-      settings: globalSettings 
+      settings: formattedSettings 
     });
 
   } catch (error) {
@@ -79,10 +148,5 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
-
-// Exportar configurações para uso em outros lugares
-export function getGlobalSettings() {
-  return globalSettings;
 }
 
