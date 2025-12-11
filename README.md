@@ -13,83 +13,83 @@
 
 ---
 
-## 📋 Table of Contents
+## Table of Contents
 
 <details>
 <summary>Click to expand</summary>
 
-- [About](#-about)
-- [Features](#-features)
-- [Quick Start](#-quick-start)
-  - [Installation](#-installation)
-  - [Configuration](#-configuration)
-  - [First Access](#-first-access)
-- [Development](#-development)
-  - [Pre-Requisites](#-pre-requisites)
-  - [Environment Setup](#-environment-setup)
-  - [File Structure](#-file-structure)
-  - [Database Setup](#-database-setup)
-  - [Build & Deploy](#-build--deploy)
-- [API Documentation](#-api-documentation)
-- [Architecture](#-architecture)
-- [Contributing](#-contributing)
-- [FAQ](#-faq)
-- [Resources](#-resources)
-- [License](#-license)
+- [About](#about)
+- [Features](#features)
+- [Quick Start](#quick-start)
+  - [Installation](#installation)
+  - [Configuration](#configuration)
+  - [First Access](#first-access)
+- [Development](#development)
+  - [Pre-Requisites](#pre-requisites)
+  - [Environment Setup](#environment-setup)
+  - [File Structure](#file-structure)
+  - [Database Setup](#database-setup)
+  - [Build & Deploy](#build--deploy)
+- [API Documentation](#api-documentation)
+- [Architecture](#architecture)
+- [Contributing](#contributing)
+- [FAQ](#faq)
+- [Resources](#resources)
+- [License](#license)
 
 </details>
 
 ---
 
-## 🎯 About
+## About
 
 **MediaGrab** is a powerful and comprehensive API for downloading media from 1000+ platforms, including YouTube, Instagram, TikTok, Twitter, and many more. Built with Next.js 16, TypeScript, Supabase/PostgreSQL, and Prisma, it provides a robust and scalable solution for integrating media downloads into any application.
 
 ### Key Highlights
 
-- 🎥 **Multi-Platform Downloads** - Support for 1000+ media sites
-- 🔄 **Fallback System** - 4 different providers for maximum availability
-- 🔐 **Complete Authentication** - JWT and NextAuth with OAuth support
-- 📊 **Admin Dashboard** - Complete administration panel
-- 👤 **User Management** - Full user and permission management
-- 🔑 **API Keys** - Per-user API key system
-- 💳 **Payments** - Stripe integration for subscriptions
-- 📧 **Email** - SendGrid integration
-- 🌍 **i18n** - Portuguese and English support
+- **Multi-Platform Downloads** - Support for 1000+ media sites
+- **Fallback System** - 4 different providers for maximum availability
+- **Complete Authentication** - JWT and NextAuth with OAuth support
+- **Admin Dashboard** - Complete administration panel
+- **User Management** - Full user and permission management
+- **API Keys** - Per-user API key system
+- **Payments** - Stripe integration for subscriptions
+- **Email** - SendGrid integration
+- **i18n** - Portuguese and English support
 
 ---
 
-## ✨ Features
+## Features
 
 <details>
 <summary><b>Click to see all features</b></summary>
 
 ### Core Features
 
-- 🎥 **Media Download** - Support for 1000+ platforms (YouTube, Instagram, TikTok, Twitter, etc.)
-- 🔄 **Fallback System** - 4 providers (yt-dlp, @distube/ytdl-core, ytdl-core, play-dl) for maximum availability
-- 🌐 **RESTful API** - Complete API for integration in any project
-- 👤 **User System** - Complete authentication with JWT and NextAuth
-- 🔑 **API Keys** - Per-user API key management
-- 📊 **Admin Dashboard** - Complete panel to manage the platform
-- 📱 **User Dashboard** - Panel for users to manage their API Keys
-- 🌍 **Internationalization** - Portuguese and English support
+- **Media Download** - Support for 1000+ platforms (YouTube, Instagram, TikTok, Twitter, etc.)
+- **Fallback System** - 4 providers (yt-dlp, @distube/ytdl-core, ytdl-core, play-dl) for maximum availability
+- **RESTful API** - Complete API for integration in any project
+- **User System** - Complete authentication with JWT and NextAuth
+- **API Keys** - Per-user API key management
+- **Admin Dashboard** - Complete panel to manage the platform
+- **User Dashboard** - Panel for users to manage their API Keys
+- **Internationalization** - Portuguese and English support
 
 ### Optional Integrations
 
-- 💳 **Payments** - Stripe integration for subscriptions
-- 📧 **Emails** - SendGrid integration
-- 🔐 **OAuth** - Login with Google and GitHub
-- 🗄️ **Modern Database** - Supabase/PostgreSQL with Prisma ORM
-- ⚙️ **Centralized Configuration** - Admin panel to manage settings
+- **Payments** - Stripe integration for subscriptions
+- **Emails** - SendGrid integration
+- **OAuth** - Login with Google and GitHub
+- **Modern Database** - Supabase/PostgreSQL with Prisma ORM
+- **Centralized Configuration** - Admin panel to manage settings
 
 </details>
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
-### 📦 Installation
+### Installation
 
 <details>
 <summary><b>Step-by-step installation guide</b></summary>
@@ -105,7 +105,7 @@
 
 1. **Clone the repository**
 ```bash
-git clone https://github.com/seu-usuario/mediagrab.git
+git clone https://github.com/fefogaca/mediagrab.git
 cd mediagrab
 ```
 
@@ -138,7 +138,7 @@ Visit: **http://localhost:3000**
 
 </details>
 
-### ⚙️ Configuration
+### Configuration
 
 <details>
 <summary><b>Environment variables and settings</b></summary>
@@ -173,7 +173,7 @@ These variables can be configured through the admin panel (`/admin/settings`) af
 
 </details>
 
-### 🎉 First Access
+### First Access
 
 <details>
 <summary><b>How to create the first administrator</b></summary>
@@ -190,9 +190,9 @@ After creating the admin, log in normally and start using!
 
 ---
 
-## 🛠️ Development
+## Development
 
-### 📚 Pre-Requisites
+### Pre-Requisites
 
 <details>
 <summary><b>Required tools and software</b></summary>
@@ -207,14 +207,14 @@ Before starting development, make sure you have installed:
 
 </details>
 
-### 🔧 Environment Setup
+### Environment Setup
 
 <details>
 <summary><b>Complete development environment setup</b></summary>
 
 1. **Clone the repository**
 ```bash
-git clone https://github.com/seu-usuario/mediagrab.git
+git clone https://github.com/fefogaca/mediagrab.git
 cd mediagrab
 ```
 
@@ -248,7 +248,7 @@ npm run dev
 
 </details>
 
-### 📁 File Structure
+### File Structure
 
 <details>
 <summary><b>Project structure and file organization</b></summary>
@@ -293,17 +293,17 @@ mediagrab/
 │   │   ├── models/            # Prisma model wrappers
 │   │   │   ├── User.ts        # User model
 │   │   │   ├── ApiKey.ts      # API Key model
-│   │   │   ├── Settings.ts    # Settings model
+│   │   │   ├── Settings.ts   # Settings model
 │   │   │   └── ...
 │   │   ├── services/          # Services (email, payment)
 │   │   └── lib/              # Utilities
-│   │       ├── database.ts    # Prisma client
+│   │       ├── database.ts   # Prisma client
 │   │       ├── auth.ts        # NextAuth configuration
 │   │       └── secrets.ts     # Secret management
 │   │
 │   └── lib/                   # Shared utilities
 │       ├── i18n/              # Internationalization
-│       └── media/             # Media utilities
+│       └── media/            # Media utilities
 │
 ├── public/                    # Static assets
 │   └── images/                # Images
@@ -330,7 +330,7 @@ mediagrab/
 
 </details>
 
-### 🗄️ Database Setup
+### Database Setup
 
 <details>
 <summary><b>Supabase and Prisma configuration</b></summary>
@@ -372,7 +372,7 @@ npx prisma studio
 
 </details>
 
-### 🔨 Build & Deploy
+### Build & Deploy
 
 <details>
 <summary><b>Build and deployment instructions</b></summary>
@@ -415,7 +415,7 @@ The project can be deployed on any platform that supports Next.js:
 
 ---
 
-## 📡 API Documentation
+## API Documentation
 
 <details>
 <summary><b>Complete API reference</b></summary>
@@ -466,7 +466,7 @@ curl -X GET "http://localhost:3000/api/download?url=VIDEO_URL" \
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 <details>
 <summary><b>System architecture and fallback system</b></summary>
@@ -483,10 +483,10 @@ MediaGrab uses a robust fallback system with 4 providers:
 | **play-dl** | YouTube, SoundCloud | Fallback 3 |
 
 If one provider fails, the system automatically tries the next. This ensures:
-- ✅ If YouTube changes something, another provider can work
-- ✅ Independent updates for each library
-- ✅ Detailed logs of which provider was used
-- ✅ Always consistent JSON response format
+- If YouTube changes something, another provider can work
+- Independent updates for each library
+- Detailed logs of which provider was used
+- Always consistent JSON response format
 
 ### Technology Stack
 
@@ -502,7 +502,7 @@ If one provider fails, the system automatically tries the next. This ensures:
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 <details>
 <summary><b>How to contribute to the project</b></summary>
@@ -510,13 +510,13 @@ If one provider fails, the system automatically tries the next. This ensures:
 Your contributions are always welcome and appreciated! Here are ways to contribute:
 
 1. **Report a bug** <br>
-   If you found a bug, report it [here](https://github.com/seu-usuario/mediagrab/issues) and we'll take care of it.
+   If you found a bug, report it [here](https://github.com/fefogaca/mediagrab/issues) and we'll take care of it.
 
 2. **Request a feature** <br>
-   You can also request a feature [here](https://github.com/seu-usuario/mediagrab/issues), and if viable, it will be developed.
+   You can also request a feature [here](https://github.com/fefogaca/mediagrab/issues), and if viable, it will be developed.
 
 3. **Create a pull request** <br>
-   Your contribution will be appreciated by the community. You can start by picking any open issue [here](https://github.com/seu-usuario/mediagrab/issues) and create a pull request.
+   Your contribution will be appreciated by the community. You can start by picking any open issue [here](https://github.com/fefogaca/mediagrab/issues) and create a pull request.
 
 > If you're new to open-source, make sure to read more about it [here](https://www.digitalocean.com/community/tutorial_series/an-introduction-to-open-source) and learn more about creating pull requests [here](https://www.digitalocean.com/community/tutorials/how-to-create-a-pull-request-on-github).
 
@@ -554,7 +554,7 @@ After that, changes will be merged.
 
 ---
 
-## ❓ FAQ
+## FAQ
 
 <details>
 <summary><b>Frequently asked questions</b></summary>
@@ -584,7 +584,7 @@ A: Yes! The free plan includes 5 requests per month and 1 API key.
 
 ---
 
-## 📚 Resources
+## Resources
 
 <details>
 <summary><b>Useful resources and documentation</b></summary>
@@ -602,7 +602,7 @@ A: Yes! The free plan includes 5 requests per month and 1 API key.
 
 ---
 
-## 📦 Available Commands
+## Available Commands
 
 <details>
 <summary><b>All npm scripts and commands</b></summary>
@@ -632,7 +632,7 @@ npx prisma studio         # Open Prisma Studio (database GUI)
 
 ---
 
-## 💳 Pricing Plans
+## Pricing Plans
 
 <details>
 <summary><b>Available subscription plans</b></summary>
@@ -648,7 +648,7 @@ npx prisma studio         # Open Prisma Studio (database GUI)
 
 ---
 
-## 🌐 Access URLs
+## Access URLs
 
 | Page | URL |
 |------|-----|
@@ -662,7 +662,7 @@ npx prisma studio         # Open Prisma Studio (database GUI)
 
 ---
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 <details>
 <summary><b>Credits and acknowledgments</b></summary>
@@ -677,7 +677,7 @@ npx prisma studio         # Open Prisma Studio (database GUI)
 
 ---
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for more details.
 
