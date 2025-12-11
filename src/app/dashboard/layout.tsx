@@ -31,6 +31,7 @@ import {
   Globe,
   Home,
   Play,
+  Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LogoSmallContrast } from "@frontend/components/shared/Logo";
@@ -51,6 +52,7 @@ const getSidebarItems = (t: ReturnType<typeof useTranslation>['t']) => [
   { href: "/dashboard/test-area", label: t.userDashboard.sidebar.testArea, icon: Play },
   { href: "/dashboard/downloads", label: t.userDashboard.sidebar.downloads, icon: Download },
   { href: "/dashboard/analytics", label: t.userDashboard.sidebar.analytics, icon: BarChart3 },
+  { href: "/dashboard/notifications", label: t.userDashboard.sidebar.notifications, icon: Bell },
   { href: "/dashboard/subscription", label: t.userDashboard.sidebar.subscription, icon: CreditCard },
   { href: "/dashboard/settings", label: t.userDashboard.sidebar.settings, icon: Settings },
 ];
