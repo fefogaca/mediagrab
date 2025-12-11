@@ -5,6 +5,7 @@ import ApiKey from '@backend/models/ApiKey';
 import { validateMediaUrl } from '@/lib/media/providers';
 import { resolveMediaInfo, type ResolvedMediaFormat } from '@/lib/server/mediaResolver';
 import { MediaResolverError } from '@/lib/server/mediaResolverError';
+import { getBaseUrlFromRequest } from '@/lib/utils';
 
 interface ApiErrorBody {
   error: {
@@ -108,7 +109,7 @@ export async function GET(request: NextRequest) {
     const resolvedInfo = await resolveMediaInfo(normalizedUrl);
     
     // Formatar resposta similar ao endpoint normal
-    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || request.nextUrl.origin;
+    const baseUrl = getBaseUrlFromRequest(request);
     const processedFormats = resolvedInfo.formats
       .filter((format) => format.format_id)
       .map((format) => {

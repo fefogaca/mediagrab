@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { validateMediaUrl } from '@/lib/media/providers';
 import { resolveMediaInfo, type ResolvedMediaFormat } from '@/lib/server/mediaResolver';
 import { MediaResolverError } from '@/lib/server/mediaResolverError';
+import { getBaseUrlFromRequest } from '@/lib/utils';
 
 interface ApiErrorBody {
   error: {
@@ -93,7 +94,7 @@ function buildDownloadFormat(
   url: string,
   format: ResolvedMediaFormat,
 ) {
-  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || request.nextUrl.origin;
+  const baseUrl = getBaseUrlFromRequest(request);
   const directDownloadUrl = new URL('/api/download-direct', baseUrl);
   directDownloadUrl.searchParams.set('url', url);
   directDownloadUrl.searchParams.set('format', format.format_id);
