@@ -152,7 +152,7 @@ export async function GET(request: NextRequest) {
             message: error.message,
           },
         },
-        { status: error.statusCode },
+        { status: error.code === 'UNSUPPORTED_PROVIDER' ? 415 : 502 },
       );
     }
 

@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
 
         // Registrar pagamento
         await Payment.create({
-          userId,
+          user: { connect: { id: userId } }, 
           stripeSessionId: session.id,
           stripeSubscriptionId: session.subscription as string | undefined,
           amount: amount,

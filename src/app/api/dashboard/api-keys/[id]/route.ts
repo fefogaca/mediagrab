@@ -48,7 +48,7 @@ export async function DELETE(
       return NextResponse.json({ message: 'API Key não encontrada' }, { status: 404 });
     }
 
-    await prisma.apiKey.delete({ where: { id } });
+    await ApiKey.deleteOne({ id });
 
     return NextResponse.json({ message: 'API Key excluída com sucesso' }, { status: 200 });
   } catch (error) {

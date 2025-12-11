@@ -34,10 +34,6 @@ export async function GET(request: Request) {
     await connectDB();
 
     const notifications = await prisma.notification.findMany({
-      include: {
-        // Note: createdBy is a string ID, not a relation in Prisma schema
-        // We'll need to fetch user separately if needed
-      },
       orderBy: { createdAt: 'desc' },
       take: 50
     });

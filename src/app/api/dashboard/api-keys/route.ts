@@ -111,11 +111,11 @@ export async function POST() {
     const apiKey = await ApiKey.create({
       key: apiKeyValue,
       name: `API Key ${keyNumber}`,
-      userId: user.id,
+      user: { connect: { id: user.id } },  // ✅ Correto - usar relação
       usageLimit: usageLimit,
       usageCount: 0,
       isActive: true,
-      expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 ano
+      expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
     });
 
     if (!apiKey) {

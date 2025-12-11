@@ -647,7 +647,6 @@ export const translations = {
       unlimited: 'Ilimitado',
       status: 'Status',
       date: 'Data',
-      name: 'Nome',
       email: 'Email',
       password: 'Senha',
       required: 'Obrigatório',
@@ -661,7 +660,6 @@ export const translations = {
         sat: 'Sáb',
         sun: 'Dom',
       },
-      unlimited: 'Ilimitado',
     },
     // Admin Panel
     admin: {
@@ -990,7 +988,6 @@ export const translations = {
         },
       },
       myAccount: 'Minha Conta',
-      administrator: 'Administrador',
       logout: 'Sair',
     },
     // User Dashboard
@@ -1654,7 +1651,6 @@ export const translations = {
       unlimited: 'Unlimited',
       status: 'Status',
       date: 'Date',
-      name: 'Name',
       email: 'Email',
       password: 'Password',
       required: 'Required',
@@ -1668,7 +1664,6 @@ export const translations = {
         sat: 'Sat',
         sun: 'Sun',
       },
-      unlimited: 'Unlimited',
     },
     // Admin Panel
     admin: {
@@ -1997,7 +1992,6 @@ export const translations = {
         },
       },
       myAccount: 'My Account',
-      administrator: 'Administrator',
       logout: 'Logout',
     },
     // User Dashboard

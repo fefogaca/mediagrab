@@ -7,6 +7,16 @@ import { getJWTSecret } from '@backend/lib/secrets';
 
 const JWT_SECRET = getJWTSecret();
 
+// Type guard para verificar se twoFactor é um objeto com enabled
+function isTwoFactorObject(twoFactor: unknown): twoFactor is { enabled: boolean } {
+  return (
+    typeof twoFactor === 'object' &&
+    twoFactor !== null &&
+    'enabled' in twoFactor &&
+    typeof (twoFactor as { enabled: unknown }).enabled === 'boolean'
+  );
+}
+
 export async function GET() {
   try {
     const cookieStore = await cookies();
@@ -43,6 +53,11 @@ export async function GET() {
       return NextResponse.json({ message: 'Usuário não encontrado' }, { status: 404 });
     }
 
+    // Verificar e extrair twoFactor de forma segura
+    const twoFactorEnabled = isTwoFactorObject(user.twoFactor) 
+      ? user.twoFactor.enabled 
+      : false;
+
     return NextResponse.json({
       user: {
         id: user.id,
@@ -53,7 +68,7 @@ export async function GET() {
         plan: user.plan,
         planExpiresAt: user.planExpiresAt,
         image: user.image,
-        twoFactorEnabled: user.twoFactor?.enabled || false,
+        twoFactorEnabled,
         createdAt: user.createdAt
       }
     });

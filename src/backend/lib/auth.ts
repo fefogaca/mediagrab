@@ -63,11 +63,6 @@ export const authConfig = {
         }
 
         // Verificar 2FA se habilitado
-        if (user.twoFactor?.enabled) {
-          throw new Error('2FA_REQUIRED');
-        }
-
-        // Verificar 2FA se habilitado
         const twoFactor = user.twoFactor as { enabled?: boolean } || {};
         if (twoFactor.enabled) {
           throw new Error('2FA_REQUIRED');

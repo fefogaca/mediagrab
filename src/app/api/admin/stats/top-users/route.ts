@@ -1,44 +1,43 @@
 import { NextResponse } from 'next/server';
 import { connectDB } from '@backend/lib/database';
-import DownloadLog from '@backend/models/DownloadLog';
+import prisma from '@backend/lib/database';
 
 export async function GET() {
   try {
     await connectDB();
     
-    const topUsers = await DownloadLog.aggregate([
-      {
-        $match: { userId: { $exists: true, $ne: null } }
-      },
-      {
-        $group: {
-          _id: "$userId",
-          download_count: { $sum: 1 }
-        }
-      },
-      { $sort: { download_count: -1 } },
-      { $limit: 5 },
-      {
-        $lookup: {
-          from: 'users',
-          localField: '_id',
-          foreignField: '_id',
-          as: 'user'
-        }
-      },
-      { $unwind: '$user' },
-      {
-        $project: {
-          username: '$user.name',
-          email: '$user.email',
-          download_count: 1
-        }
-      }
-    ]);
+    // Usar SQL raw do PostgreSQL para agrupar downloads por usuário
+    const topUsers = await prisma.$queryRaw<Array<{
+      user_id: string;
+      username: string;
+      email: string;
+      download_count: bigint;
+    }>>`
+      SELECT 
+        dl.user_id,
+        u.name as username,
+        u.email,
+        COUNT(*)::int as download_count
+      FROM download_logs dl
+      INNER JOIN users u ON dl.user_id = u.id
+      WHERE dl.user_id IS NOT NULL
+      GROUP BY dl.user_id, u.name, u.email
+      ORDER BY download_count DESC
+      LIMIT 5
+    `;
     
-    return NextResponse.json(topUsers, { status: 200 });
+    const formattedUsers = topUsers.map(user => ({
+      username: user.username,
+      email: user.email,
+      download_count: Number(user.download_count) // Converter bigint para number
+    }));
+    
+    return NextResponse.json(formattedUsers, { status: 200 });
   } catch (error) {
     console.error('Failed to fetch top users:', error);
-    return NextResponse.json({ message: 'Failed to fetch top users', error: (error as Error).message }, { status: 500 });
+    return NextResponse.json({ 
+      message: 'Failed to fetch top users', 
+      error: (error as Error).message 
+    }, { status: 500 });
   }
 }

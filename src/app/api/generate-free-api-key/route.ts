@@ -37,7 +37,7 @@ export async function POST() {
     await ApiKey.create({
       key: apiKey,
       name: 'Free Trial Key',
-      userId: guestUser.id,
+      user: { connect: { id: guestUser.id } },  // ✅ Correto
       usageLimit: 5,
       expiresAt,
       isActive: true,
