@@ -44,8 +44,9 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Install yt-dlp (required for media downloads)
+# Install OpenSSL and yt-dlp (required for Prisma and media downloads)
 RUN apk add --no-cache \
+    openssl \
     python3 \
     py3-pip \
     ffmpeg \
@@ -90,4 +91,3 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 # Start application
 ENTRYPOINT ["./docker-entrypoint.sh"]
 CMD ["node", "server.js"]
-
