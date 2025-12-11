@@ -309,10 +309,26 @@ docker-compose logs -f
 #### Platform-Specific Deployment
 
 **Coolify:**
-1. Conecte seu repositório Git
-2. Configure as variáveis de ambiente no dashboard
-3. O Coolify detectará automaticamente o `Dockerfile`
-4. Deploy automático a cada push
+1. **Opção 1: Docker Image (Recomendado)**
+   - Build da imagem localmente: `docker buildx build --platform linux/amd64 -t seu-usuario/mediagrab:latest --push .`
+   - No Coolify, selecione deploy "Docker Image"
+   - Digite o nome da imagem: `seu-usuario/mediagrab:latest`
+   - Configure as variáveis de ambiente (veja abaixo)
+   - Defina "Port Exposes" para `3000` (importante!)
+   - Faça o deploy
+
+2. **Opção 2: Repositório Git**
+   - Conecte seu repositório Git
+   - O Coolify detectará automaticamente o `Dockerfile`
+   - Configure as variáveis de ambiente
+   - Deploy automático a cada push
+
+**Importante para Coolify:**
+- Use a URL do **Session Pooler** do Supabase (não conexão direta)
+- Formato: `postgresql://postgres.PROJECT_ID:SENHA@aws-1-eu-central-1.pooler.supabase.com:5432/postgres`
+- Codifique caracteres especiais na senha (`#` → `%23`, `!` → `%21`)
+- Defina `PORT=3000` e "Port Exposes" para `3000` no dashboard do Coolify
+- Configure `NEXT_PUBLIC_APP_URL` e `NEXTAUTH_URL` com seu domínio do Coolify
 
 **Portainer:**
 1. Vá em **Stacks** → **Add Stack**

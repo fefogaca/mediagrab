@@ -174,10 +174,47 @@ docker run -d \
 
 ### Coolify
 
+#### Option 1: Docker Image (Recommended)
+
+1. **Build and push the image:**
+   ```bash
+   docker buildx build --platform linux/amd64 -t your-username/mediagrab:latest --push .
+   ```
+
+2. **In Coolify dashboard:**
+   - Select "Docker Image" deployment type
+   - Enter image name: `your-username/mediagrab:latest`
+   - Set "Port Exposes" to `3000` (important!)
+   - Configure environment variables (see below)
+   - Deploy
+
+#### Option 2: Git Repository
+
 1. Connect your Git repository
-2. Configure environment variables in the dashboard
-3. Coolify will automatically detect the `Dockerfile`
-4. Automatic deployment on each push
+2. Coolify will automatically detect the `Dockerfile`
+3. Configure environment variables
+4. Set "Port Exposes" to `3000`
+5. Automatic deployment on each push
+
+#### Environment Variables for Coolify
+
+**Required:**
+```env
+DATABASE_URL=postgresql://postgres.PROJECT_ID:PASSWORD@aws-1-eu-central-1.pooler.supabase.com:5432/postgres
+NEXT_PUBLIC_APP_URL=https://your-coolify-domain.com
+NEXTAUTH_URL=https://your-coolify-domain.com
+PORT=3000
+```
+
+**Important Notes:**
+- Use Supabase **Session Pooler** URL (not direct connection)
+- URL-encode special characters in password:
+  - `#` → `%23`
+  - `!` → `%21`
+  - `@` → `%40`
+  - `%` → `%25`
+- Get the Session Pooler URL from Supabase Dashboard → Settings → Database → Connection Pooling
+- Ensure "Port Exposes" is set to `3000` in Coolify (not `80`)
 
 ### Portainer
 

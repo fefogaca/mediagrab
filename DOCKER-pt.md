@@ -174,10 +174,47 @@ docker run -d \
 
 ### Coolify
 
+#### Opção 1: Docker Image (Recomendado)
+
+1. **Build e push da imagem:**
+   ```bash
+   docker buildx build --platform linux/amd64 -t seu-usuario/mediagrab:latest --push .
+   ```
+
+2. **No dashboard do Coolify:**
+   - Selecione tipo de deploy "Docker Image"
+   - Digite o nome da imagem: `seu-usuario/mediagrab:latest`
+   - Defina "Port Exposes" para `3000` (importante!)
+   - Configure as variáveis de ambiente (veja abaixo)
+   - Faça o deploy
+
+#### Opção 2: Repositório Git
+
 1. Conecte seu repositório Git
-2. Configure as variáveis de ambiente no dashboard
-3. Coolify detectará automaticamente o `Dockerfile`
-4. Deploy automático a cada push
+2. O Coolify detectará automaticamente o `Dockerfile`
+3. Configure as variáveis de ambiente
+4. Defina "Port Exposes" para `3000`
+5. Deploy automático a cada push
+
+#### Variáveis de Ambiente para Coolify
+
+**Obrigatórias:**
+```env
+DATABASE_URL=postgresql://postgres.PROJECT_ID:SENHA@aws-1-eu-central-1.pooler.supabase.com:5432/postgres
+NEXT_PUBLIC_APP_URL=https://seu-dominio-coolify.com
+NEXTAUTH_URL=https://seu-dominio-coolify.com
+PORT=3000
+```
+
+**Notas Importantes:**
+- Use a URL do **Session Pooler** do Supabase (não conexão direta)
+- Codifique caracteres especiais na senha:
+  - `#` → `%23`
+  - `!` → `%21`
+  - `@` → `%40`
+  - `%` → `%25`
+- Obtenha a URL do Session Pooler em Supabase Dashboard → Settings → Database → Connection Pooling
+- Certifique-se de que "Port Exposes" está definido para `3000` no Coolify (não `80`)
 
 ### Portainer
 

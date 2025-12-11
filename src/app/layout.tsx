@@ -8,6 +8,11 @@ export const metadata: Metadata = {
   title: "MediaGrab - The Ultimate Media Downloading API",
   description: "Download media from 1000+ platforms. Powerful, reliable, and easy to integrate API.",
   keywords: ["media download", "video download", "API", "youtube download", "instagram download"],
+  icons: {
+    icon: "/images/favicon.png",
+    shortcut: "/images/favicon.png",
+    apple: "/images/favicon.png",
+  },
 };
 
 export default function RootLayout({
