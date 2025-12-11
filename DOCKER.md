@@ -286,6 +286,8 @@ The container uses an isolated network (`mediagrab-network`).
 - Secrets (`JWT_SECRET`, `NEXTAUTH_SECRET`) are automatically generated
 - Health check is available at `/api/health`
 - The build uses multi-stage to optimize the final image size
+- All integrations (Stripe, SendGrid, OAuth) can be configured via admin panel after deployment
+- No need to set OAuth, Stripe, or SendGrid credentials in environment variables - configure them in `/admin/settings`
 
 ## Support
 

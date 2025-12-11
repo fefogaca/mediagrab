@@ -47,10 +47,12 @@ MediaGrab is a complete solution for developers who need to integrate media down
 - **Admin Panel**: Complete interface to manage users, API keys, settings, and statistics
 - **User Dashboard**: Personalized area for each user to manage their API keys and downloads
 - **API Key Management**: Robust system with usage limits and access control
-- **Payment Integration**: Stripe integrated for subscription plans (Developer, Startup, Enterprise)
-- **Email Service**: SendGrid integration for transactional emails
+- **Payment Integration**: Stripe integrated for subscription plans (Developer, Startup, Enterprise) - Configurable via admin panel
+- **Email Service**: SendGrid integration for transactional emails - Configurable via admin panel
+- **OAuth Integration**: Google and GitHub OAuth login - Configurable via admin panel
 - **Modern Database**: PostgreSQL via Supabase with Prisma ORM
 - **Docker Ready**: Quick and easy deployment with Docker and Docker Compose
+- **Admin Panel Configuration**: All integrations (Stripe, SendGrid, OAuth) can be configured through the admin panel without editing `.env` files
 
 The application is built with Next.js 16, React 19, TypeScript, and uses Supabase as a managed PostgreSQL database.
 
@@ -241,7 +243,9 @@ mediagrab/
 │   │   │   ├── auth.ts             # NextAuth configuration
 │   │   │   ├── secrets.ts          # Secrets management
 │   │   │   ├── stripe.ts           # Stripe configuration
-│   │   │   └── sendgrid.ts        # SendGrid configuration
+│   │   │   ├── sendgrid.ts        # SendGrid configuration
+│   │   │   ├── oauth.ts            # OAuth configuration
+│   │   │   └── auth-providers.ts   # OAuth providers management
 │   │   ├── models/                 # Data models
 │   │   │   ├── User.ts             # User model
 │   │   │   ├── ApiKey.ts           # API key model
@@ -385,9 +389,15 @@ After this, changes will be merged.
 
 Yes! See the [Docker Installation](#installation) section above.
 
-**How do I configure Stripe/SendGrid?**
+**How do I configure Stripe/SendGrid/OAuth?**
 
-After logging in as admin, go to `/admin/settings` and configure these services through the admin panel. No need to edit `.env` files.
+After logging in as admin, go to `/admin/settings` and configure these services through the admin panel. You can configure:
+- **Stripe**: Payment processing with API keys and webhook secrets
+- **SendGrid**: Email delivery with API key and sender email
+- **Google OAuth**: Google login with Client ID and Secret
+- **GitHub OAuth**: GitHub login with Client ID and Secret
+
+No need to edit `.env` files - everything is managed through the admin panel.
 
 **What platforms are supported?**
 

@@ -47,10 +47,12 @@ MediaGrab é uma solução completa para desenvolvedores que precisam integrar f
 - **Painel Administrativo**: Interface completa para gerenciar usuários, API keys, configurações e estatísticas
 - **Dashboard do Usuário**: Área personalizada para cada usuário gerenciar suas chaves de API e downloads
 - **Gerenciamento de API Keys**: Sistema robusto com limites de uso e controle de acesso
-- **Integração de Pagamentos**: Stripe integrado para planos de assinatura (Developer, Startup, Enterprise)
-- **Serviço de Email**: Integração com SendGrid para envio de emails transacionais
+- **Integração de Pagamentos**: Stripe integrado para planos de assinatura (Developer, Startup, Enterprise) - Configurável via painel admin
+- **Serviço de Email**: Integração com SendGrid para envio de emails transacionais - Configurável via painel admin
+- **Integração OAuth**: Login com Google e GitHub - Configurável via painel admin
 - **Banco de Dados Moderno**: PostgreSQL via Supabase com Prisma ORM
 - **Docker Ready**: Deploy rápido e fácil com Docker e Docker Compose
+- **Configuração via Painel Admin**: Todas as integrações (Stripe, SendGrid, OAuth) podem ser configuradas através do painel administrativo sem editar arquivos `.env`
 
 A aplicação é construída com Next.js 16, React 19, TypeScript e utiliza Supabase como banco de dados PostgreSQL gerenciado.
 
@@ -101,6 +103,8 @@ npm run dev
 Acesse: **http://localhost:3000**
 
 > **Nota:** `JWT_SECRET` e `NEXTAUTH_SECRET` são gerados automaticamente se não estiverem definidos no `.env`. Eles serão salvos automaticamente no arquivo `.env` na primeira execução.
+> 
+> **Importante:** Após o primeiro login, configure Stripe, SendGrid e OAuth (Google/GitHub) através do painel administrativo em `/admin/settings`. Não é necessário editar arquivos `.env` para essas integrações.
 
 #### Docker Installation
 
@@ -241,7 +245,9 @@ mediagrab/
 │   │   │   ├── auth.ts             # Configuração NextAuth
 │   │   │   ├── secrets.ts          # Gerenciamento de secrets
 │   │   │   ├── stripe.ts           # Configuração Stripe
-│   │   │   └── sendgrid.ts        # Configuração SendGrid
+│   │   │   ├── sendgrid.ts        # Configuração SendGrid
+│   │   │   ├── oauth.ts            # Configuração OAuth
+│   │   │   └── auth-providers.ts   # Gerenciamento de providers OAuth
 │   │   ├── models/                 # Modelos de dados
 │   │   │   ├── User.ts             # Modelo de usuário
 │   │   │   ├── ApiKey.ts           # Modelo de API key
@@ -385,9 +391,15 @@ Após isso, as mudanças serão mescladas.
 
 Sim! Veja a seção [Docker Installation](#installation) acima.
 
-**Como configuro Stripe/SendGrid?**
+**Como configuro Stripe/SendGrid/OAuth?**
 
-Após fazer login como admin, vá para `/admin/settings` e configure esses serviços através do painel administrativo. Não é necessário editar arquivos `.env`.
+Após fazer login como admin, vá para `/admin/settings` e configure esses serviços através do painel administrativo. Você pode configurar:
+- **Stripe**: Processamento de pagamentos com chaves de API e secrets de webhook
+- **SendGrid**: Envio de emails com chave de API e email remetente
+- **Google OAuth**: Login com Google usando Client ID e Secret
+- **GitHub OAuth**: Login com GitHub usando Client ID e Secret
+
+Não é necessário editar arquivos `.env` - tudo é gerenciado através do painel administrativo.
 
 **Quais plataformas são suportadas?**
 

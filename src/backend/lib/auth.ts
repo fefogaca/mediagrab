@@ -5,7 +5,6 @@ import Credentials from 'next-auth/providers/credentials';
 import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import bcrypt from 'bcryptjs';
 import prisma, { connectDB } from './database';
-import { getOAuthProviders } from './auth-providers';
 
 // Providers OAuth iniciais (usando env vars como fallback)
 // Serão atualizados do banco quando disponível
