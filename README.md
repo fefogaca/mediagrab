@@ -1,104 +1,68 @@
+# MediaGrab API
+
 <div align="center">
-  <img src="public/images/logo-longEscrito.png" alt="MediaGrab Logo" width="300" />
-  
-  <p><strong>The Ultimate Media Downloading API</strong></p>
-  
-  [![Next.js](https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
-  [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
-  [![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-green?style=for-the-badge&logo=supabase)](https://supabase.com/)
-  [![Prisma](https://img.shields.io/badge/Prisma-7-2D3748?style=for-the-badge&logo=prisma)](https://www.prisma.io/)
-  [![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38B2AC?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com/)
-  [![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
+
+![MediaGrab Logo](./public/images/logo-longEscrito.png)
+
+**Modern API for downloading media from multiple platforms**
+
+[![Next.js](https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=next.js)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19-blue?style=flat-square&logo=react)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
+[![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-green?style=flat-square&logo=supabase)](https://supabase.com/)
+[![Prisma](https://img.shields.io/badge/Prisma-ORM-2D3748?style=flat-square&logo=prisma)](https://www.prisma.io/)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat-square&logo=docker)](https://www.docker.com/)
+
 </div>
 
----
+MediaGrab is a complete RESTful API for downloading media from multiple platforms, including YouTube, Instagram, TikTok, Twitter, and others. It offers a complete authentication system, API key management, admin panel, Stripe integration for payments, and SendGrid for email delivery.
 
-## Table of Contents
-
-<details>
-<summary>Click to expand</summary>
+## Index
 
 - [About](#about)
-- [Features](#features)
-- [Quick Start](#quick-start)
+- [Usage](#usage)
   - [Installation](#installation)
-  - [Configuration](#configuration)
-  - [First Access](#first-access)
+  - [Commands](#commands)
 - [Development](#development)
   - [Pre-Requisites](#pre-requisites)
-  - [Environment Setup](#environment-setup)
+  - [Development Environment](#development-environment)
   - [File Structure](#file-structure)
-  - [Database Setup](#database-setup)
-  - [Build & Deploy](#build--deploy)
-- [API Documentation](#api-documentation)
-- [Architecture](#architecture)
-- [Contributing](#contributing)
+  - [Build](#build)
+  - [Deployment](#deployment)
+- [Community](#community)
+  - [Contribution](#contribution)
+  - [Branches](#branches)
+  - [Guideline](#guideline)
 - [FAQ](#faq)
 - [Resources](#resources)
 - [License](#license)
 
-</details>
-
----
-
 ## About
 
-**MediaGrab** is a powerful and comprehensive API for downloading media from 1000+ platforms, including YouTube, Instagram, TikTok, Twitter, and many more. Built with Next.js 16, TypeScript, Supabase/PostgreSQL, and Prisma, it provides a robust and scalable solution for integrating media downloads into any application.
+MediaGrab is a complete solution for developers who need to integrate media download functionality into their applications. The API offers:
 
-### Key Highlights
+- **Multi-platform Support**: Download videos, audio, and images from YouTube, Instagram, TikTok, Twitter, and other popular platforms
+- **RESTful API**: Well-documented and easy-to-use endpoints
+- **Complete Authentication System**: JWT, OAuth (Google, GitHub), and two-factor authentication (2FA)
+- **Admin Panel**: Complete interface to manage users, API keys, settings, and statistics
+- **User Dashboard**: Personalized area for each user to manage their API keys and downloads
+- **API Key Management**: Robust system with usage limits and access control
+- **Payment Integration**: Stripe integrated for subscription plans (Developer, Startup, Enterprise)
+- **Email Service**: SendGrid integration for transactional emails
+- **Modern Database**: PostgreSQL via Supabase with Prisma ORM
+- **Docker Ready**: Quick and easy deployment with Docker and Docker Compose
 
-- **Multi-Platform Downloads** - Support for 1000+ media sites
-- **Fallback System** - 4 different providers for maximum availability
-- **Complete Authentication** - JWT and NextAuth with OAuth support
-- **Admin Dashboard** - Complete administration panel
-- **User Management** - Full user and permission management
-- **API Keys** - Per-user API key system
-- **Payments** - Stripe integration for subscriptions
-- **Email** - SendGrid integration
-- **i18n** - Portuguese and English support
+The application is built with Next.js 16, React 19, TypeScript, and uses Supabase as a managed PostgreSQL database.
 
----
-
-## Features
-
-<details>
-<summary><b>Click to see all features</b></summary>
-
-### Core Features
-
-- **Media Download** - Support for 1000+ platforms (YouTube, Instagram, TikTok, Twitter, etc.)
-- **Fallback System** - 4 providers (yt-dlp, @distube/ytdl-core, ytdl-core, play-dl) for maximum availability
-- **RESTful API** - Complete API for integration in any project
-- **User System** - Complete authentication with JWT and NextAuth
-- **API Keys** - Per-user API key management
-- **Admin Dashboard** - Complete panel to manage the platform
-- **User Dashboard** - Panel for users to manage their API Keys
-- **Internationalization** - Portuguese and English support
-
-### Optional Integrations
-
-- **Payments** - Stripe integration for subscriptions
-- **Emails** - SendGrid integration
-- **OAuth** - Login with Google and GitHub
-- **Modern Database** - Supabase/PostgreSQL with Prisma ORM
-- **Centralized Configuration** - Admin panel to manage settings
-
-</details>
-
----
-
-## Quick Start
+## Usage
 
 ### Installation
-
-<details>
-<summary><b>Step-by-step installation guide</b></summary>
 
 #### Prerequisites
 
 - **Node.js** 20.0.0 or higher
 - **npm** 10.0.0 or higher
-- **Supabase** - Free account and project ([create free account](https://supabase.com))
+- **Supabase Account** - Create a free account at [supabase.com](https://supabase.com)
 - **yt-dlp** - Installed on system ([installation instructions](https://github.com/yt-dlp/yt-dlp#installation))
 
 #### Installation Steps
@@ -119,7 +83,7 @@ npm install --legacy-peer-deps
 cp .env.example .env
 ```
 
-4. **Configure database**
+4. **Configure the database**
    - Create a project on Supabase
    - Copy the `DATABASE_URL` from the project
    - Paste it in the `.env` file
@@ -129,88 +93,94 @@ cp .env.example .env
 npx prisma migrate dev
 ```
 
-6. **Start development server**
+6. **Start the development server**
 ```bash
 npm run dev
 ```
 
 Visit: **http://localhost:3000**
 
-</details>
+> **Note:** `JWT_SECRET` and `NEXTAUTH_SECRET` are automatically generated if they are not defined in `.env`. They will be automatically saved to the `.env` file on first run.
 
-### Configuration
+#### Docker Installation
 
 <details>
-<summary><b>Environment variables and settings</b></summary>
+<summary>Quick installation with Docker</summary>
 
-#### Required Environment Variables
+##### Prerequisites
 
-Create a `.env` file in the project root with the following variables:
+- **Docker** 20.10+ and **Docker Compose** 2.0+
+- **Supabase Account** - Create a free account at [supabase.com](https://supabase.com)
 
-```env
-# Database - Supabase/PostgreSQL
-DATABASE_URL="postgresql://user:password@host:5432/database?schema=public"
+##### Quick Start
 
-# Application URL
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-
-# NextAuth
-NEXTAUTH_URL=http://localhost:3000
+1. **Clone the repository**
+```bash
+git clone https://github.com/fefogaca/mediagrab.git
+cd mediagrab
 ```
 
-> **Note:** `JWT_SECRET` and `NEXTAUTH_SECRET` are automatically generated if they don't exist in `.env`. They will be automatically saved to the `.env` file on first run.
+2. **Configure environment variables**
+```bash
+cp .env.example .env
+# Edit .env and set your DATABASE_URL from Supabase
+```
 
-#### Optional Variables (Integrations)
+3. **Build and start with Docker Compose**
+```bash
+docker-compose up -d
+```
 
-These variables can be configured through the admin panel (`/admin/settings`) after first login:
+4. **Check logs**
+```bash
+docker-compose logs -f
+```
 
-- **Payments - Stripe**: Configured in admin panel
-- **Email - SendGrid**: Configured in admin panel
-- **OAuth - Google**: Configured in admin panel
-- **OAuth - GitHub**: Configured in admin panel
+5. **Access the application**
+Visit: **http://localhost:3000**
 
-> **Note:** If integrations are not configured, the corresponding buttons will show a message informing that the functionality will be implemented soon.
+The application will automatically:
+- Run Prisma migrations
+- Generate Prisma Client
+- Start the Next.js server
+- Health check available at `/api/health`
+
+For detailed Docker documentation, see [DOCKER.md](./DOCKER.md)
 
 </details>
 
-### First Access
+### Commands
 
-<details>
-<summary><b>How to create the first administrator</b></summary>
+```bash
+# Development
+npm run dev              # Start development server
+npm run build            # Build for production
+npm run start            # Start production server
+npm run lint             # Run linter
 
-On first access to `/login`, a popup will automatically appear to create the first administrator. Simply fill in:
+# Cleanup
+npm run clean            # Remove Next.js cache
+npm run clean:all        # Remove cache and node_modules
 
-- **Name**
-- **Email**
-- **Password** (minimum 8 characters)
-
-After creating the admin, log in normally and start using!
-
-</details>
-
----
+# Installation
+npm run install:clean    # Clean dependency installation
+npm run install:fast     # Fast installation with npm ci
+```
 
 ## Development
 
 ### Pre-Requisites
 
-<details>
-<summary><b>Required tools and software</b></summary>
-
 Before starting development, make sure you have installed:
 
-- **Node.js** 20.0.0 or higher
-- **npm** 10.0.0 or higher
-- **Git** for version control
-- **Supabase CLI** (optional, for local development)
-- **yt-dlp** installed and available in PATH
+- Node.js 20.0.0 or higher
+- npm 10.0.0 or higher
+- Git
+- Supabase account (free)
+- yt-dlp installed on system
+- Docker and Docker Compose (optional, for containerized development)
 
-</details>
-
-### Environment Setup
-
-<details>
-<summary><b>Complete development environment setup</b></summary>
+### Development Environment
 
 1. **Clone the repository**
 ```bash
@@ -223,473 +193,230 @@ cd mediagrab
 npm install --legacy-peer-deps
 ```
 
-3. **Configure environment**
+3. **Configure the environment**
 ```bash
 cp .env.example .env
-# Edit .env with your credentials
 ```
 
-4. **Configure database**
+4. **Configure the database**
+   - Create a project on Supabase
+   - Get the `DATABASE_URL` from the project
+   - Add it to the `.env` file
+
+5. **Run migrations**
 ```bash
-# Set DATABASE_URL in .env
-# Run migrations
 npx prisma migrate dev
+npx prisma generate
 ```
 
-5. **Start development server**
+6. **Start the development server**
 ```bash
 npm run dev
 ```
 
-6. **Create first administrator**
-   - Visit http://localhost:3000/login
-   - A popup will automatically appear to create the first admin
-   - Fill in: Name, Email and Password (minimum 8 characters)
-
-</details>
-
 ### File Structure
-
-<details>
-<summary><b>Project structure and file organization</b></summary>
 
 ```
 mediagrab/
 ├── prisma/
-│   ├── schema.prisma          # Database schema (Prisma)
-│   └── migrations/            # Database migrations
-│
+│   └── schema.prisma              # Prisma database schema
+├── public/
+│   └── images/                    # Static images
 ├── src/
-│   ├── app/                   # Next.js App Router
-│   │   ├── admin/             # Administration panel
-│   │   │   ├── settings/      # Global settings
-│   │   │   ├── users/         # User management
-│   │   │   ├── api-keys/      # API Key management
+│   ├── app/                        # Next.js App Router
+│   │   ├── api/                    # API routes
+│   │   │   ├── admin/             # Administrative endpoints
+│   │   │   ├── auth/               # Authentication
+│   │   │   ├── dashboard/          # Dashboard endpoints
+│   │   │   ├── download/           # Media download
+│   │   │   ├── payments/           # Stripe payments
+│   │   │   └── webhooks/           # Webhooks
+│   │   ├── admin/                  # Admin panel pages
+│   │   ├── dashboard/              # User dashboard pages
+│   │   ├── login/                  # Login page
+│   │   └── layout.tsx              # Main layout
+│   ├── backend/
+│   │   ├── lib/                    # Utilities
+│   │   │   ├── database.ts        # Prisma connection
+│   │   │   ├── auth.ts             # NextAuth configuration
+│   │   │   ├── secrets.ts          # Secrets management
+│   │   │   ├── stripe.ts           # Stripe configuration
+│   │   │   └── sendgrid.ts        # SendGrid configuration
+│   │   ├── models/                 # Data models
+│   │   │   ├── User.ts             # User model
+│   │   │   ├── ApiKey.ts           # API key model
+│   │   │   ├── Settings.ts         # Settings model
 │   │   │   └── ...
-│   │   ├── dashboard/         # User panel
-│   │   │   ├── settings/      # User settings
-│   │   │   └── ...
-│   │   ├── api/               # API Routes
-│   │   │   ├── auth/          # Authentication (login, logout, me)
-│   │   │   ├── admin/         # Administrative endpoints
-│   │   │   ├── dashboard/     # User endpoints
-│   │   │   ├── download/      # Download API
-│   │   │   ├── setup/         # Initial setup
-│   │   │   └── webhooks/      # Webhooks (Stripe)
-│   │   ├── login/             # Login page
-│   │   ├── register/          # Registration page
-│   │   ├── docs/              # API documentation
-│   │   ├── pricing/           # Pricing page
-│   │   ├── layout.tsx         # Root layout
-│   │   └── page.tsx           # Home page
-│   │
-│   ├── frontend/              # Frontend code
-│   │   ├── components/
-│   │   │   ├── ui/            # Shadcn UI components
-│   │   │   └── shared/        # Shared components
-│   │   └── hooks/             # Custom React Hooks
-│   │
-│   ├── backend/               # Backend code
-│   │   ├── models/            # Prisma model wrappers
-│   │   │   ├── User.ts        # User model
-│   │   │   ├── ApiKey.ts      # API Key model
-│   │   │   ├── Settings.ts   # Settings model
-│   │   │   └── ...
-│   │   ├── services/          # Services (email, payment)
-│   │   └── lib/              # Utilities
-│   │       ├── database.ts   # Prisma client
-│   │       ├── auth.ts        # NextAuth configuration
-│   │       └── secrets.ts     # Secret management
-│   │
-│   └── lib/                   # Shared utilities
-│       ├── i18n/              # Internationalization
-│       └── media/            # Media utilities
-│
-├── public/                    # Static assets
-│   └── images/                # Images
-│
-├── .env                       # Environment variables (not committed)
-├── .env.example               # Environment variables example
-├── .gitignore                 # Git ignored files
-├── next.config.mjs            # Next.js configuration
-├── package.json               # Project dependencies
-├── prisma/schema.prisma       # Prisma schema
-├── tailwind.config.ts         # Tailwind configuration
-└── tsconfig.json              # TypeScript configuration
+│   │   └── services/               # Business logic
+│   │       ├── email.ts             # Email service
+│   │       └── media.ts            # Download service
+│   └── frontend/
+│       └── components/              # React components
+│           ├── ui/                  # Base UI components
+│           └── ...
+├── Dockerfile                       # Docker configuration
+├── docker-compose.yml               # Docker Compose
+├── docker-entrypoint.sh             # Initialization script
+├── next.config.mjs                   # Next.js configuration
+├── package.json                      # Project dependencies
+└── README.md                         # This file
 ```
 
-| File/Directory | Description |
-|----------------|-------------|
-| `prisma/schema.prisma` | Defines the database schema |
-| `src/app/` | Next.js routes and pages (App Router) |
-| `src/app/api/` | REST API endpoints |
-| `src/backend/models/` | Prisma model wrappers |
-| `src/backend/lib/database.ts` | Configured Prisma client |
-| `src/middleware.ts` | Authentication and routing middleware |
-| `.env` | Environment variables (create manually) |
+| No | File/Folder | Description |
+|----|-------------|-------------|
+| 1  | `src/app/api/` | REST API routes |
+| 2  | `src/app/admin/` | Admin panel pages |
+| 3  | `src/app/dashboard/` | User dashboard pages |
+| 4  | `src/backend/lib/` | Utilities and configurations |
+| 5  | `src/backend/models/` | Prisma data models |
+| 6  | `src/backend/services/` | Business services |
+| 7  | `prisma/schema.prisma` | Database schema |
 
-</details>
+### Build
 
-### Database Setup
-
-<details>
-<summary><b>Supabase and Prisma configuration</b></summary>
-
-The project uses **Supabase** (PostgreSQL) with **Prisma ORM**.
-
-#### 1. Create Supabase Project
-
-1. Visit [supabase.com](https://supabase.com)
-2. Create a free account
-3. Create a new project
-4. Copy the `DATABASE_URL` from the project
-
-#### 2. Configure in Project
-
-1. Add `DATABASE_URL` to `.env` file:
-```env
-DATABASE_URL="postgresql://user:password@host:5432/database?schema=public"
-```
-
-2. Run migrations:
-```bash
-npx prisma migrate dev
-```
-
-3. (Optional) Open Prisma Studio to view data:
-```bash
-npx prisma studio
-```
-
-#### Main Models
-
-- **User** - System users
-- **ApiKey** - User API keys
-- **Settings** - Global application settings
-- **Payment** - Payment history
-- **DownloadLog** - Download logs
-- **Notification** - System notifications
-
-</details>
-
-### Build & Deploy
-
-<details>
-<summary><b>Build and deployment instructions</b></summary>
-
-#### Build
-
-To compile the project for production:
+To create a production build:
 
 ```bash
-# Production build
+# Build the application
 npm run build
 
 # Start production server
 npm run start
 ```
 
-The build generates optimized files in the `.next/` folder.
+The build generates an optimized version of the application in the `.next/standalone` folder (when `output: 'standalone'` is configured in `next.config.mjs`).
 
-#### Deployment
+### Deployment
 
-##### Vercel (Recommended)
+#### Docker Deployment
 
-1. Connect your repository to Vercel
-2. Configure environment variables:
-   - `DATABASE_URL`
-   - `NEXT_PUBLIC_APP_URL`
-   - `NEXTAUTH_URL`
-3. Automatic deployment on every push
-
-##### Other Platforms
-
-The project can be deployed on any platform that supports Next.js:
-- **Netlify**
-- **Railway**
-- **DigitalOcean**
-- **AWS**
-- **Google Cloud**
-
-</details>
-
----
-
-## API Documentation
-
-<details>
-<summary><b>Complete API reference</b></summary>
-
-### Authentication
-
-All API requests must include an API Key in the header:
+The easiest way to deploy is using Docker:
 
 ```bash
-curl -X GET "http://localhost:3000/api/download?url=VIDEO_URL" \
-  -H "X-API-Key: sua-api-key"
+# Build and start
+docker-compose up -d --build
+
+# View logs
+docker-compose logs -f
 ```
 
-### Main Endpoints
+#### Platform-Specific Deployment
 
-| Method | Endpoint | Description | Authentication |
-|--------|----------|-------------|----------------|
-| GET | `/api/download?url={url}` | Gets video information and formats | API Key |
-| GET | `/api/download-direct?url={url}&format={format}` | Direct download | API Key |
-| GET | `/api/public-download?url={url}` | Public download (for testing) | None |
-| POST | `/api/auth/login` | User login | None |
-| GET | `/api/auth/me` | Current user data | Cookie |
-| GET | `/api/dashboard/my-api-keys` | List user API Keys | Cookie |
-| POST | `/api/dashboard/my-api-keys` | Create new API Key | Cookie |
+**Coolify:**
+1. Connect your Git repository
+2. Configure environment variables in the dashboard
+3. Coolify will automatically detect the `Dockerfile`
+4. Automatic deployment on each push
 
-### Example Response
+**Portainer:**
+1. Go to **Stacks** → **Add Stack**
+2. Paste the `docker-compose.yml` content
+3. Configure environment variables
+4. Click **Deploy**
 
-```json
-{
-  "success": true,
-  "data": {
-    "title": "Video Title",
-    "thumbnail": "https://...",
-    "duration": 120,
-    "platform": "youtube",
-    "formats": [
-      {
-        "quality": "1080p",
-        "format": "mp4",
-        "url": "https://..."
-      }
-    ]
-  }
-}
-```
+**Railway/Render:**
+1. Connect the repository
+2. Configure `DATABASE_URL` and other variables
+3. The platform will automatically detect the Dockerfile
+4. Automatic deployment
 
-</details>
+For detailed deployment instructions, see [DOCKER.md](./DOCKER.md)
 
----
+## Community
 
-## Architecture
+### Contribution
 
-<details>
-<summary><b>System architecture and fallback system</b></summary>
+Your contributions are always welcome and appreciated. Here are ways to contribute:
 
-### Fallback System
+1. **Report a bug**  
+If you found a bug, report it [here](https://github.com/fefogaca/mediagrab/issues) and we'll take care of it.
 
-MediaGrab uses a robust fallback system with 4 providers:
+2. **Request a feature**  
+You can also request a feature [here](https://github.com/fefogaca/mediagrab/issues), and if viable, it will be included in development.
 
-| Provider | Platforms | Priority |
-|----------|-----------|----------|
-| **yt-dlp** | 1000+ sites | Primary |
-| **@distube/ytdl-core** | YouTube | Fallback 1 |
-| **ytdl-core** | YouTube | Fallback 2 |
-| **play-dl** | YouTube, SoundCloud | Fallback 3 |
+3. **Create a pull request**  
+It can't get better than this! Your pull request will be appreciated by the community. You can start by picking any open issue [here](https://github.com/fefogaca/mediagrab/issues) and create a pull request.
 
-If one provider fails, the system automatically tries the next. This ensures:
-- If YouTube changes something, another provider can work
-- Independent updates for each library
-- Detailed logs of which provider was used
-- Always consistent JSON response format
-
-### Technology Stack
-
-- **Frontend**: Next.js 16, React 19, TypeScript, Tailwind CSS
-- **Backend**: Next.js API Routes, Prisma ORM
-- **Database**: Supabase (PostgreSQL)
-- **Authentication**: NextAuth.js, JWT
-- **Payments**: Stripe
-- **Email**: SendGrid
-- **OAuth**: Google, GitHub
-
-</details>
-
----
-
-## Contributing
-
-<details>
-<summary><b>How to contribute to the project</b></summary>
-
-Your contributions are always welcome and appreciated! Here are ways to contribute:
-
-1. **Report a bug** <br>
-   If you found a bug, report it [here](https://github.com/fefogaca/mediagrab/issues) and we'll take care of it.
-
-2. **Request a feature** <br>
-   You can also request a feature [here](https://github.com/fefogaca/mediagrab/issues), and if viable, it will be developed.
-
-3. **Create a pull request** <br>
-   Your contribution will be appreciated by the community. You can start by picking any open issue [here](https://github.com/fefogaca/mediagrab/issues) and create a pull request.
-
-> If you're new to open-source, make sure to read more about it [here](https://www.digitalocean.com/community/tutorial_series/an-introduction-to-open-source) and learn more about creating pull requests [here](https://www.digitalocean.com/community/tutorials/how-to-create-a-pull-request-on-github).
+> If you are new to open-source, make sure to read more about it [here](https://www.digitalocean.com/community/tutorial_series/an-introduction-to-open-source) and learn more about creating a pull request [here](https://www.digitalocean.com/community/tutorials/how-to-create-a-pull-request-on-github).
 
 ### Branches
 
-We use an agile continuous integration methodology:
+We use an agile continuous integration methodology, so the version is frequently updated and development is very fast.
 
-1. **`main`** is the production branch
-2. **`develop`** is the development branch
-3. No other permanent branches should be created in the main repository
+1. **`main`** is the production branch.
+2. **`develop`** is the development branch.
+3. No other permanent branches should be created in the main repository. You can create feature branches, but they should be merged with `main`.
 
 **Steps to work with feature branch**
 
-1. To start working on a new feature, create a new branch prefixed with `feat/` followed by the feature name (e.g., `feat/new-feature`)
-2. When you finish your changes, you can create a PR
+1. To start working on a new feature, create a new branch prefixed with `feat` followed by the feature name. (e.g., `feat-FEATURE-NAME`)
+2. Once you finish your changes, you can create a PR.
 
 **Steps to create a pull request**
 
-1. Make a PR to the `develop` branch
-2. Comply with best practices and guidelines
-3. Must pass all continuous integration checks and receive positive reviews
+1. Make a PR to the `develop` branch.
+2. Comply with best practices and guidelines, for example, where the PR concerns visual elements, it should have an image showing the effect.
+3. Must pass all continuous integration checks and get positive reviews.
 
-After that, changes will be merged.
+After this, changes will be merged.
 
-### Guidelines
+### Guideline
 
-- Use TypeScript for all code
-- Follow the configured ESLint standards
-- Write descriptive commits
-- Add tests when possible
-- Document significant changes
+- Follow the existing code style
+- Add tests for new features
+- Update documentation as needed
+- Keep commits atomic and well-described
+- Use TypeScript for all new code
+- Follow the project's naming conventions
+- Add JSDoc comments for public functions
 - Keep code clean and readable
-
-</details>
-
----
 
 ## FAQ
 
-<details>
-<summary><b>Frequently asked questions</b></summary>
+**How do I get started?**
 
-**Q: Do I need to configure all integrations (Stripe, SendGrid, OAuth)?**  
-A: No! These are optional. You can configure them through the admin panel (`/admin/settings`) when needed.
+1. Clone the repository
+2. Install dependencies: `npm install --legacy-peer-deps`
+3. Set up your Supabase database and add `DATABASE_URL` to `.env`
+4. Run migrations: `npx prisma migrate dev`
+5. Start the development server: `npm run dev`
 
-**Q: How do I create the first administrator?**  
-A: On first access to `/login`, a popup will automatically appear to create the first admin.
+**Can I use Docker?**
 
-**Q: Does the project work without Supabase?**  
-A: No, the project requires Supabase/PostgreSQL. You can create a free account at [supabase.com](https://supabase.com).
+Yes! See the [Docker Installation](#installation) section above.
 
-**Q: Can I use another database?**  
-A: The project is configured for PostgreSQL. To use another database, you would need to adapt the Prisma schema.
+**How do I configure Stripe/SendGrid?**
 
-**Q: How do I generate an API Key?**  
-A: After logging in, go to `/dashboard` and click "New API Key" in the API Keys panel.
+After logging in as admin, go to `/admin/settings` and configure these services through the admin panel. No need to edit `.env` files.
 
-**Q: What happens if a download provider fails?**  
-A: The system automatically tries the next provider in the fallback chain, ensuring maximum availability.
+**What platforms are supported?**
 
-**Q: Is there a free plan?**  
-A: Yes! The free plan includes 5 requests per month and 1 API key.
+Currently supports: YouTube, Instagram, TikTok, Twitter, and others. Check the API documentation for the complete list.
 
-</details>
+**How do I deploy?**
 
----
+You can deploy using Docker to platforms like Coolify, Portainer, Railway, or Render. See the [Deployment](#deployment) section for platform-specific instructions.
 
 ## Resources
-
-<details>
-<summary><b>Useful resources and documentation</b></summary>
 
 - [Next.js Documentation](https://nextjs.org/docs)
 - [Prisma Documentation](https://www.prisma.io/docs)
 - [Supabase Documentation](https://supabase.com/docs)
-- [Tailwind CSS Documentation](https://tailwindcss.com/docs)
-- [Shadcn UI Components](https://ui.shadcn.com/)
+- [Docker Documentation](https://docs.docker.com/)
 - [NextAuth.js Documentation](https://next-auth.js.org/)
 - [Stripe Documentation](https://stripe.com/docs)
 - [SendGrid Documentation](https://docs.sendgrid.com/)
 
-</details>
-
----
-
-## Available Commands
-
-<details>
-<summary><b>All npm scripts and commands</b></summary>
-
-```bash
-# Development
-npm run dev          # Start development server (with Webpack)
-
-# Build & Production
-npm run build        # Compile for production
-npm run start        # Start production server
-
-# Code Quality
-npm run lint         # Run ESLint
-
-# Utilities
-npm run clean        # Clean Next.js cache (.next and node_modules/.cache)
-npm run clean:all    # Clean everything including node_modules
-
-# Database
-npx prisma migrate dev    # Run migrations in development
-npx prisma generate       # Generate Prisma Client
-npx prisma studio         # Open Prisma Studio (database GUI)
-```
-
-</details>
-
----
-
-## Pricing Plans
-
-<details>
-<summary><b>Available subscription plans</b></summary>
-
-| Plan | Price | Requests/month | API Keys |
-|------|-------|----------------|----------|
-| **Free** | $0 | 5 | 1 |
-| **Developer** | $10 | 1,000 | 5 |
-| **Startup** | $30 | 10,000 | 20 |
-| **Enterprise** | $50 | Unlimited | Unlimited |
-
-</details>
-
----
-
-## Access URLs
-
-| Page | URL |
-|------|-----|
-| Landing Page | http://localhost:3000 |
-| Login | http://localhost:3000/login |
-| Register | http://localhost:3000/register |
-| Admin Dashboard | http://localhost:3000/admin |
-| User Dashboard | http://localhost:3000/dashboard |
-| API Documentation | http://localhost:3000/docs |
-| Pricing | http://localhost:3000/pricing |
-
----
-
-## Acknowledgments
-
-<details>
-<summary><b>Credits and acknowledgments</b></summary>
-
-- [yt-dlp](https://github.com/yt-dlp/yt-dlp) - Download backend
-- [Shadcn UI](https://ui.shadcn.com/) - UI components
-- [Next.js](https://nextjs.org/) - React framework
-- [Supabase](https://supabase.com/) - Database
-- [Prisma](https://www.prisma.io/) - ORM
-
-</details>
-
----
-
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for more details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
 <div align="center">
-  <p>Made with ❤️ by <a href="https://github.com/fefogaca">fefogaca</a></p>
-  <p>
-    <a href="https://github.com/fefogaca/mediagrab/issues">Report Bug</a>
-    ·
-    <a href="https://github.com/fefogaca/mediagrab/issues">Request Feature</a>
-    ·
-    <a href="https://github.com/fefogaca/mediagrab">View on GitHub</a>
-  </p>
+
+Made with ❤️ by [fefogaca](https://github.com/fefogaca)
+
+[Report Bug](https://github.com/fefogaca/mediagrab/issues) • [Request Feature](https://github.com/fefogaca/mediagrab/issues)
+
 </div>

@@ -5,6 +5,8 @@ const nextConfig = {
     // Desabilitar proxy temporariamente se causar problemas
     // proxy: false,
   },
+  // Enable standalone output for Docker
+  output: 'standalone',
 };
 
 export default nextConfig;

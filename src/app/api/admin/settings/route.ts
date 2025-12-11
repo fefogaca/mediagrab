@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { connectDB } from '@/backend/lib/database';
 import { getJWTSecret } from '@/backend/lib/secrets';
 import Settings from '@/backend/models/Settings';
+import { clearOAuthProvidersCache } from '@/backend/lib/auth-providers';
 
 const JWT_SECRET = getJWTSecret();
 
@@ -116,6 +117,11 @@ export async function POST(request: NextRequest) {
       sendGrid: body.sendGrid,
       stripe: body.stripe,
     });
+
+    // Limpar cache de OAuth providers para recarregar com novas configurações
+    if (body.googleOAuth || body.githubOAuth) {
+      clearOAuthProvidersCache();
+    }
 
     // Formatar resposta
     const formattedSettings = {

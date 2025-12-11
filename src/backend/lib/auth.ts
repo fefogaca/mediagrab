@@ -5,28 +5,83 @@ import Credentials from 'next-auth/providers/credentials';
 import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import bcrypt from 'bcryptjs';
 import prisma, { connectDB } from './database';
+import { getOAuthProviders } from './auth-providers';
+
+// Providers OAuth iniciais (usando env vars como fallback)
+// Serão atualizados do banco quando disponível
+const getInitialOAuthProviders = () => {
+  const providers: any[] = [];
+  
+  // Google OAuth (env vars como fallback)
+  if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+    providers.push(
+      Google({
+        clientId: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        authorization: {
+          params: {
+            prompt: 'consent',
+            access_type: 'offline',
+            response_type: 'code',
+          },
+        },
+      })
+    );
+  }
+  
+  // GitHub OAuth (env vars como fallback)
+  if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
+    providers.push(
+      GitHub({
+        clientId: process.env.GITHUB_CLIENT_ID,
+        clientSecret: process.env.GITHUB_CLIENT_SECRET,
+      })
+    );
+  }
+  
+  return providers;
+};
+
+// Carregar providers OAuth do banco e atualizar env vars
+// Isso permite que as configurações do banco sejam usadas nas próximas requisições
+(async () => {
+  try {
+    await connectDB();
+    const { getGoogleOAuthConfig, getGitHubOAuthConfig } = await import('./oauth');
+    
+    // Carregar Google OAuth do banco
+    try {
+      const googleConfig = await getGoogleOAuthConfig();
+      if (googleConfig.enabled && googleConfig.clientId && googleConfig.clientSecret) {
+        process.env.GOOGLE_CLIENT_ID = googleConfig.clientId;
+        process.env.GOOGLE_CLIENT_SECRET = googleConfig.clientSecret;
+        console.log('✅ Google OAuth configurado do banco de dados');
+      }
+    } catch (error) {
+      console.warn('⚠️ Erro ao carregar Google OAuth do banco:', error);
+    }
+    
+    // Carregar GitHub OAuth do banco
+    try {
+      const githubConfig = await getGitHubOAuthConfig();
+      if (githubConfig.enabled && githubConfig.clientId && githubConfig.clientSecret) {
+        process.env.GITHUB_CLIENT_ID = githubConfig.clientId;
+        process.env.GITHUB_CLIENT_SECRET = githubConfig.clientSecret;
+        console.log('✅ GitHub OAuth configurado do banco de dados');
+      }
+    } catch (error) {
+      console.warn('⚠️ Erro ao carregar GitHub OAuth do banco:', error);
+    }
+  } catch (error) {
+    console.warn('⚠️ Erro ao inicializar OAuth providers do banco, usando env vars:', error);
+  }
+})();
 
 export const authConfig = {
   adapter: PrismaAdapter(prisma),
   providers: [
-    // Google OAuth
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID || '',
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
-      authorization: {
-        params: {
-          prompt: 'consent',
-          access_type: 'offline',
-          response_type: 'code',
-        },
-      },
-    }),
-    
-    // GitHub OAuth
-    GitHub({
-      clientId: process.env.GITHUB_CLIENT_ID || '',
-      clientSecret: process.env.GITHUB_CLIENT_SECRET || '',
-    }),
+    // OAuth providers (carregados de env vars, atualizados do banco em background)
+    ...getInitialOAuthProviders(),
     
     // Credenciais (email/senha)
     Credentials({

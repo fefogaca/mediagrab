@@ -30,6 +30,8 @@ import {
   Mail,
   Eye,
   EyeOff,
+  Github,
+  Chrome,
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 
@@ -52,6 +54,18 @@ interface SendGridConfig {
   fromEmail: string;
 }
 
+interface GoogleOAuthConfig {
+  enabled: boolean;
+  clientId: string;
+  clientSecret: string;
+}
+
+interface GitHubOAuthConfig {
+  enabled: boolean;
+  clientId: string;
+  clientSecret: string;
+}
+
 interface Settings {
   siteName: string;
   siteUrl: string;
@@ -65,6 +79,8 @@ interface Settings {
   rateLimitPerMinute: number;
   stripe: StripeConfig;
   sendGrid: SendGridConfig;
+  googleOAuth: GoogleOAuthConfig;
+  githubOAuth: GitHubOAuthConfig;
 }
 
 interface DbStatus {
@@ -104,11 +120,23 @@ export default function SettingsPage() {
       apiKey: "",
       fromEmail: "",
     },
+    googleOAuth: {
+      enabled: false,
+      clientId: "",
+      clientSecret: "",
+    },
+    githubOAuth: {
+      enabled: false,
+      clientId: "",
+      clientSecret: "",
+    },
   });
 
   const [showStripeSecret, setShowStripeSecret] = useState(false);
   const [showStripeWebhook, setShowStripeWebhook] = useState(false);
   const [showSendGridKey, setShowSendGridKey] = useState(false);
+  const [showGoogleSecret, setShowGoogleSecret] = useState(false);
+  const [showGitHubSecret, setShowGitHubSecret] = useState(false);
   const [testingEmail, setTestingEmail] = useState(false);
 
   const [dbStatus, setDbStatus] = useState<DbStatus>({
@@ -133,11 +161,13 @@ export default function SettingsPage() {
       if (response.ok) {
         const data = await response.json();
         if (data.settings) {
-          // Garantir que stripe e sendGrid existam
+          // Garantir que stripe, sendGrid e OAuth existam
           const loadedSettings = {
             ...data.settings,
             stripe: data.settings.stripe || settings.stripe,
             sendGrid: data.settings.sendGrid || settings.sendGrid,
+            googleOAuth: data.settings.googleOAuth || settings.googleOAuth,
+            githubOAuth: data.settings.githubOAuth || settings.githubOAuth,
           };
           setSettings(loadedSettings);
         }
@@ -245,6 +275,26 @@ export default function SettingsPage() {
       ...settings,
       sendGrid: {
         ...settings.sendGrid,
+        [field]: value,
+      },
+    });
+  };
+
+  const handleGoogleOAuthChange = (field: keyof GoogleOAuthConfig, value: string | boolean) => {
+    setSettings({
+      ...settings,
+      googleOAuth: {
+        ...settings.googleOAuth,
+        [field]: value,
+      },
+    });
+  };
+
+  const handleGitHubOAuthChange = (field: keyof GitHubOAuthConfig, value: string | boolean) => {
+    setSettings({
+      ...settings,
+      githubOAuth: {
+        ...settings.githubOAuth,
         [field]: value,
       },
     });
@@ -746,6 +796,128 @@ export default function SettingsPage() {
               )}
               {testingEmail ? t.admin.settings.sendgrid.sending : t.admin.settings.sendgrid.testEmail}
             </Button>
+          </CardContent>
+        </Card>
+
+        {/* Google OAuth Settings */}
+        <Card className="bg-zinc-900/50 border-zinc-800">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center gap-2">
+              <Chrome className="h-5 w-5 text-emerald-500" />
+              {t.admin.settings.googleOAuth.title}
+            </CardTitle>
+            <CardDescription className="text-zinc-400">
+              {t.admin.settings.googleOAuth.subtitle}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-zinc-300">{t.admin.settings.googleOAuth.enabled}</Label>
+                <p className="text-xs text-zinc-500">{t.admin.settings.googleOAuth.enabledDesc}</p>
+              </div>
+              <Switch
+                checked={settings.googleOAuth.enabled}
+                onCheckedChange={(checked) => handleGoogleOAuthChange('enabled', checked)}
+              />
+            </div>
+            {settings.googleOAuth.enabled && (
+              <>
+                <Separator className="bg-zinc-800" />
+                <div className="space-y-2">
+                  <Label className="text-zinc-300">{t.admin.settings.googleOAuth.clientId}</Label>
+                  <Input
+                    type="text"
+                    value={settings.googleOAuth.clientId}
+                    onChange={(e) => handleGoogleOAuthChange('clientId', e.target.value)}
+                    className="bg-zinc-800/50 border-zinc-700 text-white"
+                    placeholder="xxxxx.apps.googleusercontent.com"
+                  />
+                  <p className="text-xs text-zinc-500">{t.admin.settings.googleOAuth.clientIdDesc}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-zinc-300">{t.admin.settings.googleOAuth.clientSecret}</Label>
+                  <div className="relative">
+                    <Input
+                      type={showGoogleSecret ? "text" : "password"}
+                      value={settings.googleOAuth.clientSecret}
+                      onChange={(e) => handleGoogleOAuthChange('clientSecret', e.target.value)}
+                      className="bg-zinc-800/50 border-zinc-700 text-white pr-10"
+                      placeholder="GOCSPX-..."
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowGoogleSecret(!showGoogleSecret)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-300"
+                    >
+                      {showGoogleSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  <p className="text-xs text-zinc-500">{t.admin.settings.googleOAuth.clientSecretDesc}</p>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* GitHub OAuth Settings */}
+        <Card className="bg-zinc-900/50 border-zinc-800">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center gap-2">
+              <Github className="h-5 w-5 text-emerald-500" />
+              {t.admin.settings.githubOAuth.title}
+            </CardTitle>
+            <CardDescription className="text-zinc-400">
+              {t.admin.settings.githubOAuth.subtitle}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-zinc-300">{t.admin.settings.githubOAuth.enabled}</Label>
+                <p className="text-xs text-zinc-500">{t.admin.settings.githubOAuth.enabledDesc}</p>
+              </div>
+              <Switch
+                checked={settings.githubOAuth.enabled}
+                onCheckedChange={(checked) => handleGitHubOAuthChange('enabled', checked)}
+              />
+            </div>
+            {settings.githubOAuth.enabled && (
+              <>
+                <Separator className="bg-zinc-800" />
+                <div className="space-y-2">
+                  <Label className="text-zinc-300">{t.admin.settings.githubOAuth.clientId}</Label>
+                  <Input
+                    type="text"
+                    value={settings.githubOAuth.clientId}
+                    onChange={(e) => handleGitHubOAuthChange('clientId', e.target.value)}
+                    className="bg-zinc-800/50 border-zinc-700 text-white"
+                    placeholder="Iv1.xxx..."
+                  />
+                  <p className="text-xs text-zinc-500">{t.admin.settings.githubOAuth.clientIdDesc}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-zinc-300">{t.admin.settings.githubOAuth.clientSecret}</Label>
+                  <div className="relative">
+                    <Input
+                      type={showGitHubSecret ? "text" : "password"}
+                      value={settings.githubOAuth.clientSecret}
+                      onChange={(e) => handleGitHubOAuthChange('clientSecret', e.target.value)}
+                      className="bg-zinc-800/50 border-zinc-700 text-white pr-10"
+                      placeholder="ghp_..."
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowGitHubSecret(!showGitHubSecret)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-300"
+                    >
+                      {showGitHubSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  <p className="text-xs text-zinc-500">{t.admin.settings.githubOAuth.clientSecretDesc}</p>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
