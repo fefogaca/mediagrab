@@ -3,14 +3,7 @@ import { cookies } from 'next/headers';
 import jwt from 'jsonwebtoken';
 import { PLANS, PAYMENT_URLS } from '@/lib/config/plans';
 import { getJWTSecret } from '@backend/lib/secrets';
-
-// Importação condicional do Stripe
-let Stripe: any = null;
-try {
-  Stripe = require('stripe').default;
-} catch {
-  // Stripe não instalado
-}
+import { getStripeInstance, isStripeEnabled, getPlanPriceId } from '@/backend/lib/stripe';
 
 const JWT_SECRET = getJWTSecret();;
 
@@ -35,10 +28,10 @@ async function getUserFromRequest(): Promise<DecodedToken | null> {
 }
 
 export async function POST(request: NextRequest) {
-  // Verificar se Stripe está configurado
-  const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+  // Verificar se Stripe está configurado e habilitado
+  const stripeEnabled = await isStripeEnabled();
   
-  if (!Stripe || !stripeSecretKey) {
+  if (!stripeEnabled) {
     return NextResponse.json(
       { 
         error: "coming_soon",
@@ -57,9 +50,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const stripe = new Stripe(stripeSecretKey, {
-      apiVersion: '2023-10-16',
-    });
+    const stripe = await getStripeInstance();
+    if (!stripe) {
+      return NextResponse.json(
+        { 
+          error: "coming_soon",
+          message: "Stripe payment is coming soon" 
+        },
+        { status: 503 }
+      );
+    }
 
     const body = await request.json();
     const { planId } = body;
@@ -73,7 +73,10 @@ export async function POST(request: NextRequest) {
 
     const plan = PLANS[planId];
     
-    if (!plan.stripe?.priceId) {
+    // Obter price ID do banco de dados
+    const priceId = await getPlanPriceId(planId as 'developer' | 'startup' | 'enterprise');
+    
+    if (!priceId) {
       return NextResponse.json(
         { 
           error: "coming_soon",
@@ -88,17 +91,7 @@ export async function POST(request: NextRequest) {
       payment_method_types: ['card'],
       line_items: [
         {
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: `MediaGrab ${plan.name} Plan`,
-              description: `Monthly subscription - ${plan.limits.requests === -1 ? 'Unlimited' : plan.limits.requests} requests/month`,
-            },
-            unit_amount: Math.round(plan.price.usd * 100), // Stripe usa centavos
-            recurring: {
-              interval: 'month',
-            },
-          },
+          price: priceId,
           quantity: 1,
         },
       ],

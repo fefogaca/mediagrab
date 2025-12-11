@@ -1,13 +1,5 @@
 import sgMail from '@sendgrid/mail';
-
-// Configurar SendGrid
-const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
-const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'noreply@mediagrab.com';
-const FROM_NAME = process.env.SENDGRID_FROM_NAME || 'MediaGrab';
-
-if (SENDGRID_API_KEY) {
-  sgMail.setApiKey(SENDGRID_API_KEY);
-}
+import { configureSendGrid, isSendGridEnabled, getSendGridFromEmail } from '../lib/sendgrid';
 
 interface EmailOptions {
   to: string;
@@ -22,18 +14,28 @@ interface EmailOptions {
  * Envia email usando SendGrid
  */
 export async function sendEmail(options: EmailOptions): Promise<boolean> {
-  if (!SENDGRID_API_KEY) {
-    console.warn('⚠️ SENDGRID_API_KEY não configurada. Email não enviado.');
+  const isEnabled = await isSendGridEnabled();
+  if (!isEnabled) {
+    console.warn('⚠️ SendGrid não configurado ou desabilitado. Email não enviado.');
     console.log('📧 Email que seria enviado:', options);
     return false;
   }
+
+  // Configurar SendGrid com credenciais do banco
+  const configured = await configureSendGrid();
+  if (!configured) {
+    console.warn('⚠️ Erro ao configurar SendGrid. Email não enviado.');
+    return false;
+  }
+
+  const fromEmail = await getSendGridFromEmail();
 
   try {
     const msg: any = {
       to: options.to,
       from: {
-        email: FROM_EMAIL,
-        name: FROM_NAME,
+        email: fromEmail,
+        name: 'MediaGrab',
       },
       subject: options.subject,
     };

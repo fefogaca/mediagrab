@@ -4,24 +4,15 @@ import prisma from '@backend/lib/database';
 import Payment from '@models/Payment';
 import { sendPaymentConfirmation } from '@services/email';
 import { PLANS } from '@/lib/config/plans';
-
-// Importação condicional do Stripe
-let Stripe: any = null;
-try {
-  Stripe = require('stripe').default;
-} catch {
-  // Stripe não instalado
-}
-
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY || '';
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
-
-const stripe = (Stripe && stripeSecretKey) ? new Stripe(stripeSecretKey, {
-  apiVersion: '2023-10-16',
-}) : null;
+import { getStripeInstance, getStripeWebhookSecret, isStripeEnabled } from '@/backend/lib/stripe';
 
 export async function POST(request: NextRequest) {
-  if (!stripe || !webhookSecret) {
+  // Verificar se Stripe está configurado
+  const stripeEnabled = await isStripeEnabled();
+  const stripe = await getStripeInstance();
+  const webhookSecret = await getStripeWebhookSecret();
+
+  if (!stripeEnabled || !stripe || !webhookSecret) {
     // Não logar erro, apenas retornar silenciosamente
     return NextResponse.json(
       { received: true },

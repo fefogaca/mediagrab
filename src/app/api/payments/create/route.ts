@@ -3,20 +3,13 @@ import { auth } from "@backend/lib/auth";
 import { connectDB } from "@backend/lib/database";
 import prisma from "@backend/lib/database";
 import { PLANS, PAYMENT_URLS } from "@/lib/config/plans";
-
-// Importação condicional do Stripe
-let Stripe: any = null;
-try {
-  Stripe = require('stripe').default;
-} catch {
-  // Stripe não instalado
-}
+import { getStripeInstance, isStripeEnabled, getPlanPriceId } from "@/backend/lib/stripe";
 
 export async function POST(request: NextRequest) {
-  // Verificar se Stripe está configurado
-  const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+  // Verificar se Stripe está configurado e habilitado
+  const stripeEnabled = await isStripeEnabled();
   
-  if (!Stripe || !stripeSecretKey) {
+  if (!stripeEnabled) {
     return NextResponse.json(
       { 
         error: "coming_soon",
@@ -76,7 +69,10 @@ export async function POST(request: NextRequest) {
 
     const planConfig = PLANS[plan];
     
-    if (!planConfig.stripe?.priceId) {
+    // Obter price ID do banco de dados
+    const priceId = await getPlanPriceId(plan as 'developer' | 'startup' | 'enterprise');
+    
+    if (!priceId) {
       return NextResponse.json(
         { 
           error: "coming_soon",
@@ -86,16 +82,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const stripe = new Stripe(stripeSecretKey, {
-      apiVersion: '2023-10-16',
-    });
+    const stripe = await getStripeInstance();
+    if (!stripe) {
+      return NextResponse.json(
+        { 
+          error: "coming_soon",
+          message: "Stripe payment is coming soon" 
+        },
+        { status: 503 }
+      );
+    }
 
     // Criar sessão de checkout do Stripe
     const checkoutSession = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
         {
-          price: planConfig.stripe.priceId,
+          price: priceId,
           quantity: 1,
         },
       ],

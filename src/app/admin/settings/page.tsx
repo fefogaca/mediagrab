@@ -26,8 +26,31 @@ import {
   XCircle,
   AlertTriangle,
   RefreshCw,
+  CreditCard,
+  Mail,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
+
+interface StripeConfig {
+  enabled: boolean;
+  secretKey: string;
+  publishableKey: string;
+  webhookSecret: string;
+  developerPriceId: string;
+  developerProductId: string;
+  startupPriceId: string;
+  startupProductId: string;
+  enterprisePriceId: string;
+  enterpriseProductId: string;
+}
+
+interface SendGridConfig {
+  enabled: boolean;
+  apiKey: string;
+  fromEmail: string;
+}
 
 interface Settings {
   siteName: string;
@@ -40,6 +63,8 @@ interface Settings {
   maxApiKeysPerUser: number;
   defaultDailyLimit: number;
   rateLimitPerMinute: number;
+  stripe: StripeConfig;
+  sendGrid: SendGridConfig;
 }
 
 interface DbStatus {
@@ -62,7 +87,29 @@ export default function SettingsPage() {
     maxApiKeysPerUser: 5,
     defaultDailyLimit: 100,
     rateLimitPerMinute: 60,
+    stripe: {
+      enabled: false,
+      secretKey: "",
+      publishableKey: "",
+      webhookSecret: "",
+      developerPriceId: "",
+      developerProductId: "",
+      startupPriceId: "",
+      startupProductId: "",
+      enterprisePriceId: "",
+      enterpriseProductId: "",
+    },
+    sendGrid: {
+      enabled: false,
+      apiKey: "",
+      fromEmail: "",
+    },
   });
+
+  const [showStripeSecret, setShowStripeSecret] = useState(false);
+  const [showStripeWebhook, setShowStripeWebhook] = useState(false);
+  const [showSendGridKey, setShowSendGridKey] = useState(false);
+  const [testingEmail, setTestingEmail] = useState(false);
 
   const [dbStatus, setDbStatus] = useState<DbStatus>({
     connected: false,
@@ -86,7 +133,13 @@ export default function SettingsPage() {
       if (response.ok) {
         const data = await response.json();
         if (data.settings) {
-          setSettings(data.settings);
+          // Garantir que stripe e sendGrid existam
+          const loadedSettings = {
+            ...data.settings,
+            stripe: data.settings.stripe || settings.stripe,
+            sendGrid: data.settings.sendGrid || settings.sendGrid,
+          };
+          setSettings(loadedSettings);
         }
       }
     } catch (error) {
@@ -174,6 +227,57 @@ export default function SettingsPage() {
       } catch (error) {
         console.error("Erro ao alternar:", error);
       }
+    }
+  };
+
+  const handleStripeChange = (field: keyof StripeConfig, value: string | boolean) => {
+    setSettings({
+      ...settings,
+      stripe: {
+        ...settings.stripe,
+        [field]: value,
+      },
+    });
+  };
+
+  const handleSendGridChange = (field: keyof SendGridConfig, value: string | boolean) => {
+    setSettings({
+      ...settings,
+      sendGrid: {
+        ...settings.sendGrid,
+        [field]: value,
+      },
+    });
+  };
+
+  const handleTestEmail = async () => {
+    if (!settings.sendGrid.apiKey || !settings.sendGrid.fromEmail) {
+      toast.error("Configure a API Key e o Email Remetente primeiro");
+      return;
+    }
+
+    setTestingEmail(true);
+    try {
+      const response = await fetch("/api/admin/settings/test-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          apiKey: settings.sendGrid.apiKey,
+          fromEmail: settings.sendGrid.fromEmail,
+        }),
+      });
+
+      if (response.ok) {
+        toast.success(t.admin.settings.sendgrid.sent);
+      } else {
+        const error = await response.json();
+        toast.error(error.message || t.admin.settings.sendgrid.error);
+      }
+    } catch (error) {
+      console.error("Erro ao testar email:", error);
+      toast.error(t.admin.settings.sendgrid.error);
+    } finally {
+      setTestingEmail(false);
     }
   };
 
@@ -427,6 +531,220 @@ export default function SettingsPage() {
                 <RefreshCw className="h-4 w-4 mr-2" />
               )}
               {checkingDb ? t.admin.settings.database.checkingConnection : t.admin.settings.database.verifyConnection}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Stripe Settings */}
+        <Card className="bg-zinc-900/50 border-zinc-800">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-emerald-500" />
+              {t.admin.settings.stripe.title}
+            </CardTitle>
+            <CardDescription className="text-zinc-400">
+              {t.admin.settings.stripe.subtitle}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-zinc-300">{t.admin.settings.stripe.enabled}</Label>
+                <p className="text-xs text-zinc-500">{t.admin.settings.stripe.enabledDesc}</p>
+              </div>
+              <Switch
+                checked={settings.stripe.enabled}
+                onCheckedChange={(checked) => handleStripeChange('enabled', checked)}
+              />
+            </div>
+            <Separator className="bg-zinc-800" />
+            <div className="space-y-2">
+              <Label className="text-zinc-300">{t.admin.settings.stripe.secretKey}</Label>
+              <div className="relative">
+                <Input
+                  type={showStripeSecret ? "text" : "password"}
+                  value={settings.stripe.secretKey}
+                  onChange={(e) => handleStripeChange('secretKey', e.target.value)}
+                  className="bg-zinc-800/50 border-zinc-700 text-white pr-10"
+                  placeholder="sk_test_..."
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowStripeSecret(!showStripeSecret)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-300"
+                >
+                  {showStripeSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              <p className="text-xs text-zinc-500">{t.admin.settings.stripe.secretKeyDesc}</p>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-zinc-300">{t.admin.settings.stripe.publishableKey}</Label>
+              <Input
+                type="text"
+                value={settings.stripe.publishableKey}
+                onChange={(e) => handleStripeChange('publishableKey', e.target.value)}
+                className="bg-zinc-800/50 border-zinc-700 text-white"
+                placeholder="pk_test_..."
+              />
+              <p className="text-xs text-zinc-500">{t.admin.settings.stripe.publishableKeyDesc}</p>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-zinc-300">{t.admin.settings.stripe.webhookSecret}</Label>
+              <div className="relative">
+                <Input
+                  type={showStripeWebhook ? "text" : "password"}
+                  value={settings.stripe.webhookSecret}
+                  onChange={(e) => handleStripeChange('webhookSecret', e.target.value)}
+                  className="bg-zinc-800/50 border-zinc-700 text-white pr-10"
+                  placeholder="whsec_..."
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowStripeWebhook(!showStripeWebhook)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-300"
+                >
+                  {showStripeWebhook ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              <p className="text-xs text-zinc-500">{t.admin.settings.stripe.webhookSecretDesc}</p>
+            </div>
+            <Separator className="bg-zinc-800" />
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium text-zinc-300">Planos</h4>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label className="text-zinc-300 text-xs">Developer Price ID</Label>
+                  <Input
+                    type="text"
+                    value={settings.stripe.developerPriceId}
+                    onChange={(e) => handleStripeChange('developerPriceId', e.target.value)}
+                    className="bg-zinc-800/50 border-zinc-700 text-white text-sm"
+                    placeholder="price_..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-zinc-300 text-xs">Developer Product ID</Label>
+                  <Input
+                    type="text"
+                    value={settings.stripe.developerProductId}
+                    onChange={(e) => handleStripeChange('developerProductId', e.target.value)}
+                    className="bg-zinc-800/50 border-zinc-700 text-white text-sm"
+                    placeholder="prod_..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-zinc-300 text-xs">Startup Price ID</Label>
+                  <Input
+                    type="text"
+                    value={settings.stripe.startupPriceId}
+                    onChange={(e) => handleStripeChange('startupPriceId', e.target.value)}
+                    className="bg-zinc-800/50 border-zinc-700 text-white text-sm"
+                    placeholder="price_..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-zinc-300 text-xs">Startup Product ID</Label>
+                  <Input
+                    type="text"
+                    value={settings.stripe.startupProductId}
+                    onChange={(e) => handleStripeChange('startupProductId', e.target.value)}
+                    className="bg-zinc-800/50 border-zinc-700 text-white text-sm"
+                    placeholder="prod_..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-zinc-300 text-xs">Enterprise Price ID</Label>
+                  <Input
+                    type="text"
+                    value={settings.stripe.enterprisePriceId}
+                    onChange={(e) => handleStripeChange('enterprisePriceId', e.target.value)}
+                    className="bg-zinc-800/50 border-zinc-700 text-white text-sm"
+                    placeholder="price_..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-zinc-300 text-xs">Enterprise Product ID</Label>
+                  <Input
+                    type="text"
+                    value={settings.stripe.enterpriseProductId}
+                    onChange={(e) => handleStripeChange('enterpriseProductId', e.target.value)}
+                    className="bg-zinc-800/50 border-zinc-700 text-white text-sm"
+                    placeholder="prod_..."
+                  />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* SendGrid Settings */}
+        <Card className="bg-zinc-900/50 border-zinc-800">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center gap-2">
+              <Mail className="h-5 w-5 text-emerald-500" />
+              {t.admin.settings.sendgrid.title}
+            </CardTitle>
+            <CardDescription className="text-zinc-400">
+              {t.admin.settings.sendgrid.subtitle}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-zinc-300">{t.admin.settings.sendgrid.enabled}</Label>
+                <p className="text-xs text-zinc-500">{t.admin.settings.sendgrid.enabledDesc}</p>
+              </div>
+              <Switch
+                checked={settings.sendGrid.enabled}
+                onCheckedChange={(checked) => handleSendGridChange('enabled', checked)}
+              />
+            </div>
+            <Separator className="bg-zinc-800" />
+            <div className="space-y-2">
+              <Label className="text-zinc-300">{t.admin.settings.sendgrid.apiKey}</Label>
+              <div className="relative">
+                <Input
+                  type={showSendGridKey ? "text" : "password"}
+                  value={settings.sendGrid.apiKey}
+                  onChange={(e) => handleSendGridChange('apiKey', e.target.value)}
+                  className="bg-zinc-800/50 border-zinc-700 text-white pr-10"
+                  placeholder="SG.xxx..."
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowSendGridKey(!showSendGridKey)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-300"
+                >
+                  {showSendGridKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              <p className="text-xs text-zinc-500">{t.admin.settings.sendgrid.apiKeyDesc}</p>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-zinc-300">{t.admin.settings.sendgrid.fromEmail}</Label>
+              <Input
+                type="email"
+                value={settings.sendGrid.fromEmail}
+                onChange={(e) => handleSendGridChange('fromEmail', e.target.value)}
+                className="bg-zinc-800/50 border-zinc-700 text-white"
+                placeholder="noreply@mediagrab.com"
+              />
+              <p className="text-xs text-zinc-500">{t.admin.settings.sendgrid.fromEmailDesc}</p>
+            </div>
+            <Separator className="bg-zinc-800" />
+            <Button
+              variant="outline"
+              className="w-full border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+              onClick={handleTestEmail}
+              disabled={testingEmail || !settings.sendGrid.apiKey || !settings.sendGrid.fromEmail}
+            >
+              {testingEmail ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Mail className="h-4 w-4 mr-2" />
+              )}
+              {testingEmail ? t.admin.settings.sendgrid.sending : t.admin.settings.sendgrid.testEmail}
             </Button>
           </CardContent>
         </Card>
