@@ -176,10 +176,16 @@ docker run -d \
 
 #### Option 1: Docker Image (Recommended)
 
-1. **Build and push the image:**
+1. **Build and push the image (multi-architecture):**
    ```bash
+   # Build for both amd64 and arm64 (supports servers and MacBooks)
+   docker buildx build --platform linux/amd64,linux/arm64 -t your-username/mediagrab:latest --push .
+   
+   # Or build only for amd64 (servers)
    docker buildx build --platform linux/amd64 -t your-username/mediagrab:latest --push .
    ```
+   
+   > **Note:** The image supports both `linux/amd64` (x86_64 servers) and `linux/arm64` (Apple Silicon MacBooks, ARM servers). Docker will automatically select the correct architecture.
 
 2. **In Coolify dashboard:**
    - Select "Docker Image" deployment type
@@ -323,6 +329,7 @@ The container uses an isolated network (`mediagrab-network`).
 - Secrets (`JWT_SECRET`, `NEXTAUTH_SECRET`) are automatically generated
 - Health check is available at `/api/health`
 - The build uses multi-stage to optimize the final image size
+- **Multi-architecture support**: The image supports both `linux/amd64` (x86_64) and `linux/arm64` (Apple Silicon, ARM servers)
 - All integrations (Stripe, SendGrid, OAuth) can be configured via admin panel after deployment
 - No need to set OAuth, Stripe, or SendGrid credentials in environment variables - configure them in `/admin/settings`
 

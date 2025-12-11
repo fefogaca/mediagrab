@@ -52,6 +52,7 @@ MediaGrab é uma solução completa para desenvolvedores que precisam integrar f
 - **Integração OAuth**: Login com Google e GitHub - Configurável via painel admin
 - **Banco de Dados Moderno**: PostgreSQL via Supabase com Prisma ORM
 - **Docker Ready**: Deploy rápido e fácil com Docker e Docker Compose
+- **Suporte Multi-Arquitetura**: Imagem Docker suporta tanto `linux/amd64` quanto `linux/arm64` (funciona em servidores e MacBooks Apple Silicon)
 - **Configuração via Painel Admin**: Todas as integrações (Stripe, SendGrid, OAuth) podem ser configuradas através do painel administrativo sem editar arquivos `.env`
 
 A aplicação é construída com Next.js 16, React 19, TypeScript e utiliza Supabase como banco de dados PostgreSQL gerenciado.
