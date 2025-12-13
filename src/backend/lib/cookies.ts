@@ -8,20 +8,35 @@ interface CookiesData {
   youtube: string;
 }
 
+// Cache simples para cookies (evita múltiplas queries ao banco)
+let cookiesCache: CookiesData | null = null;
+let cacheTimestamp = 0;
+const CACHE_TTL = 60000; // 1 minuto
+
 /**
- * Obtém os cookies do banco de dados
+ * Obtém os cookies do banco de dados (com cache para evitar problemas de pool)
  */
 export async function getCookies(): Promise<CookiesData> {
+  // Retornar cache se ainda válido
+  if (cookiesCache && Date.now() - cacheTimestamp < CACHE_TTL) {
+    return cookiesCache;
+  }
+
   try {
     const settings = await Settings.getSettings();
     const cookies = typeof settings.cookies === 'string'
       ? JSON.parse(settings.cookies)
       : settings.cookies || { instagram: "", youtube: "" };
     
-    return cookies as CookiesData;
+    // Atualizar cache
+    cookiesCache = cookies as CookiesData;
+    cacheTimestamp = Date.now();
+    
+    return cookiesCache;
   } catch (error) {
     console.error('Erro ao obter cookies:', error);
-    return { instagram: "", youtube: "" };
+    // Retornar cache antigo se houver, senão retornar vazio
+    return cookiesCache || { instagram: "", youtube: "" };
   }
 }
 

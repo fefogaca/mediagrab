@@ -188,6 +188,7 @@ async function fetchWithYtDlp(url: string, providerId?: string): Promise<Provide
   // Detectar plataforma para usar cookies apropriados
   const isInstagram = url.includes('instagram.com') || url.includes('instagr.am');
   const isYouTube = url.includes('youtube.com') || url.includes('youtu.be');
+  const isTwitter = url.includes('twitter.com') || url.includes('x.com');
   
   // Obter cookies se disponíveis
   let cookiesPath: string | null = null;
@@ -229,15 +230,61 @@ async function fetchWithYtDlp(url: string, providerId?: string): Promise<Provide
     }
   });
 
-  // Para Twitter/X: formatos HLS geralmente são apenas vídeo, precisam de merge
+  // Para Twitter/X e Instagram: formatos HLS/DASH geralmente são apenas vídeo, precisam de merge
   // Incluir formatos de áudio separados se existirem
-  const isTwitter = url.includes('twitter.com') || url.includes('x.com');
+  
+  // Para Instagram: filtrar formatos VP9/AV1 que causam vídeo preto, priorizar H.264 (avc1)
+  if (isInstagram) {
+    // Filtrar formatos com codec problemático (VP9, AV1)
+    const filteredVideoWithAudio = videoWithAudio.filter(f => 
+      !f.vcodec?.includes('vp9') && !f.vcodec?.includes('av01') && !f.vcodec?.includes('vp09')
+    );
+    const filteredVideoOnly = videoOnly.filter(f => 
+      !f.vcodec?.includes('vp9') && !f.vcodec?.includes('av01') && !f.vcodec?.includes('vp09')
+    );
+    
+    // Priorizar formatos H.264 (avc1)
+    const h264Formats = [...filteredVideoWithAudio, ...filteredVideoOnly].filter(f => 
+      f.vcodec?.toLowerCase().includes('avc1') || f.vcodec?.toLowerCase().includes('h264')
+    );
+    const otherFormats = [...filteredVideoWithAudio, ...filteredVideoOnly].filter(f => 
+      !f.vcodec?.toLowerCase().includes('avc1') && !f.vcodec?.toLowerCase().includes('h264')
+    );
+    
+    // Usar H.264 primeiro, depois outros formatos (serão re-encodados)
+    const formatsToUse = h264Formats.length > 0 
+      ? [...h264Formats, ...otherFormats, ...audioOnly]
+      : [...filteredVideoWithAudio, ...filteredVideoOnly, ...audioOnly];
+    
+    const processedFormats = formatsToUse
+      .filter((format: YtDlpFormat) => format.format_id || format.format)
+      .map((format: YtDlpFormat): RawFormat => ({
+        format_id: String(format.format_id ?? format.format ?? ''),
+        ext: format.ext ?? 'mp4',
+        resolution:
+          format.resolution ||
+          (format.acodec !== 'none' && format.vcodec === 'none'
+            ? 'Áudio'
+            : format.vcodec !== 'none' && format.acodec === 'none'
+              ? 'Vídeo'
+              : 'Desconhecido'),
+        quality: format.quality || format.format_note || null,
+        vcodec: format.vcodec || 'none',
+        acodec: format.acodec || 'none',
+        filesize_approx: format.filesize || format.filesize_approx,
+      }));
+
+    return {
+      title,
+      formats: processedFormats,
+    };
+  }
   
   // Priorizar: vídeo+áudio > vídeo-only (para merge) > áudio-only
   // Se não houver vídeo+áudio, usar vídeo-only (o backend vai fazer merge com áudio)
-  // Para Twitter, sempre incluir áudio-only para permitir merge
+  // Para Twitter e Instagram, sempre incluir áudio-only para permitir merge
   const formatsToUse = videoWithAudio.length > 0 
-    ? [...videoWithAudio, ...(isTwitter ? audioOnly : []), ...audioOnly]
+    ? [...videoWithAudio, ...((isTwitter || isInstagram) ? audioOnly : []), ...audioOnly]
     : [...videoOnly, ...audioOnly];
 
   const processedFormats = formatsToUse
