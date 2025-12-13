@@ -3,6 +3,7 @@ import YTDlpWrap from 'yt-dlp-wrap';
 import ytdl from 'ytdl-core';
 
 import { validateMediaUrl } from '@/lib/media/providers';
+import { getCookiesFilePath } from '@/backend/lib/cookies';
 
 const ytDlpWrap = new YTDlpWrap();
 const DEFAULT_FORMAT = 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best';
@@ -69,6 +70,21 @@ export async function GET(request: NextRequest) {
       return buildStreamResponse(responseStream);
     }
 
+    // Detectar plataforma para usar cookies apropriados
+    const isInstagram = url.includes('instagram.com') || url.includes('instagr.am');
+    const isYouTube = url.includes('youtube.com') || url.includes('youtu.be');
+    
+    // Obter cookies se disponíveis
+    let cookiesPath: string | null = null;
+    if (isInstagram || isYouTube) {
+      try {
+        const platform = isInstagram ? 'instagram' : 'youtube';
+        cookiesPath = await getCookiesFilePath(platform);
+      } catch (error) {
+        console.warn('Erro ao obter cookies:', error);
+      }
+    }
+
     // Opções otimizadas para yt-dlp - melhorar performance de download
     const ytDlpOptions = [
       url,
@@ -83,8 +99,17 @@ export async function GET(request: NextRequest) {
       '--concurrent-fragments', '4', // Download paralelo de fragmentos
       '--retries', '3', // Menos tentativas (mais rápido em caso de erro)
       '--fragment-retries', '3', // Menos tentativas de fragmentos
-      '--extractor-args', 'youtube:player_client=android', // Cliente Android (mais rápido)
     ];
+
+    // Adicionar cookies se disponíveis
+    if (cookiesPath) {
+      ytDlpOptions.push('--cookies', cookiesPath);
+    }
+
+    // Adicionar argumentos específicos do YouTube apenas se for YouTube
+    if (isYouTube) {
+      ytDlpOptions.push('--extractor-args', 'youtube:player_client=android');
+    }
 
     const nodeStream = ytDlpWrap.execStream(ytDlpOptions);
     const responseStream = toReadableStream(nodeStream);

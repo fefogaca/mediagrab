@@ -323,6 +323,9 @@ model Settings {
   // Stripe Settings (JSONB)
   stripe                 Json      @default("{\"enabled\": false, \"secretKey\": \"\", \"publishableKey\": \"\", \"webhookSecret\": \"\", \"developerPriceId\": \"\", \"developerProductId\": \"\", \"startupPriceId\": \"\", \"startupProductId\": \"\", \"enterprisePriceId\": \"\", \"enterpriseProductId\": \"\"}") @map("stripe")
   
+  // Cookies Settings (JSONB) - Armazena cookies do Instagram e YouTube
+  cookies                Json      @default("{\"instagram\": \"\", \"youtube\": \"\"}") @map("cookies")
+  
   createdAt             DateTime  @default(now()) @map("created_at")
   updatedAt             DateTime  @updatedAt @map("updated_at")
 

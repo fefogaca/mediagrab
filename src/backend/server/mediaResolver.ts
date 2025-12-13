@@ -184,8 +184,31 @@ interface YtDlpFormat {
   filesize_approx?: number;
 }
 
-async function fetchWithYtDlp(url: string): Promise<ProviderResult> {
-  const videoInfo = await ytDlpWrap.getVideoInfo(url);
+async function fetchWithYtDlp(url: string, providerId?: string): Promise<ProviderResult> {
+  // Detectar plataforma para usar cookies apropriados
+  const isInstagram = url.includes('instagram.com') || url.includes('instagr.am');
+  const isYouTube = url.includes('youtube.com') || url.includes('youtu.be');
+  
+  // Obter cookies se disponíveis
+  let cookiesPath: string | null = null;
+  if (isInstagram || isYouTube) {
+    try {
+      const { getCookiesFilePath } = await import('@/backend/lib/cookies');
+      const platform = isInstagram ? 'instagram' : 'youtube';
+      cookiesPath = await getCookiesFilePath(platform);
+    } catch (error) {
+      console.warn('Erro ao obter cookies:', error);
+    }
+  }
+
+  // Preparar argumentos do yt-dlp
+  // getVideoInfo aceita um array de strings como argumentos
+  const args: string[] = [url];
+  if (cookiesPath) {
+    args.push('--cookies', cookiesPath);
+  }
+
+  const videoInfo = await ytDlpWrap.getVideoInfo(args);
   const { title, formats } = videoInfo;
 
   // Separar formatos em categorias

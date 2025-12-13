@@ -66,6 +66,11 @@ interface GitHubOAuthConfig {
   clientSecret: string;
 }
 
+interface CookiesConfig {
+  instagram: string;
+  youtube: string;
+}
+
 interface Settings {
   siteName: string;
   siteUrl: string;
@@ -81,6 +86,7 @@ interface Settings {
   sendGrid: SendGridConfig;
   googleOAuth: GoogleOAuthConfig;
   githubOAuth: GitHubOAuthConfig;
+  cookies: CookiesConfig;
 }
 
 interface DbStatus {
@@ -130,6 +136,10 @@ export default function SettingsPage() {
       clientId: "",
       clientSecret: "",
     },
+    cookies: {
+      instagram: "",
+      youtube: "",
+    },
   });
 
   const [showStripeSecret, setShowStripeSecret] = useState(false);
@@ -168,6 +178,7 @@ export default function SettingsPage() {
             sendGrid: data.settings.sendGrid || settings.sendGrid,
             googleOAuth: data.settings.googleOAuth || settings.googleOAuth,
             githubOAuth: data.settings.githubOAuth || settings.githubOAuth,
+            cookies: data.settings.cookies || settings.cookies,
           };
           setSettings(loadedSettings);
         }
@@ -298,6 +309,54 @@ export default function SettingsPage() {
         [field]: value,
       },
     });
+  };
+
+  const [uploadingCookies, setUploadingCookies] = useState(false);
+  const [instagramFile, setInstagramFile] = useState<File | null>(null);
+  const [youtubeFile, setYoutubeFile] = useState<File | null>(null);
+
+  const handleCookiesUpload = async () => {
+    if (!instagramFile && !youtubeFile) {
+      toast.error("Selecione pelo menos um arquivo de cookies");
+      return;
+    }
+
+    setUploadingCookies(true);
+    try {
+      const formData = new FormData();
+      if (instagramFile) {
+        formData.append('instagram', instagramFile);
+      }
+      if (youtubeFile) {
+        formData.append('youtube', youtubeFile);
+      }
+
+      const response = await fetch("/api/admin/settings/cookies", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSettings({
+          ...settings,
+          cookies: data.cookies,
+        });
+        toast.success(t.admin.settings.cookies.success);
+        setInstagramFile(null);
+        setYoutubeFile(null);
+        // Recarregar settings para garantir sincronização
+        await fetchSettings();
+      } else {
+        const error = await response.json();
+        toast.error(error.message || t.admin.settings.cookies.error);
+      }
+    } catch (error) {
+      console.error("Erro ao fazer upload dos cookies:", error);
+      toast.error(t.admin.settings.cookies.error);
+    } finally {
+      setUploadingCookies(false);
+    }
   };
 
   const handleTestEmail = async () => {
@@ -918,6 +977,71 @@ export default function SettingsPage() {
                 </div>
               </>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Cookies Settings */}
+        <Card className="bg-zinc-900/50 border-zinc-800">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center gap-2">
+              <Key className="h-5 w-5 text-emerald-500" />
+              {t.admin.settings.cookies.title}
+            </CardTitle>
+            <CardDescription className="text-zinc-400">
+              {t.admin.settings.cookies.subtitle}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-zinc-300">{t.admin.settings.cookies.instagram}</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="file"
+                  accept=".txt"
+                  onChange={(e) => setInstagramFile(e.target.files?.[0] || null)}
+                  className="bg-zinc-800/50 border-zinc-700 text-white text-sm"
+                />
+                {instagramFile && (
+                  <Badge variant="outline" className="text-emerald-500 border-emerald-500">
+                    {instagramFile.name}
+                  </Badge>
+                )}
+              </div>
+              <p className="text-xs text-zinc-500">{t.admin.settings.cookies.instagramDesc}</p>
+            </div>
+            <Separator className="bg-zinc-800" />
+            <div className="space-y-2">
+              <Label className="text-zinc-300">{t.admin.settings.cookies.youtube}</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="file"
+                  accept=".txt"
+                  onChange={(e) => setYoutubeFile(e.target.files?.[0] || null)}
+                  className="bg-zinc-800/50 border-zinc-700 text-white text-sm"
+                />
+                {youtubeFile && (
+                  <Badge variant="outline" className="text-emerald-500 border-emerald-500">
+                    {youtubeFile.name}
+                  </Badge>
+                )}
+              </div>
+              <p className="text-xs text-zinc-500">{t.admin.settings.cookies.youtubeDesc}</p>
+            </div>
+            <Separator className="bg-zinc-800" />
+            <Button
+              onClick={handleCookiesUpload}
+              disabled={uploadingCookies || (!instagramFile && !youtubeFile)}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              {uploadingCookies ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {t.admin.settings.cookies.uploading}
+                </>
+              ) : (
+                t.admin.settings.cookies.upload
+              )}
+            </Button>
           </CardContent>
         </Card>
       </div>

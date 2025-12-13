@@ -31,6 +31,10 @@ const defaultSettings = {
     enterprisePriceId: "",
     enterpriseProductId: "",
   },
+  cookies: {
+    instagram: "",
+    youtube: "",
+  },
 };
 
 export const Settings = {
@@ -57,6 +61,7 @@ export const Settings = {
             githubOAuth: defaultSettings.githubOAuth as Prisma.InputJsonValue,
             sendGrid: defaultSettings.sendGrid as Prisma.InputJsonValue,
             stripe: defaultSettings.stripe as Prisma.InputJsonValue,
+            cookies: defaultSettings.cookies as Prisma.InputJsonValue,
           },
         });
       }
@@ -89,6 +94,7 @@ export const Settings = {
         githubOAuth: (data.githubOAuth as Prisma.InputJsonValue) || defaultSettings.githubOAuth as Prisma.InputJsonValue,
         sendGrid: (data.sendGrid as Prisma.InputJsonValue) || defaultSettings.sendGrid as Prisma.InputJsonValue,
         stripe: (data.stripe as Prisma.InputJsonValue) || defaultSettings.stripe as Prisma.InputJsonValue,
+        cookies: (data.cookies as Prisma.InputJsonValue) || defaultSettings.cookies as Prisma.InputJsonValue,
       };
       settings = await prisma.settings.create({ data: createData });
     } else {
@@ -108,6 +114,7 @@ export const Settings = {
       if (data.githubOAuth !== undefined) updateData.githubOAuth = data.githubOAuth as Prisma.InputJsonValue;
       if (data.sendGrid !== undefined) updateData.sendGrid = data.sendGrid as Prisma.InputJsonValue;
       if (data.stripe !== undefined) updateData.stripe = data.stripe as Prisma.InputJsonValue;
+      if (data.cookies !== undefined) updateData.cookies = data.cookies as Prisma.InputJsonValue;
       
       settings = await prisma.settings.update({
         where: { id: settings.id },

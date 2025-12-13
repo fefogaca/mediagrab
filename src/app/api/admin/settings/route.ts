@@ -76,6 +76,9 @@ export async function GET() {
       stripe: typeof settings.stripe === 'string'
         ? JSON.parse(settings.stripe)
         : settings.stripe,
+      cookies: typeof settings.cookies === 'string'
+        ? JSON.parse(settings.cookies)
+        : settings.cookies || { instagram: "", youtube: "" },
     };
 
     return NextResponse.json({ settings: formattedSettings });
@@ -116,6 +119,7 @@ export async function POST(request: NextRequest) {
       githubOAuth: body.githubOAuth,
       sendGrid: body.sendGrid,
       stripe: body.stripe,
+      cookies: body.cookies,
     });
 
     // Limpar cache de OAuth providers para recarregar com novas configurações
@@ -139,6 +143,9 @@ export async function POST(request: NextRequest) {
       githubOAuth: updatedSettings.githubOAuth as any,
       sendGrid: updatedSettings.sendGrid as any,
       stripe: updatedSettings.stripe as any,
+      cookies: typeof updatedSettings.cookies === 'string'
+        ? JSON.parse(updatedSettings.cookies)
+        : updatedSettings.cookies || { instagram: "", youtube: "" },
     };
 
     return NextResponse.json({ 
