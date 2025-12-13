@@ -340,6 +340,7 @@ export default function SettingsPage() {
     setUploadingCookies(true);
     try {
       const formData = new FormData();
+      // Aceitar qualquer arquivo .txt - o nome do arquivo não importa mais
       if (instagramFile) {
         formData.append('instagram', instagramFile);
       }
@@ -1095,7 +1096,10 @@ export default function SettingsPage() {
                 <Input
                   type="file"
                   accept=".txt"
-                  onChange={(e) => setInstagramFile(e.target.files?.[0] || null)}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] || null;
+                    setInstagramFile(file);
+                  }}
                   className="bg-zinc-800/50 border-zinc-700 text-white text-sm"
                 />
                 {instagramFile && (

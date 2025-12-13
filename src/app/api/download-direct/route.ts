@@ -55,10 +55,11 @@ export async function GET(request: NextRequest) {
 
   // Garantir que vídeos sempre tenham áudio fazendo merge quando necessário
   // Se o formato não especificar merge (não contém '+'), fazer merge automático
-  if (source === 'yt-dlp' && !format.includes('+') && !format.includes('best')) {
+  // Exceção: formatos HLS (hls-*) e DASH (dash-*) não precisam de merge, são streams completos
+  if (source === 'yt-dlp' && !format.includes('+') && !format.includes('best') && !format.startsWith('hls-') && !format.startsWith('dash-')) {
     // Se for um formato específico (ID numérico ou string), fazer merge com bestaudio
     // yt-dlp vai fazer merge automaticamente: formato_video+bestaudio
-    // Usar fallback para garantir que sempre funcione
+    // Usar fallback para garantir que sempre funcione - se o formato não existir, usar o melhor disponível
     format = `${format}+bestaudio/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best`;
   }
 
@@ -94,11 +95,14 @@ export async function GET(request: NextRequest) {
       '--no-warnings', // Reduzir logs
       '--quiet', // Modo silencioso
       '--no-progress', // Não mostrar progresso (melhora performance)
-      '--buffer-size', '16K', // Buffer menor para começar mais rápido
+      '--buffer-size', '64K', // Buffer maior para melhor estabilidade
       '--http-chunk-size', '10M', // Chunks maiores para melhor throughput
       '--concurrent-fragments', '4', // Download paralelo de fragmentos
-      '--retries', '3', // Menos tentativas (mais rápido em caso de erro)
-      '--fragment-retries', '3', // Menos tentativas de fragmentos
+      '--retries', '5', // Mais tentativas para melhor confiabilidade
+      '--fragment-retries', '5', // Mais tentativas de fragmentos
+      '--extractor-retries', '3', // Tentativas do extrator
+      '--ignore-errors', // Continuar mesmo com erros menores
+      '--no-check-certificate', // Não verificar certificados (pode ajudar em alguns casos)
     ];
 
     // Adicionar cookies se disponíveis
@@ -140,21 +144,52 @@ export async function GET(request: NextRequest) {
 }
 
 function toReadableStream(stream: NodeJS.ReadableStream): ReadableStream<Uint8Array> {
+  let isCancelled = false;
+  
   return new ReadableStream<Uint8Array>({
     start(controller) {
-      stream.on('data', (chunk) => {
-        controller.enqueue(chunk);
+      stream.on('data', (chunk: Buffer) => {
+        if (!isCancelled) {
+          try {
+            controller.enqueue(new Uint8Array(chunk));
+          } catch (error) {
+            console.error('Erro ao enfileirar chunk:', error);
+            if (!isCancelled) {
+              controller.error(error);
+            }
+          }
+        }
       });
+      
       stream.on('end', () => {
-        controller.close();
+        if (!isCancelled) {
+          try {
+            controller.close();
+          } catch (error) {
+            console.error('Erro ao fechar stream:', error);
+          }
+        }
       });
+      
       stream.on('error', (error) => {
-        controller.error(error);
+        if (!isCancelled) {
+          console.error('Erro no stream:', error);
+          try {
+            controller.error(error);
+          } catch (closeError) {
+            console.error('Erro ao reportar erro do stream:', closeError);
+          }
+        }
       });
     },
     cancel() {
+      isCancelled = true;
       if ('destroy' in stream && typeof stream.destroy === 'function') {
-        stream.destroy();
+        try {
+          stream.destroy();
+        } catch (error) {
+          console.error('Erro ao destruir stream:', error);
+        }
       }
     },
   });
@@ -164,12 +199,18 @@ function buildStreamResponse(stream: ReadableStream<Uint8Array>) {
   const filename = 'media-download.mp4';
   return new NextResponse(stream, {
     headers: {
-      'Content-Type': 'application/octet-stream',
+      'Content-Type': 'application/octet-stream', // Voltar para octet-stream para compatibilidade
       'Content-Disposition': `attachment; filename="${filename}"`,
-      'Cache-Control': 'no-cache', // Não cachear para garantir dados atualizados
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
       'X-Content-Type-Options': 'nosniff',
       // Headers para melhorar performance de streaming
       'Accept-Ranges': 'bytes',
+      'Connection': 'keep-alive',
+      'Transfer-Encoding': 'chunked',
+      // Headers adicionais para garantir que o download funcione
+      'X-Accel-Buffering': 'no', // Desabilitar buffering do nginx (se aplicável)
     },
   });
 }
