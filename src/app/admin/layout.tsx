@@ -33,6 +33,7 @@ import {
   Globe,
   ArrowLeft,
   Play,
+  Bot,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LogoSmallContrast } from '@frontend/components/shared/Logo';
@@ -51,6 +52,7 @@ const getAdminSidebarItems = (t: any) => [
   { href: '/admin', label: t.admin.sidebar.dashboard, icon: LayoutDashboard },
   { href: '/admin/users', label: t.admin.sidebar.users, icon: Users },
   { href: '/admin/api-keys', label: t.admin.sidebar.apiKeys, icon: Key },
+  { href: '/admin/installations', label: t.admin.sidebar.installations, icon: Bot },
   { href: '/admin/test-area', label: t.admin.sidebar.testArea, icon: Play },
   { href: '/admin/downloads', label: t.admin.sidebar.downloads, icon: Download },
   { href: '/admin/payments', label: t.admin.sidebar.payments, icon: CreditCard },

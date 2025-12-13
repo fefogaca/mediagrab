@@ -20,6 +20,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
   const menuItems = [
     { href: '/admin', label: t.admin.sidebar.dashboard, icon: '📊' },
     { href: '/admin/users', label: t.admin.sidebar.users, icon: '👥' },
+    { href: '/admin/installations', label: t.admin.sidebar.installations, icon: '🤖' },
     { href: '/admin/api-keys', label: t.admin.sidebar.apiKeys, icon: '🔑' },
     { href: '/admin/downloads', label: t.admin.sidebar.downloads, icon: '⬇️' },
     { href: '/admin/payments', label: t.admin.sidebar.payments, icon: '💳' },

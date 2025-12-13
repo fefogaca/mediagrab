@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { connectDB } from '@backend/lib/database';
+import prisma from '@backend/lib/database';
 import DownloadLog from '@backend/models/DownloadLog';
 import ApiKey from '@backend/models/ApiKey';
 import jwt from 'jsonwebtoken';
@@ -37,12 +38,63 @@ export async function GET() {
 
     await connectDB();
     
-    const totalDownloads = await DownloadLog.count({ userId });
-    const totalApiKeys = await ApiKey.count({ userId });
+    // Fazer queries sequenciais para evitar problemas com Session Pooler
+    let user;
+    let totalDownloads = 0;
+    let totalApiKeys = 0;
+    
+    try {
+      user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          usageCount: true,
+          usageLimit: true,
+          plan: true,
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching user:', error);
+      user = null;
+    }
+    
+    // Pequeno delay entre queries
+    await new Promise(resolve => setTimeout(resolve, 50));
+    
+    try {
+      totalDownloads = await DownloadLog.count({ userId });
+    } catch (error) {
+      console.error('Error counting downloads:', error);
+      totalDownloads = 0;
+    }
+    
+    await new Promise(resolve => setTimeout(resolve, 50));
+    
+    try {
+      totalApiKeys = await ApiKey.count({ userId });
+    } catch (error) {
+      console.error('Error counting API keys:', error);
+      totalApiKeys = 0;
+    }
 
-    return NextResponse.json({ totalDownloads, totalApiKeys }, { status: 200 });
+    // Calcular usageCount e usageLimit
+    const usageCount = user?.usageCount || 0;
+    const usageLimit = user?.usageLimit || (user?.plan === 'free' ? 5 : 100);
+
+    return NextResponse.json({ 
+      totalDownloads, 
+      totalApiKeys,
+      usageCount,
+      usageLimit
+    }, { status: 200 });
   } catch (error) {
     console.error('Failed to fetch user stats:', error);
-    return NextResponse.json({ message: 'Failed to fetch user stats', error: (error as Error).message }, { status: 500 });
+    return NextResponse.json({ 
+      message: 'Failed to fetch user stats', 
+      error: (error as Error).message,
+      totalDownloads: 0,
+      totalApiKeys: 0,
+      usageCount: 0,
+      usageLimit: 5
+    }, { status: 500 });
   }
 }

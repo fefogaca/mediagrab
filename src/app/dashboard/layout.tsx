@@ -100,28 +100,62 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [user, setUser] = useState<User | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [redirecting, setRedirecting] = useState(false);
   
   const sidebarItems = getSidebarItems(t);
 
   useEffect(() => {
-    fetchUser();
-  }, []);
-
-  const fetchUser = async () => {
-    try {
-      const response = await fetch("/api/auth/me");
-      if (!response.ok) {
-        router.push("/login");
-        return;
+    // Verificar role imediatamente antes de qualquer renderização
+    let isMounted = true;
+    let redirectTimeout: NodeJS.Timeout | null = null;
+    
+    const checkAndRedirect = async () => {
+      try {
+        const response = await fetch("/api/auth/me");
+        if (!response.ok) {
+          if (isMounted) {
+            router.push("/login");
+          }
+          return;
+        }
+        const data = await response.json();
+        
+        if (!isMounted) return;
+        
+        // Se o usuário é admin, redirecionar imediatamente para o painel admin
+        if (data.user?.role === "admin") {
+          setRedirecting(true);
+          // Limpar qualquer timeout anterior
+          if (redirectTimeout) {
+            clearTimeout(redirectTimeout);
+          }
+          // Usar window.location.replace para redirecionamento completo e evitar loops
+          // Não usar setTimeout, fazer imediatamente
+          if (isMounted) {
+            window.location.replace("/admin");
+          }
+          return;
+        }
+        
+        setUser(data.user);
+        setLoading(false);
+      } catch (error) {
+        console.error("Erro ao verificar usuário:", error);
+        if (isMounted) {
+          router.push("/login");
+        }
       }
-      const data = await response.json();
-      setUser(data.user);
-    } catch {
-      router.push("/login");
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+    
+    checkAndRedirect();
+    
+    return () => {
+      isMounted = false;
+      if (redirectTimeout) {
+        clearTimeout(redirectTimeout);
+      }
+    };
+  }, [router]);
 
   const handleLogout = async () => {
     try {
@@ -133,12 +167,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   };
 
-  if (loading) {
+  // Mostrar loading enquanto verifica autenticação ou redireciona admin
+  if (loading || redirecting) {
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-emerald-500" />
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-emerald-500" />
+          {redirecting && (
+            <p className="text-zinc-400 text-sm">Redirecting to admin panel...</p>
+          )}
+        </div>
       </div>
     );
+  }
+
+  // Se não há usuário e não está carregando, redirecionar para login
+  if (!user && !loading) {
+    return null; // Retornar null enquanto redireciona
   }
 
   return (

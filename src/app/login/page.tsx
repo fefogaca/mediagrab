@@ -144,11 +144,14 @@ function LoginPageContent() {
       toast.success(language === 'pt' ? "Login realizado com sucesso!" : "Login successful!");
       
       // Aguardar um pouco para garantir que o cookie foi salvo
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 300));
       
       // Redirecionar baseado no callbackUrl ou role
       const redirectPath = callbackUrl || (data.user?.role === "admin" ? "/admin" : "/dashboard");
-      router.push(redirectPath);
+      
+      // Usar window.location.replace para redirecionamento completo
+      // Isso evita problemas com o router do Next.js e loops
+      window.location.replace(redirectPath);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t.login.errors.invalid);
     } finally {

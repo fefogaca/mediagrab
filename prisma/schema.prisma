@@ -329,3 +329,21 @@ model Settings {
   @@map("settings")
 }
 
+model BotInstallation {
+  id                String    @id @default(uuid())
+  botPhone          String    @map("bot_phone") @db.VarChar(20)
+  developerName     String    @map("developer_name") @db.VarChar(255)
+  developerPhone    String?   @map("developer_phone") @db.VarChar(20)
+  installationDate  DateTime  @map("installation_date")
+  botName           String    @default("MediaGrab") @map("bot_name") @db.VarChar(100)
+  version           String    @default("1.0.0") @db.VarChar(20)
+  
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  @@unique([botPhone])
+  @@index([installationDate])
+  @@index([developerName])
+  @@map("bot_installations")
+}
+

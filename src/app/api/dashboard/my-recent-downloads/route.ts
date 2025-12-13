@@ -36,11 +36,17 @@ export async function GET() {
 
     await connectDB();
     
-    const downloads = await prisma.downloadLog.findMany({
-      where: { userId },
-      take: 20,
-      orderBy: { createdAt: 'desc' }
-    });
+    let downloads: any[] = [];
+    try {
+      downloads = await prisma.downloadLog.findMany({
+        where: { userId },
+        take: 20,
+        orderBy: { createdAt: 'desc' }
+      });
+    } catch (error) {
+      console.error('Error fetching downloads:', error);
+      downloads = [];
+    }
 
     return NextResponse.json({ downloads }, { status: 200 });
   } catch (error) {

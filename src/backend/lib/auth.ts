@@ -152,6 +152,17 @@ export const authConfig = {
     newUser: '/register/complete',
   },
 
+  redirect: async (url: string, baseUrl: string) => {
+    // Se a URL já é absoluta, retornar como está
+    if (url.startsWith('http')) return url;
+    
+    // Se a URL começa com /, usar baseUrl
+    if (url.startsWith('/')) return `${baseUrl}${url}`;
+    
+    // Caso padrão
+    return `${baseUrl}/dashboard`;
+  },
+
   callbacks: {
     async signIn({ user, account }: { user: any; account: any }) {
       if (account?.provider === 'google' || account?.provider === 'github') {
@@ -225,6 +236,22 @@ export const authConfig = {
       }
       
       return session;
+    },
+
+    async redirect({ url, baseUrl }: { url: string; baseUrl: string }) {
+      // Se a URL já é absoluta, retornar como está
+      if (url.startsWith('http')) return url;
+      
+      // Se a URL começa com /, usar baseUrl
+      if (url.startsWith('/')) {
+        // Verificar se o usuário é admin e redirecionar para /admin
+        // Isso será verificado no lado do cliente após o login
+        return `${baseUrl}${url}`;
+      }
+      
+      // Caso padrão: redirecionar para dashboard
+      // O layout do dashboard verificará se é admin e redirecionará
+      return `${baseUrl}/dashboard`;
     },
   },
 

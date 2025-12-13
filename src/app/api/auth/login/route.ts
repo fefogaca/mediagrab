@@ -23,8 +23,16 @@ export async function POST(request: Request) {
     await connectDB();
     
     // Buscar usuário por email usando Prisma diretamente
-    const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
+    // Usar findFirst com delay para evitar problemas com prepared statements
+    await new Promise(resolve => setTimeout(resolve, 50));
+    
+    const user = await prisma.user.findFirst({
+      where: { 
+        email: {
+          equals: email.toLowerCase(),
+          mode: 'insensitive'
+        }
+      },
       select: {
         id: true,
         email: true,
@@ -58,10 +66,16 @@ export async function POST(request: Request) {
     }
 
     // Atualizar último login usando Prisma diretamente
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { lastLoginAt: new Date() }
-    });
+    try {
+      await new Promise(resolve => setTimeout(resolve, 50));
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { lastLoginAt: new Date() }
+      });
+    } catch (updateError) {
+      // Não crítico se falhar, apenas logar
+      console.warn('Erro ao atualizar último login:', updateError);
+    }
 
     // Criar token JWT
     const token = jwt.sign(

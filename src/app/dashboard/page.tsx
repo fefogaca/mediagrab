@@ -52,23 +52,47 @@ export default function DashboardPage() {
 
   const fetchStats = async () => {
     try {
+      setLoading(true);
       const [statsRes, downloadsRes] = await Promise.all([
         fetch("/api/dashboard/my-stats"),
         fetch("/api/dashboard/my-recent-downloads"),
       ]);
 
-      const statsData = await statsRes.json().catch(() => ({}));
-      const downloadsData = await downloadsRes.json().catch(() => ({ downloads: [] }));
+      // Verificar se as respostas são válidas
+      if (!statsRes.ok) {
+        console.error("Erro ao buscar stats:", statsRes.status, statsRes.statusText);
+      }
+      if (!downloadsRes.ok) {
+        console.error("Erro ao buscar downloads:", downloadsRes.status, downloadsRes.statusText);
+      }
+
+      const statsData = await statsRes.json().catch((err) => {
+        console.error("Erro ao parsear stats:", err);
+        return { totalKeys: 0, totalDownloads: 0, usageCount: 0, usageLimit: 5 };
+      });
+      
+      const downloadsData = await downloadsRes.json().catch((err) => {
+        console.error("Erro ao parsear downloads:", err);
+        return { downloads: [] };
+      });
 
       setStats({
-        totalKeys: statsData.totalKeys || 0,
+        totalKeys: statsData.totalApiKeys || statsData.totalKeys || 0,
         totalDownloads: statsData.totalDownloads || 0,
         usageCount: statsData.usageCount || 0,
-        usageLimit: statsData.usageLimit || 100,
+        usageLimit: statsData.usageLimit || 5,
       });
       setRecentDownloads(downloadsData.downloads?.slice(0, 5) || []);
     } catch (error) {
       console.error("Erro ao buscar estatísticas:", error);
+      // Garantir valores padrão em caso de erro
+      setStats({
+        totalKeys: 0,
+        totalDownloads: 0,
+        usageCount: 0,
+        usageLimit: 5,
+      });
+      setRecentDownloads([]);
     } finally {
       setLoading(false);
     }
