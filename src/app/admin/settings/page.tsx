@@ -181,6 +181,14 @@ export default function SettingsPage() {
             cookies: data.settings.cookies || settings.cookies,
           };
           setSettings(loadedSettings);
+          
+          // Verificar se há cookies configurados
+          if (loadedSettings.cookies) {
+            setCookieStatus({
+              instagram: !!(loadedSettings.cookies.instagram && loadedSettings.cookies.instagram.trim() !== ''),
+              youtube: !!(loadedSettings.cookies.youtube && loadedSettings.cookies.youtube.trim() !== ''),
+            });
+          }
         }
       }
     } catch (error) {
@@ -314,6 +322,14 @@ export default function SettingsPage() {
   const [uploadingCookies, setUploadingCookies] = useState(false);
   const [instagramFile, setInstagramFile] = useState<File | null>(null);
   const [youtubeFile, setYoutubeFile] = useState<File | null>(null);
+  const [testingCookies, setTestingCookies] = useState<{ instagram: boolean; youtube: boolean }>({
+    instagram: false,
+    youtube: false,
+  });
+  const [cookieStatus, setCookieStatus] = useState<{ instagram: boolean; youtube: boolean }>({
+    instagram: false,
+    youtube: false,
+  });
 
   const handleCookiesUpload = async () => {
     if (!instagramFile && !youtubeFile) {
@@ -347,6 +363,14 @@ export default function SettingsPage() {
         setYoutubeFile(null);
         // Recarregar settings para garantir sincronização
         await fetchSettings();
+        
+        // Atualizar status dos cookies
+        if (data.cookies) {
+          setCookieStatus({
+            instagram: !!(data.cookies.instagram && data.cookies.instagram.trim() !== ''),
+            youtube: !!(data.cookies.youtube && data.cookies.youtube.trim() !== ''),
+          });
+        }
       } else {
         const error = await response.json();
         toast.error(error.message || t.admin.settings.cookies.error);
@@ -356,6 +380,35 @@ export default function SettingsPage() {
       toast.error(t.admin.settings.cookies.error);
     } finally {
       setUploadingCookies(false);
+    }
+  };
+
+  const handleTestCookies = async (platform: 'instagram' | 'youtube') => {
+    setTestingCookies(prev => ({ ...prev, [platform]: true }));
+    
+    try {
+      const response = await fetch("/api/admin/settings/cookies/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ platform }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success(data.message || `Cookies do ${platform} estão funcionando!`);
+      } else {
+        if (data.error === 'NO_COOKIES') {
+          toast.warning(data.message || `Nenhum cookie configurado para ${platform}`);
+        } else {
+          toast.error(data.message || `Erro ao testar cookies do ${platform}`);
+        }
+      }
+    } catch (error) {
+      console.error(`Erro ao testar cookies do ${platform}:`, error);
+      toast.error(`Erro ao testar cookies do ${platform}`);
+    } finally {
+      setTestingCookies(prev => ({ ...prev, [platform]: false }));
     }
   };
 
@@ -992,8 +1045,52 @@ export default function SettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Status dos Cookies */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex items-center justify-between p-3 rounded-lg bg-zinc-800/50 border border-zinc-700">
+                <div className="flex items-center gap-2">
+                  <div className={`h-2 w-2 rounded-full ${cookieStatus.instagram ? 'bg-emerald-500' : 'bg-zinc-600'}`} />
+                  <span className="text-sm text-zinc-300">Instagram</span>
+                </div>
+                <Badge variant={cookieStatus.instagram ? "default" : "secondary"} className={cookieStatus.instagram ? "bg-emerald-600" : ""}>
+                  {cookieStatus.instagram ? t.admin.settings.cookies.configured : t.admin.settings.cookies.notConfigured}
+                </Badge>
+              </div>
+              <div className="flex items-center justify-between p-3 rounded-lg bg-zinc-800/50 border border-zinc-700">
+                <div className="flex items-center gap-2">
+                  <div className={`h-2 w-2 rounded-full ${cookieStatus.youtube ? 'bg-emerald-500' : 'bg-zinc-600'}`} />
+                  <span className="text-sm text-zinc-300">YouTube</span>
+                </div>
+                <Badge variant={cookieStatus.youtube ? "default" : "secondary"} className={cookieStatus.youtube ? "bg-emerald-600" : ""}>
+                  {cookieStatus.youtube ? t.admin.settings.cookies.configured : t.admin.settings.cookies.notConfigured}
+                </Badge>
+              </div>
+            </div>
+            <Separator className="bg-zinc-800" />
+            
             <div className="space-y-2">
-              <Label className="text-zinc-300">{t.admin.settings.cookies.instagram}</Label>
+              <div className="flex items-center justify-between">
+                <Label className="text-zinc-300">{t.admin.settings.cookies.instagram}</Label>
+                {cookieStatus.instagram && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleTestCookies('instagram')}
+                    disabled={testingCookies.instagram}
+                    className="h-7 text-xs"
+                  >
+                    {testingCookies.instagram ? (
+                      <>
+                        <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                        {t.admin.settings.cookies.testing}
+                      </>
+                    ) : (
+                      t.admin.settings.cookies.test
+                    )}
+                  </Button>
+                )}
+              </div>
               <div className="flex items-center gap-2">
                 <Input
                   type="file"
@@ -1011,7 +1108,28 @@ export default function SettingsPage() {
             </div>
             <Separator className="bg-zinc-800" />
             <div className="space-y-2">
-              <Label className="text-zinc-300">{t.admin.settings.cookies.youtube}</Label>
+              <div className="flex items-center justify-between">
+                <Label className="text-zinc-300">{t.admin.settings.cookies.youtube}</Label>
+                {cookieStatus.youtube && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleTestCookies('youtube')}
+                    disabled={testingCookies.youtube}
+                    className="h-7 text-xs"
+                  >
+                    {testingCookies.youtube ? (
+                      <>
+                        <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                        {t.admin.settings.cookies.testing}
+                      </>
+                    ) : (
+                      t.admin.settings.cookies.test
+                    )}
+                  </Button>
+                )}
+              </div>
               <div className="flex items-center gap-2">
                 <Input
                   type="file"
