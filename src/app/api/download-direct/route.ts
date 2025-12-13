@@ -54,13 +54,32 @@ export async function GET(request: NextRequest) {
   let format = formatParam;
 
   // Garantir que vídeos sempre tenham áudio fazendo merge quando necessário
-  // Se o formato não especificar merge (não contém '+'), fazer merge automático
-  // Exceção: formatos HLS (hls-*) e DASH (dash-*) não precisam de merge, são streams completos
-  if (source === 'yt-dlp' && !format.includes('+') && !format.includes('best') && !format.startsWith('hls-') && !format.startsWith('dash-')) {
-    // Se for um formato específico (ID numérico ou string), fazer merge com bestaudio
-    // yt-dlp vai fazer merge automaticamente: formato_video+bestaudio
-    // Usar fallback para garantir que sempre funcione - se o formato não existir, usar o melhor disponível
-    format = `${format}+bestaudio/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best`;
+  // Para Twitter/X: formatos HLS geralmente são apenas vídeo, precisam de merge com áudio
+  const isTwitter = url.includes('twitter.com') || url.includes('x.com');
+  
+  if (source === 'yt-dlp') {
+    // Se for formato HLS do Twitter sem áudio, fazer merge automático
+    if (isTwitter && format.startsWith('hls-') && !format.includes('+')) {
+      // Para Twitter, fazer merge: formato_video+bestaudio
+      // O yt-dlp vai fazer merge automaticamente quando encontrar o formato com '+'
+      format = `${format}+bestaudio/best[ext=mp4]/best`;
+    }
+    // Se for formato DASH do Instagram, pode precisar de merge também
+    else if (format.startsWith('dash-') && !format.includes('+')) {
+      // Para DASH, tentar merge se não tiver áudio
+      format = `${format}+bestaudio/best[ext=mp4]/best`;
+    }
+    // Para formatos numéricos (como 18 do YouTube), fazer merge se não tiver áudio
+    else if (/^\d+$/.test(format) && !format.includes('+')) {
+      // Formato numérico específico - fazer merge com bestaudio
+      format = `${format}+bestaudio/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best`;
+    }
+    // Para outros formatos sem merge, fazer merge automático
+    else if (!format.includes('+') && !format.includes('best') && !format.startsWith('hls-') && !format.startsWith('dash-')) {
+      // Se for um formato específico (ID numérico ou string), fazer merge com bestaudio
+      // yt-dlp vai fazer merge automaticamente: formato_video+bestaudio
+      format = `${format}+bestaudio/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best`;
+    }
   }
 
   try {
@@ -115,7 +134,62 @@ export async function GET(request: NextRequest) {
       ytDlpOptions.push('--extractor-args', 'youtube:player_client=android');
     }
 
-    const nodeStream = ytDlpWrap.execStream(ytDlpOptions);
+    let nodeStream: NodeJS.ReadableStream;
+    try {
+      nodeStream = ytDlpWrap.execStream(ytDlpOptions);
+    } catch (streamError: any) {
+      console.error('Erro ao criar stream do yt-dlp:', streamError);
+      
+      // Se o erro for sobre formato não disponível, tentar com best
+      if (streamError?.message?.includes('Requested format is not available') || 
+          streamError?.cause?.message?.includes('Requested format is not available') ||
+          streamError?.message?.includes('format is not available')) {
+        console.log('Formato não disponível, tentando com best...');
+        try {
+          // Para Twitter, garantir merge de áudio
+          const fallbackFormat = isTwitter 
+            ? 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best'
+            : 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best';
+          
+          const fallbackOptions = [
+            url,
+            '-f', fallbackFormat,
+            '-o', '-',
+            '--no-playlist',
+            '--quiet',
+            '--no-progress',
+            '--buffer-size', '64K',
+            '--http-chunk-size', '10M',
+            '--concurrent-fragments', '4',
+            '--retries', '5',
+            '--fragment-retries', '5',
+            '--extractor-retries', '3',
+            '--ignore-errors',
+          ];
+          
+          if (cookiesPath) {
+            fallbackOptions.push('--cookies', cookiesPath);
+          }
+          
+          if (isYouTube) {
+            fallbackOptions.push('--extractor-args', 'youtube:player_client=android');
+          }
+          
+          nodeStream = ytDlpWrap.execStream(fallbackOptions);
+        } catch (fallbackError) {
+          console.error('Falha no fallback best:', fallbackError);
+          throw streamError; // Re-throw o erro original
+        }
+      } else {
+        throw streamError;
+      }
+    }
+    
+    // Adicionar listener de erro antes de converter
+    nodeStream.on('error', (error) => {
+      console.error('Erro no stream do yt-dlp:', error);
+    });
+    
     const responseStream = toReadableStream(nodeStream);
     return buildStreamResponse(responseStream);
   } catch (primaryError) {

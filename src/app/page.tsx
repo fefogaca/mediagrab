@@ -213,7 +213,12 @@ export default function Home() {
           return hasAudio && isAudioOnly;
         });
 
-        if (audioFormats.length === 0) return null;
+        if (audioFormats.length === 0) {
+          // Se não há formatos de áudio-only, mas há formatos com vídeo+áudio, 
+          // podemos extrair apenas o áudio usando bestaudio
+          // Mas isso requer mudança no backend, então retornar null por enquanto
+          return null;
+        }
 
         // Priorizar MP3
         const mp3 = audioFormats.find(f => f.ext.toLowerCase() === 'mp3');

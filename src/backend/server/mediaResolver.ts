@@ -229,10 +229,15 @@ async function fetchWithYtDlp(url: string, providerId?: string): Promise<Provide
     }
   });
 
+  // Para Twitter/X: formatos HLS geralmente são apenas vídeo, precisam de merge
+  // Incluir formatos de áudio separados se existirem
+  const isTwitter = url.includes('twitter.com') || url.includes('x.com');
+  
   // Priorizar: vídeo+áudio > vídeo-only (para merge) > áudio-only
   // Se não houver vídeo+áudio, usar vídeo-only (o backend vai fazer merge com áudio)
+  // Para Twitter, sempre incluir áudio-only para permitir merge
   const formatsToUse = videoWithAudio.length > 0 
-    ? [...videoWithAudio, ...audioOnly]
+    ? [...videoWithAudio, ...(isTwitter ? audioOnly : []), ...audioOnly]
     : [...videoOnly, ...audioOnly];
 
   const processedFormats = formatsToUse
