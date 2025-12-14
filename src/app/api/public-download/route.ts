@@ -95,10 +95,22 @@ function buildDownloadFormat(
   format: ResolvedMediaFormat,
 ) {
   const baseUrl = getBaseUrlFromRequest(request);
-  const directDownloadUrl = new URL('/api/download-direct', baseUrl);
-  directDownloadUrl.searchParams.set('url', url);
-  directDownloadUrl.searchParams.set('format', format.format_id);
-  directDownloadUrl.searchParams.set('source', format.source);
+  
+  // Se tem URL direta (ex: Twitter scraping), passar como parâmetro
+  let directDownloadUrl: URL;
+  if (format.url) {
+    // Para URLs diretas, ainda usar download-direct mas passar a URL direta
+    directDownloadUrl = new URL('/api/download-direct', baseUrl);
+    directDownloadUrl.searchParams.set('url', url);
+    directDownloadUrl.searchParams.set('format', format.format_id);
+    directDownloadUrl.searchParams.set('source', format.source);
+    directDownloadUrl.searchParams.set('direct_url', format.url); // Passar URL direta
+  } else {
+    directDownloadUrl = new URL('/api/download-direct', baseUrl);
+    directDownloadUrl.searchParams.set('url', url);
+    directDownloadUrl.searchParams.set('format', format.format_id);
+    directDownloadUrl.searchParams.set('source', format.source);
+  }
 
   return {
     format_id: format.format_id,
@@ -109,6 +121,7 @@ function buildDownloadFormat(
     acodec: format.acodec,
     filesize_approx: format.filesize_approx,
     source: format.source,
+    url: format.url, // Preservar URL direta
     download_url: directDownloadUrl.toString(),
   };
 }

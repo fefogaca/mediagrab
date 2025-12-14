@@ -50,6 +50,7 @@ interface MediaFormat {
   filesize_approx?: number;
   source: string;
   download_url: string;
+  url?: string; // URL direta (opcional, usado para Twitter scraping)
 }
 
 type MediaType = 'video' | 'audio' | null;

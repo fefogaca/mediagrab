@@ -34,6 +34,7 @@ const defaultSettings = {
   cookies: {
     instagram: "",
     youtube: "",
+    twitter: "",
   },
 };
 

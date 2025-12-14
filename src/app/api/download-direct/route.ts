@@ -3,7 +3,7 @@ import YTDlpWrap from 'yt-dlp-wrap';
 import ytdl from 'ytdl-core';
 
 import { validateMediaUrl } from '@/lib/media/providers';
-import { getCookiesFilePath } from '@/backend/lib/cookies';
+import { getCookiesConfig } from '@/backend/lib/cookies';
 
 const ytDlpWrap = new YTDlpWrap();
 const DEFAULT_FORMAT = 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best';
@@ -52,6 +52,70 @@ export async function GET(request: NextRequest) {
   let url = validation.normalizedUrl;
   const provider = validation.provider;
   let format = formatParam;
+
+  // Verificar se foi passada uma URL direta (ex: Twitter scraping)
+  const directUrl = searchParams.get('direct_url');
+  const sourceStr = String(source);
+  if (directUrl && (sourceStr === 'twitter-scraping' || sourceStr.includes('twitter'))) {
+    try {
+      console.log(`[DownloadDirect] Usando URL direta para Twitter: ${directUrl.substring(0, 100)}...`);
+      
+      // Fazer fetch da URL direta e fazer proxy do stream
+      const videoResponse = await fetch(directUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Referer': url,
+        },
+      });
+
+      if (!videoResponse.ok) {
+        throw new Error(`Falha ao buscar vídeo: ${videoResponse.status} ${videoResponse.statusText}`);
+      }
+
+      // Criar stream a partir da resposta
+      const videoStream = videoResponse.body;
+      if (!videoStream) {
+        throw new Error('Resposta do vídeo não contém stream');
+      }
+
+      // O body do fetch já é um ReadableStream<Uint8Array>
+      // Podemos usar diretamente
+      console.log(`[DownloadDirect] ✅ Proxy direto de URL iniciado com sucesso`);
+      return buildStreamResponse(videoStream);
+    } catch (error) {
+      console.error('[DownloadDirect] ❌ Erro ao usar URL direta:', error);
+      // Continuar com método normal abaixo (yt-dlp como fallback)
+    }
+  }
+
+  // Se não tem URL direta mas é Twitter scraping, tentar buscar do formato
+  if (!directUrl && (sourceStr === 'twitter-scraping' || sourceStr.includes('twitter')) && format === 'twitter-scraped') {
+    try {
+      // Obter informações do formato para pegar a URL direta
+      const { resolveMediaInfo } = await import('@/lib/server/mediaResolver');
+      const mediaInfo = await resolveMediaInfo(url);
+      const formatInfo = mediaInfo.formats.find(f => f.format_id === format && f.source === source);
+      
+      if (formatInfo?.url) {
+        console.log(`[DownloadDirect] URL direta encontrada no formato: ${formatInfo.url.substring(0, 100)}...`);
+        
+        const videoResponse = await fetch(formatInfo.url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Referer': url,
+          },
+        });
+
+        if (videoResponse.ok && videoResponse.body) {
+          console.log(`[DownloadDirect] ✅ Proxy direto de URL iniciado com sucesso`);
+          return buildStreamResponse(videoResponse.body);
+        }
+      }
+    } catch (error) {
+      console.warn('[DownloadDirect] Erro ao buscar URL direta do formato, tentando yt-dlp...', error);
+      // Continuar com método normal abaixo
+    }
+  }
 
   // Converter YouTube Shorts para formato normal do YouTube (yt-dlp funciona melhor assim)
   if (url.includes('youtube.com/shorts/')) {
@@ -124,6 +188,24 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // Para garantir melhor compatibilidade, tentar usar orquestrador de streaming
+    // que tem fallback automático
+    try {
+      const { getVideoStream } = await import('@/backend/services/download/streamOrchestrator');
+      const platform = isYouTube ? 'youtube' : isInstagram ? 'instagram' : isTwitter ? 'twitter' : 'tiktok';
+      
+      const nodeStream = await getVideoStream({
+        url,
+        format,
+        platform: platform as any,
+      });
+      const responseStream = toReadableStream(nodeStream);
+      return buildStreamResponse(responseStream);
+    } catch (orchestratorError) {
+      console.warn('[DownloadDirect] Orquestrador falhou, usando método direto:', orchestratorError);
+      // Continuar com método direto abaixo
+    }
+
     if (source === 'ytdl-core' && provider.id === 'youtube') {
       const nodeStream = ytdl(url, { quality: format });
       const responseStream = toReadableStream(nodeStream);
@@ -131,12 +213,13 @@ export async function GET(request: NextRequest) {
       return buildStreamResponse(responseStream);
     }
 
-    // Obter cookies se disponíveis
-    let cookiesPath: string | null = null;
-    if (isInstagram || isYouTube) {
+    // Obter configuração de cookies (arquivo ou navegador)
+    let cookiesConfig: { type: 'file'; path: string } | { type: 'browser'; browser: string; profile?: string } | null = null;
+    if (isInstagram || isYouTube || isTwitter) {
       try {
-        const platform = isInstagram ? 'instagram' : 'youtube';
-        cookiesPath = await getCookiesFilePath(platform);
+        const { getCookiesConfig } = await import('@/backend/lib/cookies');
+        const platform = isInstagram ? 'instagram' : isYouTube ? 'youtube' : 'twitter';
+        cookiesConfig = await getCookiesConfig(platform);
       } catch (error) {
         console.warn('Erro ao obter cookies:', error);
       }
@@ -201,8 +284,18 @@ export async function GET(request: NextRequest) {
     }
 
     // Adicionar cookies se disponíveis
-    if (cookiesPath) {
-      ytDlpOptions.push('--cookies', cookiesPath);
+    // Adicionar cookies (arquivo ou navegador)
+    if (cookiesConfig) {
+      if (cookiesConfig.type === 'file') {
+        ytDlpOptions.push('--cookies', cookiesConfig.path);
+      } else if (cookiesConfig.type === 'browser') {
+        // Usar cookies do navegador
+        const browserArg = cookiesConfig.profile 
+          ? `${cookiesConfig.browser}:${cookiesConfig.profile}`
+          : cookiesConfig.browser;
+        ytDlpOptions.push('--cookies-from-browser', browserArg);
+        console.log(`[DownloadDirect] Usando cookies do navegador: ${browserArg}`);
+      }
     }
 
     // Adicionar argumentos específicos do YouTube apenas se for YouTube
@@ -281,8 +374,16 @@ export async function GET(request: NextRequest) {
             );
           }
           
-          if (cookiesPath) {
-            fallbackOptions.push('--cookies', cookiesPath);
+          // Adicionar cookies no fallback (usar mesma config do método principal)
+          if (cookiesConfig) {
+            if (cookiesConfig.type === 'file') {
+              fallbackOptions.push('--cookies', cookiesConfig.path);
+            } else if (cookiesConfig.type === 'browser') {
+              const browserArg = cookiesConfig.profile 
+                ? `${cookiesConfig.browser}:${cookiesConfig.profile}`
+                : cookiesConfig.browser;
+              fallbackOptions.push('--cookies-from-browser', browserArg);
+            }
           }
           
           if (isYouTube) {

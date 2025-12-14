@@ -55,13 +55,21 @@ export default function DownloadModal({
     const audioFormats: FormatGroup[] = [];
 
     formats.forEach((format) => {
-      const isVideo = format.vcodec !== 'none';
-      const isAudio = format.acodec !== 'none';
+      // Considerar 'unknown' como vídeo quando tem extensão de vídeo (ex: Twitter scraping)
+      const isVideo = format.vcodec !== 'none' && format.vcodec !== 'unknown';
+      const isAudio = format.acodec !== 'none' && format.acodec !== 'unknown';
+      // Se tiver extensão de vídeo mas codecs unknown, assumir que é vídeo (comum em scraping)
+      const hasVideoExt = format.ext && ['mp4', 'webm', 'mkv', 'mov', 'avi'].includes(format.ext.toLowerCase());
+      const hasUrlWithUnknown = format.vcodec === 'unknown' && format.acodec === 'unknown';
       
       // Pular formatos que não têm vídeo nem áudio
-      if (!isVideo && !isAudio) return;
+      if (!isVideo && !isAudio && !(hasUrlWithUnknown && hasVideoExt)) return;
+      
+      // Se tem URL com codecs unknown mas extensão de vídeo, tratar como vídeo
+      const effectiveIsVideo = isVideo || (hasUrlWithUnknown && hasVideoExt);
+      const effectiveIsAudio = isAudio || (hasUrlWithUnknown && !hasVideoExt && !isVideo);
 
-      const targetArray = isVideo ? videoFormats : audioFormats;
+      const targetArray = effectiveIsVideo ? videoFormats : audioFormats;
       const resolution = format.resolution || 'Desconhecido';
 
       // Encontrar ou criar grupo de extensão

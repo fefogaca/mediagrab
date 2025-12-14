@@ -29,6 +29,7 @@ export interface ResolvedMediaFormat {
   acodec: string;
   filesize_approx?: number;
   source: MediaLibrarySource;
+  url?: string; // URL direta do stream (quando disponível, ex: Twitter scraping)
 }
 
 export interface ResolvedMediaInfo {
@@ -124,6 +125,98 @@ export async function resolveMediaInfo(url: string): Promise<ResolvedMediaInfo> 
       'UNSUPPORTED_PROVIDER',
       'Este link não é suportado para download.',
     );
+  }
+
+  // Para YouTube, usar o novo orquestrador com fallback em paralelo
+  if (provider.id === 'youtube') {
+    try {
+      const { resolveYouTubeMedia } = await import('../services/youtube/youtubeOrchestrator');
+      const { convertToResolvedMediaInfo } = await import('../services/common/adapters');
+      
+      const result = await resolveYouTubeMedia(url);
+      
+      if (result.success && result.data) {
+        console.log(`[MediaResolver] ✅ Sucesso com novo orquestrador YouTube (método: ${result.method})`);
+        return convertToResolvedMediaInfo(result, provider);
+      }
+      
+      // Se falhou, continuar com métodos antigos
+      console.warn(`[MediaResolver] Novo orquestrador YouTube falhou, tentando métodos antigos...`);
+    } catch (error) {
+      console.warn(`[MediaResolver] Erro no novo orquestrador YouTube, usando métodos antigos:`, 
+        error instanceof Error ? error.message : 'Erro desconhecido'
+      );
+      // Continuar com métodos antigos
+    }
+  }
+
+  // Para Twitter, usar o novo orquestrador
+  if (provider.id === 'twitter') {
+    try {
+      const { resolveTwitterMedia } = await import('../services/twitter/twitterOrchestrator');
+      const { convertToResolvedMediaInfo } = await import('../services/common/adapters');
+      
+      const result = await resolveTwitterMedia(url);
+      
+      if (result.success && result.data) {
+        console.log(`[MediaResolver] ✅ Sucesso com novo orquestrador Twitter (método: ${result.method})`);
+        return convertToResolvedMediaInfo(result, provider);
+      }
+      
+      // Se falhou, continuar com métodos antigos (yt-dlp)
+      console.warn(`[MediaResolver] Novo orquestrador Twitter falhou, tentando métodos antigos...`);
+    } catch (error) {
+      console.warn(`[MediaResolver] Erro no novo orquestrador Twitter, usando métodos antigos:`, 
+        error instanceof Error ? error.message : 'Erro desconhecido'
+      );
+      // Continuar com métodos antigos
+    }
+  }
+
+  // Para Instagram, usar o novo orquestrador
+  if (provider.id === 'instagram') {
+    try {
+      const { resolveInstagramMedia } = await import('../services/instagram/instagramOrchestrator');
+      const { convertToResolvedMediaInfo } = await import('../services/common/adapters');
+      
+      const result = await resolveInstagramMedia(url);
+      
+      if (result.success && result.data) {
+        console.log(`[MediaResolver] ✅ Sucesso com novo orquestrador Instagram (método: ${result.method})`);
+        return convertToResolvedMediaInfo(result, provider);
+      }
+      
+      // Se falhou, continuar com métodos antigos (yt-dlp)
+      console.warn(`[MediaResolver] Novo orquestrador Instagram falhou, tentando métodos antigos...`);
+    } catch (error) {
+      console.warn(`[MediaResolver] Erro no novo orquestrador Instagram, usando métodos antigos:`, 
+        error instanceof Error ? error.message : 'Erro desconhecido'
+      );
+      // Continuar com métodos antigos
+    }
+  }
+
+  // Para TikTok, usar o novo orquestrador
+  if (provider.id === 'tiktok') {
+    try {
+      const { resolveTikTokMedia } = await import('../services/tiktok/tiktokOrchestrator');
+      const { convertToResolvedMediaInfo } = await import('../services/common/adapters');
+      
+      const result = await resolveTikTokMedia(url);
+      
+      if (result.success && result.data) {
+        console.log(`[MediaResolver] ✅ Sucesso com novo orquestrador TikTok (método: ${result.method})`);
+        return convertToResolvedMediaInfo(result, provider);
+      }
+      
+      // Se falhou, continuar com métodos antigos (yt-dlp)
+      console.warn(`[MediaResolver] Novo orquestrador TikTok falhou, tentando métodos antigos...`);
+    } catch (error) {
+      console.warn(`[MediaResolver] Erro no novo orquestrador TikTok, usando métodos antigos:`, 
+        error instanceof Error ? error.message : 'Erro desconhecido'
+      );
+      // Continuar com métodos antigos
+    }
   }
 
   // Filtrar providers que suportam esta plataforma
