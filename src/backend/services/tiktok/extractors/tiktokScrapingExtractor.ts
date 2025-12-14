@@ -69,8 +69,8 @@ export class TikTokScrapingExtractor implements IExtractor {
           /"downloadAddr":"([^"]+)"/,
           /"playAddr":"([^"]+)"/,
           /"videoUrl":"([^"]+)"/,
-          /window\.__UNIVERSAL_DATA_FOR_REHYDRATION__\s*=\s*({.+?});/s,
-          /"ItemModule":\s*({.+?})/s,
+          /window\.__UNIVERSAL_DATA_FOR_REHYDRATION__\s*=\s*({[\s\S]+?});/,
+          /"ItemModule":\s*({[\s\S]+?})/,
         ];
 
         for (const pattern of patterns) {
