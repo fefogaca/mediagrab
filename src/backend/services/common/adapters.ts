@@ -17,6 +17,18 @@ export function convertToResolvedMediaInfo(
     throw new Error(result.error?.message || 'Extração falhou');
   }
 
+  // Mapear método para MediaLibrarySource (usar yt-dlp como padrão para novos métodos)
+  const mapMethodToSource = (method: string): 'yt-dlp' | 'ytdl-core' | '@distube/ytdl-core' | 'play-dl' => {
+    if (method.includes('ytdlp') || method.includes('yt-dlp')) return 'yt-dlp';
+    if (method.includes('distube')) return '@distube/ytdl-core';
+    if (method.includes('ytdl-core') && !method.includes('distube')) return 'ytdl-core';
+    if (method.includes('play-dl')) return 'play-dl';
+    // Para novos métodos (graphql, scraping, etc.), usar yt-dlp como padrão
+    return 'yt-dlp';
+  };
+
+  const source = mapMethodToSource(result.method);
+
   const formats: ResolvedMediaFormat[] = result.data.formats.map((format) => ({
     format_id: format.format_id,
     ext: format.ext,
@@ -25,7 +37,7 @@ export function convertToResolvedMediaInfo(
     vcodec: format.vcodec,
     acodec: format.acodec,
     filesize_approx: format.filesize_approx,
-    source: result.method as any, // Converter para MediaLibrarySource
+    source,
     url: format.url, // Preservar URL direta se disponível
   }));
 
@@ -33,7 +45,7 @@ export function convertToResolvedMediaInfo(
     title: result.data.title,
     provider,
     formats,
-    library: result.method as any,
+    library: source,
   };
 }
 
