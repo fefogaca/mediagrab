@@ -19,10 +19,18 @@ export function convertToResolvedMediaInfo(
 
   // Mapear método para MediaLibrarySource (usar yt-dlp como padrão para novos métodos)
   const mapMethodToSource = (method: string): MediaLibrarySource => {
-    if (method.includes('ytdlp') || method.includes('yt-dlp')) return 'yt-dlp';
-    if (method.includes('distube')) return '@distube/ytdl-core';
-    if (method.includes('ytdl-core') && !method.includes('distube')) return 'ytdl-core';
-    if (method.includes('play-dl')) return 'play-dl';
+    if (method.includes('ytdlp') || method.includes('yt-dlp') || method.includes('graphql') || method.includes('scraping') || method.includes('api')) {
+      return 'yt-dlp';
+    }
+    if (method.includes('distube')) {
+      return '@distube/ytdl-core';
+    }
+    if (method.includes('ytdl-core') && !method.includes('distube')) {
+      return 'ytdl-core';
+    }
+    if (method.includes('play-dl')) {
+      return 'play-dl';
+    }
     // Para novos métodos (graphql, scraping, etc.), usar yt-dlp como padrão
     return 'yt-dlp';
   };
