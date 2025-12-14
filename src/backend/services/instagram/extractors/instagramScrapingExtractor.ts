@@ -106,8 +106,8 @@ export class InstagramScrapingExtractor implements IExtractor {
       for (const script of scripts) {
         const scriptText = $(script).html() || '';
         
-        // Procurar por window._sharedData
-        const match = scriptText.match(/window\._sharedData\s*=\s*({.+?});/s);
+        // Procurar por window._sharedData (usando [\s\S] ao invés de . com flag s para compatibilidade ES2017)
+        const match = scriptText.match(/window\._sharedData\s*=\s*({[\s\S]+?});/);
         if (match) {
           try {
             sharedData = JSON.parse(match[1]);
