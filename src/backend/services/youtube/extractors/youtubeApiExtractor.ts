@@ -103,7 +103,7 @@ export class YouTubeApiExtractor implements IExtractor {
         title,
         formats,
         thumbnail: thumbnail || undefined,
-        description,
+        description: description || undefined,
       };
 
       // Nota: Este extractor não retorna URLs diretas de stream
