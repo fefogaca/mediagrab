@@ -137,7 +137,7 @@ export async function resolveMediaInfo(url: string): Promise<ResolvedMediaInfo> 
       
       if (result.success && result.data) {
         console.log(`[MediaResolver] ✅ Sucesso com novo orquestrador YouTube (método: ${result.method})`);
-        return convertToResolvedMediaInfo(result, provider);
+        return convertToResolvedMediaInfo(result, provider) as ResolvedMediaInfo;
       }
       
       // Se falhou, continuar com métodos antigos
@@ -160,7 +160,7 @@ export async function resolveMediaInfo(url: string): Promise<ResolvedMediaInfo> 
       
       if (result.success && result.data) {
         console.log(`[MediaResolver] ✅ Sucesso com novo orquestrador Twitter (método: ${result.method})`);
-        return convertToResolvedMediaInfo(result, provider);
+        return convertToResolvedMediaInfo(result, provider) as ResolvedMediaInfo;
       }
       
       // Se falhou, continuar com métodos antigos (yt-dlp)
@@ -183,7 +183,7 @@ export async function resolveMediaInfo(url: string): Promise<ResolvedMediaInfo> 
       
       if (result.success && result.data) {
         console.log(`[MediaResolver] ✅ Sucesso com novo orquestrador Instagram (método: ${result.method})`);
-        return convertToResolvedMediaInfo(result, provider);
+        return convertToResolvedMediaInfo(result, provider) as ResolvedMediaInfo;
       }
       
       // Se falhou, continuar com métodos antigos (yt-dlp)
@@ -206,7 +206,7 @@ export async function resolveMediaInfo(url: string): Promise<ResolvedMediaInfo> 
       
       if (result.success && result.data) {
         console.log(`[MediaResolver] ✅ Sucesso com novo orquestrador TikTok (método: ${result.method})`);
-        return convertToResolvedMediaInfo(result, provider);
+        return convertToResolvedMediaInfo(result, provider) as ResolvedMediaInfo;
       }
       
       // Se falhou, continuar com métodos antigos (yt-dlp)
