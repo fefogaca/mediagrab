@@ -100,6 +100,14 @@ export class InstagramYtDlpExtractor implements IExtractor {
         (f.vcodec === 'none' || f.vcodec === 'unknown') && f.acodec !== 'none' && f.acodec !== 'unknown'
       );
       
+      // Criar resultado com os formatos processados
+      const result: ExtractedMediaInfo = {
+        title: title || 'Instagram Media',
+        formats: processedFormats,
+        thumbnail: (videoInfo as any).thumbnail,
+        description: (videoInfo as any).description,
+      };
+
       if (hasAudioOnly) {
         // Log detalhado para debug
         console.warn('[InstagramYtDlpExtractor] ⚠️ Apenas áudio encontrado, yt-dlp pode não ter conseguido extrair vídeo');
@@ -120,13 +128,6 @@ export class InstagramYtDlpExtractor implements IExtractor {
       } else if (hasVideoFormat) {
         console.log(`[InstagramYtDlpExtractor] ✅ Formatos de vídeo encontrados: ${processedFormats.filter(f => f.vcodec !== 'none' && f.vcodec !== 'unknown').length} de ${processedFormats.length}`);
       }
-
-      const result: ExtractedMediaInfo = {
-        title: title || 'Instagram Media',
-        formats: processedFormats,
-        thumbnail: (videoInfo as any).thumbnail,
-        description: (videoInfo as any).description,
-      };
 
       return {
         success: true,
