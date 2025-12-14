@@ -38,7 +38,7 @@ export class YoutubeDlExtractor implements IExtractor {
       // Processar formatos
       const formats: ExtractedFormat[] = info.formats
         .filter((format: any) => format.hasVideo || format.hasAudio)
-        .map((format): ExtractedFormat => {
+        .map((format: any): ExtractedFormat => {
           const codecs = this.splitCodecs(format.codecs);
           const resolution = format.qualityLabel
             ? format.qualityLabel
