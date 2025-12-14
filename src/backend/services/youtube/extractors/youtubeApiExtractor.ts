@@ -102,7 +102,7 @@ export class YouTubeApiExtractor implements IExtractor {
       const result: ExtractedMediaInfo = {
         title,
         formats,
-        thumbnail,
+        thumbnail: thumbnail || undefined,
         description,
       };
 
