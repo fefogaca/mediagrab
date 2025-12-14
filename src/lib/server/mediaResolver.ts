@@ -8,7 +8,11 @@ import {
   type MediaProviderId,
 } from '../media/providers';
 
-export type MediaLibrarySource = 'yt-dlp' | 'ytdl-core';
+export type MediaLibrarySource = 
+  | 'yt-dlp' 
+  | 'ytdl-core' 
+  | '@distube/ytdl-core' 
+  | 'play-dl';
 
 export interface ResolvedMediaFormat {
   format_id: string;
