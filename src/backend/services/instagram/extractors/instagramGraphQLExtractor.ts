@@ -111,10 +111,13 @@ export class InstagramGraphQLExtractor implements IExtractor {
       }
 
       // Preparar headers com cookies
+      const defaultHeaders = this.axiosInstance.defaults.headers.common || {};
       const headers: Record<string, string> = {
-        ...this.axiosInstance.defaults.headers,
+        ...Object.fromEntries(
+          Object.entries(defaultHeaders).map(([key, value]) => [key, String(value)])
+        ),
         'Cookie': instagramCookies,
-        ...options?.headers,
+        ...(options?.headers || {}),
       };
 
       // GraphQL Query Hash para PostPageQuery

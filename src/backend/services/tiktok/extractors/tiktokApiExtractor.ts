@@ -76,9 +76,12 @@ export class TikTokApiExtractor implements IExtractor {
       }
 
       // Headers específicos do TikTok
+      const defaultHeaders = this.axiosInstance.defaults.headers.common || {};
       const headers: Record<string, string> = {
-        ...this.axiosInstance.defaults.headers,
-        ...options?.headers,
+        ...Object.fromEntries(
+          Object.entries(defaultHeaders).map(([key, value]) => [key, String(value)])
+        ),
+        ...(options?.headers || {}),
       };
 
       // Tentar diferentes endpoints da API
