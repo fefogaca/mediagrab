@@ -2,7 +2,7 @@
  * Adaptadores para converter entre formatos antigos e novos
  */
 
-import type { ResolvedMediaFormat, ResolvedMediaInfo } from '../../server/mediaResolver';
+import type { ResolvedMediaFormat, ResolvedMediaInfo, MediaLibrarySource } from '../../server/mediaResolver';
 import type { ExtractedMediaInfo, ExtractorResult } from './types';
 import type { MediaProvider } from '../../media/providers';
 
@@ -18,7 +18,7 @@ export function convertToResolvedMediaInfo(
   }
 
   // Mapear método para MediaLibrarySource (usar yt-dlp como padrão para novos métodos)
-  const mapMethodToSource = (method: string): 'yt-dlp' | 'ytdl-core' | '@distube/ytdl-core' | 'play-dl' => {
+  const mapMethodToSource = (method: string): MediaLibrarySource => {
     if (method.includes('ytdlp') || method.includes('yt-dlp')) return 'yt-dlp';
     if (method.includes('distube')) return '@distube/ytdl-core';
     if (method.includes('ytdl-core') && !method.includes('distube')) return 'ytdl-core';
