@@ -31,7 +31,7 @@ export async function POST(request: Request) {
 
     const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, getJwtSecret(), { expiresIn: '1h' });
 
-    const response = NextResponse.json({ message: 'Login successful', role: user.role }, { status: 200 });
+    const response = NextResponse.json({ message: 'Login successful', role: user.role, token: token }, { status: 200 });
 
     response.cookies.set('token', token, {
       httpOnly: true,

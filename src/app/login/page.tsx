@@ -75,7 +75,13 @@ const LoginPage = () => {
         throw new Error(data.message || 'Login failed');
       }
 
-      const { role } = data;
+      const { role, token } = data;
+      
+      // Salvar token no localStorage para verificação no cliente
+      if (token) {
+        localStorage.setItem('token', token);
+      }
+      
       // Redirecionar baseado no role
       if (role === 'admin') {
       router.push('/admin');
